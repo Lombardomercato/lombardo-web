@@ -1,182 +1,199 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lombardo | Vinería boutique y café de especialidad</title>
+    <meta
+      name="description"
+      content="Lombardo es una vinería boutique y café de especialidad en Pueblo Esther. Un espacio elegante y relajado para disfrutar vino, café y buenos momentos."
+    />
+    <meta
+      name="keywords"
+      content="vinería boutique, wine bar, café de especialidad, Pueblo Esther, Rosario, catas de vino, experiencias de vino"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="site-header" id="inicio">
+      <div class="container nav-wrap">
+        <a class="brand" href="#inicio" aria-label="Inicio">LOMBARDO</a>
+        <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="main-menu">☰</button>
+        <nav class="main-nav" id="main-menu" aria-label="Principal">
+          <a href="#inicio">Inicio</a>
+          <a href="#cafe">Café</a>
+          <a href="#vinos">Vinos</a>
+          <a href="#experiencias">Experiencias</a>
+          <a href="#galeria">Galería</a>
+          <a href="#contacto">Contacto</a>
+        </nav>
+      </div>
+    </header>
 
-  <!-- A) SEO Básico -->
-  <title>LOMBARDO | CAFÉ DE ESPECIALIDAD Y VINERÍA EN PUEBLO ESTHER</title>
-  <meta name="description" content="Lombardo es café de especialidad y vinería boutique en Pueblo Esther. Desayunos, meriendas, vinos por copa, catas y experiencias." />
-  <meta name="keywords" content="café pueblo esther, café de especialidad pueblo esther, vinería pueblo esther, vinoteca pueblo esther, vinos por copa pueblo esther, catas pueblo esther, cafetería pueblo esther, vinos rosario zona sur" />
-  <link rel="canonical" href="https://lombardomercato.com/" />
-
-  <!-- Open Graph (para que se vea bien al compartir) -->
-  <meta property="og:title" content="LOMBARDO | CAFÉ DE ESPECIALIDAD Y VINERÍA EN PUEBLO ESTHER" />
-  <meta property="og:description" content="Café de especialidad, vinería boutique y experiencias en Pueblo Esther. Reservas por WhatsApp." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://lombardomercato.com/" />
-  <meta property="og:image" content="https://lombardomercato.com/assets/logo/logo-reducido-azul.png" />
-
-  <!-- B) SEO Local (Schema.org) -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "CafeOrCoffeeShop",
-    "name": "LOMBARDO",
-    "url": "https://lombardomercato.com/",
-    "image": "https://lombardomercato.com/assets/logo/logo-reducido-azul.png",
-    "telephone": "+5439412762319",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Pueblo Esther",
-      "addressRegion": "Santa Fe",
-      "addressCountry": "AR"
-    },
-    "servesCuisine": ["Cafe", "Wine"],
-    "areaServed": "Pueblo Esther, Santa Fe",
-    "sameAs": []
-  }
-  </script>
-
-  <link rel="icon" href="assets/logo/logo-reducido-azul.png" />
-  <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-  <header class="topbar">
-    <div class="container">
-      <nav class="nav">
-        <a class="brand" href="index.html" aria-label="INICIO">
-          <img class="brandLogo" src="assets/logo/logo-horiz-blanco.png" alt="LOMBARDO" />
-        </a>
-        <div class="links">
-          <a href="carta.html">CARTA</a>
-          <a href="vineria.html">VINERÍA</a>
-          <a href="experiencias.html">EXPERIENCIAS</a>
-          <a href="empresas.html">EMPRESAS</a>
-          <a class="cta" href="contacto.html">RESERVAS</a>
+    <main>
+      <section class="hero section">
+        <div class="hero-overlay"></div>
+        <div class="container hero-content">
+          <p class="eyebrow">vino · café · encuentros</p>
+          <h1>LOMBARDO</h1>
+          <p class="hero-text">
+            Una vinería boutique donde el vino, el café de especialidad y los buenos momentos se encuentran en un ambiente cálido y elegante.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#contacto">Descubrir Lombardo</a>
+            <a class="btn btn-secondary" href="#experiencias">Ver experiencias</a>
+          </div>
         </div>
-      </nav>
-    </div>
-  </header>
+      </section>
 
-  <main>
-    <section class="hero">
-      <div class="container heroWrap">
-        <div>
-          <span class="kicker">PUEBLO ESTHER · SANTA FE</span>
-          <h1 class="heroTitle">CAFÉ DE ESPECIALIDAD.<br/>VINERÍA BOUTIQUE.</h1>
-          <p class="heroLead">Tu punto de encuentro en el pueblo: atención simple, algo rico siempre y una selección de vinos que se entiende.</p>
-
-          <div class="heroActions">
-            <a class="btn btnPrimary" data-wa="general">RESERVAR</a>
-            <a class="btn btnSoft" href="carta.html">VER CARTA</a>
-            <a class="btn btnSoft" href="vineria.html">VER VINERÍA</a>
+      <section class="section" id="concepto">
+        <div class="container two-col">
+          <div>
+            <h2>El espíritu de Lombardo</h2>
+            <p>
+              Lombardo nace como un espacio para disfrutar sin apuro. Un lugar donde el vino, el café de especialidad y la buena compañía se combinan en una experiencia simple pero cuidada.
+            </p>
+            <p>
+              Inspirado en los wine bars italianos y en la cultura de compartir, Lombardo propone un ambiente elegante, relajado y auténtico donde cada visita se transforma en un momento para recordar.
+            </p>
+            <ul class="highlights" aria-label="Valores de Lombardo">
+              <li>vino con identidad</li>
+              <li>café de especialidad</li>
+              <li>momentos compartidos</li>
+            </ul>
           </div>
+          <img src="assets/fotos/local.jpg" alt="Interior cálido de Lombardo" />
+        </div>
+      </section>
 
-          <div class="tags">
-            <span class="tag">CAFÉ</span>
-            <span class="tag">VINOS POR COPA</span>
-            <span class="tag">PASTELERÍA</span>
-            <span class="tag">EXPERIENCIAS</span>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="grid2" style="margin-top:18px;">
-            <div class="card">
-              <h3>LOMBARDO ES SIMPLE</h3>
-              <p class="small">Venís, elegís, te recomendamos sin vueltas. Café con carácter. Vino con historia.</p>
+      <section class="section alt" id="cafe">
+        <div class="container two-col reverse">
+          <img src="assets/fotos/cafe.jpg" alt="Café de especialidad servido en taza" />
+          <div>
+            <h2>Café de especialidad</h2>
+            <p>
+              El buen café también tiene su lugar en Lombardo. Trabajamos con café de especialidad para ofrecer una experiencia simple, cálida y cuidada en cada taza.
+            </p>
+            <p>
+              Desde un espresso intenso hasta un flat white perfectamente equilibrado, cada café se prepara respetando el origen y la calidad del grano.
+            </p>
+            <div class="card-grid">
+              <article class="card"><h3>espresso</h3></article>
+              <article class="card"><h3>flat white</h3></article>
+              <article class="card"><h3>capuccino</h3></article>
+              <article class="card"><h3>latte</h3></article>
+              <article class="card"><h3>café con algo dulce</h3></article>
             </div>
-            <div class="card">
-              <h3>VINERÍA CON GUIA</h3>
-              <p class="small">Te hacemos 3 preguntas y listo: ocasión, estilo, presupuesto.</p>
-            </div>
+            <p class="closing">Un buen café siempre encuentra su momento.</p>
           </div>
         </div>
+      </section>
 
-        <div class="heroMedia">
-          <img src="assets/hero/hero-home.jpg" alt="LOMBARDO" />
-          <div class="heroOverlay"></div>
-
-          <div class="glass">
-            <div class="glassGrid">
-              <div class="glassItem">
-                <b>HORARIOS</b>
-                <span>MAR A DOM · 08:00–13:00</span>
-                <span>MAR A DOM · 16:30–21:30</span>
-                <span class="pillRed">LUNES CERRADO</span>
-              </div>
-              <div class="glassItem">
-                <b>RESERVAS</b>
-                <span>Te respondemos por WhatsApp.</span>
-                <span>Mesas · Catas · Vinos.</span>
-                <a class="btn btnPrimary" style="margin-top:10px;" data-wa="general">ESCRIBIR</a>
-              </div>
+      <section class="section" id="vinos">
+        <div class="container two-col">
+          <div>
+            <h2>La cultura del vino</h2>
+            <p>
+              El vino es parte central de la experiencia Lombardo. Una selección pensada para descubrir, disfrutar y compartir sin formalidades.
+            </p>
+            <p>
+              Nuestra propuesta combina etiquetas seleccionadas, vinos por copa y recomendaciones pensadas para que cada visita sea diferente.
+            </p>
+            <div class="card-grid wine-grid">
+              <article class="card"><h3>vinos por copa</h3></article>
+              <article class="card"><h3>etiquetas boutique</h3></article>
+              <article class="card"><h3>recomendaciones de la casa</h3></article>
+              <article class="card"><h3>descubrir nuevos sabores</h3></article>
             </div>
+            <p class="closing">El vino se disfruta mejor cuando se comparte.</p>
+          </div>
+          <img src="assets/fotos/vino.jpg" alt="Vino sirviéndose en copa" />
+        </div>
+      </section>
+
+      <section class="section alt" id="experiencias">
+        <div class="container">
+          <h2>Experiencias Lombardo</h2>
+          <p class="section-intro">
+            Más que una vinería, Lombardo es un punto de encuentro para vivir momentos especiales.
+          </p>
+          <p class="section-intro">
+            Catas guiadas, encuentros entre amigos, eventos privados y noches donde el vino y la conversación son protagonistas.
+          </p>
+          <div class="card-grid event-grid">
+            <article class="card"><h3>Catas de vino</h3></article>
+            <article class="card"><h3>Eventos privados</h3></article>
+            <article class="card"><h3>Encuentros en el balcón</h3></article>
+            <article class="card"><h3>Happy hour</h3></article>
+            <article class="card"><h3>Noches especiales</h3></article>
+          </div>
+          <p class="closing">Cada encuentro tiene su propio sabor.</p>
+        </div>
+      </section>
+
+      <section class="section" id="galeria">
+        <div class="container">
+          <h2>La atmósfera Lombardo</h2>
+          <p class="section-intro">Un espacio pensado para disfrutar del vino, del café y del momento.</p>
+          <div class="gallery">
+            <img src="assets/fotos/rrss_lombardo_post_2.jpg" alt="Copas brindando" />
+            <img src="assets/fotos/vino.jpg" alt="Vino sirviéndose" />
+            <img src="assets/fotos/cafe.jpg" alt="Tazas de café" />
+            <img src="assets/fotos/local.jpg" alt="Mesas compartidas" />
+            <img src="assets/fotos/rrss_lombardo_post_3.jpg" alt="Botellas y texturas cálidas" />
+            <img src="assets/fotos/generadas-set.png" alt="Momentos reales en Lombardo" />
+          </div>
+          <p class="closing">Un lugar para quedarse.</p>
+        </div>
+      </section>
+
+      <section class="section contact" id="contacto">
+        <div class="container two-col">
+          <div>
+            <h2>Te esperamos en Lombardo</h2>
+            <p>
+              Un espacio donde el vino, el café y los encuentros se disfrutan sin apuro.
+            </p>
+            <dl>
+              <dt>Ubicación</dt>
+              <dd>Pueblo Esther, Rosario, Santa Fe</dd>
+              <dt>Horarios</dt>
+              <dd>Martes a Domingo · 08:00 – 13:00 / 17:00 – 00:00</dd>
+              <dt>Contacto</dt>
+              <dd><a href="https://wa.me/5493410000000" target="_blank" rel="noreferrer">Escribinos</a></dd>
+            </dl>
+            <p class="closing">Venís por una copa… y te quedás por el momento.</p>
+          </div>
+          <div class="map-wrap" aria-hidden="true">
+            <div class="map-placeholder">Pueblo Esther · Rosario</div>
           </div>
         </div>
+      </section>
+    </main>
 
-      </div>
-    </section>
-
-    <section class="sectionTight">
-      <div class="container sectionHead">
+    <footer class="site-footer">
+      <div class="container footer-grid">
         <div>
-          <h2>LO QUE OFRECEMOS</h2>
-          <p>Minimal, claro y con fotos. Después reemplazamos por las tuyas.</p>
+          <p class="footer-brand">LOMBARDO</p>
+          <p>vino · café · encuentros</p>
+          <p>Vinería boutique y café de especialidad en Pueblo Esther.</p>
         </div>
-      </div>
-
-      <div class="container grid3">
-        <div class="card">
-          <h3>CAFÉ</h3>
-          <p class="small">Espresso, cortado, flat white, capuccino, latte y especiales.</p>
-        </div>
-        <div class="card">
-          <h3>VINERÍA</h3>
-          <p class="small">Selección curada + vinos por copa + recomendaciones.</p>
-        </div>
-        <div class="card">
-          <h3>EXPERIENCIAS</h3>
-          <p class="small">Catas, eventos privados y (próximamente) club de vinos.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container sectionHead">
+        <nav aria-label="Footer">
+          <a href="#inicio">Inicio</a>
+          <a href="#cafe">Café</a>
+          <a href="#vinos">Vinos</a>
+          <a href="#experiencias">Experiencias</a>
+          <a href="#galeria">Galería</a>
+          <a href="#contacto">Contacto</a>
+        </nav>
         <div>
-          <h2>GALERÍA</h2>
-          <p>Imágenes de marca + fotos de ambiente.</p>
+          <p class="footer-title">Seguinos</p>
+          <p>Instagram</p>
+          <p class="footer-end">Lombardo — un lugar para disfrutar sin apuro.</p>
         </div>
       </div>
+    </footer>
 
-      <div class="container gallery">
-        <div class="g g1"><img src="assets/fotos/foto-cafe.jpg" alt="Café de especialidad en Lombardo Pueblo Esther" /></div>
-        <div class="g g2"><img src="assets/fotos/foto-vino.jpg" alt="Vinería boutique en Lombardo Pueblo Esther" /></div>
-        <div class="g g3"><img src="assets/fotos/foto-local.jpg" alt="Espacio Lombardo en Pueblo Esther Santa Fe" /></div>
-        <div class="g g4"><img src="assets/fotos/rrss_lombardo_post_1.jpg" alt="Lombardo: café y vino en Pueblo Esther" /></div>
-        <div class="g g5"><img src="assets/fotos/rrss_lombardo_post_2.jpg" alt="Lombardo: vinería y experiencias" /></div>
-      </div>
-
-      <div class="container" style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap">
-        <a class="btn btnPrimary" href="vineria.html">VER VINERÍA</a>
-        <a class="btn btnSoft" href="carta.html">ABRIR CARTA</a>
-        <a class="btn btnSoft" href="contacto.html">UBICACIÓN</a>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="container">
-      <small>© <span id="year"></span> LOMBARDO · PUEBLO ESTHER</small>
-    </div>
-  </footer>
-
-  <div class="floatCta">
-    <a class="btn btnPrimary" data-wa="general">WHATSAPP</a>
-  </div>
-
-  <script src="js/script.js"></script>
-</body>
+    <script src="js/script.js"></script>
+  </body>
 </html>
