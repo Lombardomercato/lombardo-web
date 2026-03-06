@@ -50,3 +50,22 @@ Si usás lombardomercato.com:
   - CNAME www -> lombardomercato.github.io
 
 Listo.
+
+
+10) ESTRUCTURA DE PÁGINAS
+Páginas núcleo actuales:
+- index.html
+- nosotros.html
+- carta.html
+- cafe.html
+- vinos.html
+- experiencias.html
+- eventos.html
+- club.html
+- galeria.html
+- contacto.html
+- tienda.html
+
+Legado archivado:
+- archive/empresas.html
+

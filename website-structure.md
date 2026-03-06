@@ -1,28 +1,32 @@
-Lombardo Website Structure
+# Lombardo Website Structure
 
-Pages
+## Core pages (current architecture)
 
-Home
-Nosotros
-Carta
-Café
-Vinos
-Experiencias
-Eventos
-Club Lombardo
-Tienda
-Galería
-Contacto
+- index.html (Home)
+- nosotros.html
+- carta.html
+- cafe.html
+- vinos.html
+- experiencias.html
+- eventos.html
+- club.html
+- galeria.html
+- contacto.html
+- tienda.html
 
-Home sections
+## Archived / non-core pages
 
-Hero
-Concept
-Café
-Vinos
-Experiencias
-Carta destacada
-Eventos
-Galería
-Ubicación
-Club Lombardo
+- archive/empresas.html (legacy redirect page, excluded from core navigation)
+
+## Home sections
+
+- Hero
+- Concept
+- Café
+- Vinos
+- Experiencias
+- Carta destacada
+- Eventos
+- Galería
+- Ubicación
+- Club Lombardo
