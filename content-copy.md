@@ -1,288 +1,515 @@
 # LOMBARDO — Website Content Copy
 
-Version: 1.0
+Version: 2.0
 
-This file contains the official copywriting used on the Lombardo website.
+This file contains the official copy for the Lombardo website.
+Use this copy as the default source for the site.
+Do not replace the brand tone with generic marketing language.
 
-Tone of voice:
-warm
-refined
-human
-elegant
-relaxed
-
-The brand voice should feel like an elegant host welcoming people to enjoy wine, coffee and shared moments.
-
-Avoid:
-corporate tone
-generic marketing language
-aggressive sales language
+Tone:
+- cercano
+- claro
+- canchero con criterio
+- cálido
+- con identidad
+- sin sanata
 
 ---
 
-# HERO SECTION
+# 1. GLOBAL BRAND LINES
 
-Headline:
+Main claim:
+TU PUNTO DE ENCUENTRO EN PUEBLO ESTHER.
 
-LOMBARDO
+Secondary claim:
+MERCATO DE ENCUENTRO.
 
-Subheadline:
+Brand support line:
+CAFÉ, VINO Y BUENOS MOMENTOS.
 
-vino · café · encuentros
+Alternative social line:
+UN BUEN TINTO = CORAZÓN CONTENTO.
 
-Supporting text:
+Coffee line:
+NADA DE SANATA.
 
-Una vinería boutique donde el vino, el café de especialidad y los buenos momentos se encuentran en un ambiente cálido y elegante.
+Club line:
+¿CAFÉ, VINO O LOS DOS?
 
-Primary CTA:
+---
 
-Descubrir Lombardo
+# 2. HEADER / NAV
+
+Menu labels:
+- Inicio
+- Nosotros
+- Carta
+- Café
+- Vinos
+- Experiencias
+- Eventos
+- Club Lombardo
+- Tienda
+- Galería
+- Contacto
+
+Primary header CTA:
+VER CARTA
 
 Secondary CTA:
-
-Ver experiencias
+ESCRIBINOS
 
 ---
 
-# BRAND INTRO / CONCEPT
+# 3. HERO
+
+H1:
+LOMBARDO
+
+Supporting headline:
+TU PUNTO DE ENCUENTRO EN PUEBLO ESTHER.
+
+Subheadline:
+CAFÉ, VINO Y BUENOS MOMENTOS.
+
+Hero paragraph:
+Un espacio de encuentro en Pueblo Esther donde la tradición y lo contemporáneo se cruzan para crear una experiencia cálida, rica y con identidad.
+
+Primary CTA:
+VER CARTA
+
+Secondary CTA:
+CONOCÉ LOMBARDO
+
+Optional highlight pills:
+- CAFÉ DE ESPECIALIDAD
+- VINOS
+- EXPERIENCIAS
+- CLUB
+- EVENTOS
+
+---
+
+# 4. CONCEPTO / PROPUESTA
 
 Section title:
-
-El espíritu de Lombardo
+UN LUGAR CON IDENTIDAD
 
 Paragraph 1:
-
-Lombardo nace como un espacio para disfrutar sin apuro. Un lugar donde el vino, el café de especialidad y la buena compañía se combinan en una experiencia simple pero cuidada.
+Lombardo nace de la idea de crear un punto de encuentro real: un lugar donde podés venir por un café, quedarte por una copa y volver por la experiencia completa.
 
 Paragraph 2:
+Entre vinos, desayunos, meriendas, productos con selección y momentos compartidos, Lombardo combina barrio, estética y una propuesta distinta para Pueblo Esther.
 
-Inspirado en los wine bars italianos y en la cultura de compartir, Lombardo propone un ambiente elegante, relajado y auténtico donde cada visita se transforma en un momento para recordar.
-
-Highlight phrases:
-
-vino con identidad  
-café de especialidad  
-momentos compartidos
+Short statements:
+- CERCANÍA
+- COMUNIDAD
+- DIFERENCIACIÓN
 
 ---
 
-# SPECIALTY COFFEE SECTION
+# 5. NOSOTROS
 
 Section title:
+NOSOTROS
 
-Café de especialidad
+Intro:
+Somos un espacio de encuentro en Pueblo Esther que combina tradición y modernidad para ofrecer una experiencia gastronómica auténtica, accesible y de calidad.
 
-Intro text:
+Expanded paragraph:
+Nacimos de la unión de dos emprendedores del rubro de bebidas y distribución que vieron la oportunidad de crear un lugar donde residentes y visitantes puedan encontrarse con una propuesta cálida, cuidada y con personalidad.
 
-El buen café también tiene su lugar en Lombardo. Trabajamos con café de especialidad para ofrecer una experiencia simple, cálida y cuidada en cada taza.
+Mission label:
+MISIÓN
 
-Supporting text:
+Mission text:
+Brindar un servicio que inspire y genere momentos memorables, sin perder la esencia del barrio y la cultura argentina.
 
-Desde un espresso intenso hasta un flat white perfectamente equilibrado, cada café se prepara respetando el origen y la calidad del grano.
+Vision label:
+VISIÓN
 
-Featured items:
+Vision text:
+Construir una marca que trascienda, evoque historia y pertenencia, y se convierta en un ícono dentro del sector gastronómico.
 
-espresso  
-flat white  
-capuccino  
-latte  
-café con algo dulce
+Values label:
+VALORES
+
+Values list:
+- CERCANÍA
+- COMUNIDAD
+- DIFERENCIACIÓN
+
+---
+
+# 6. CARTA / MENU OVERVIEW
+
+Section title:
+CARTA
+
+Intro:
+Una carta pensada para cualquier momento del día: desayunos, meriendas, café de especialidad, vinos, algo rico para acompañar y excusas perfectas para quedarse un rato más.
+
+CTA:
+VER CARTA COMPLETA
+
+---
+
+# 7. DESAYUNOS Y MERIENDAS
+
+Section title:
+DESAYUNOS Y MERIENDAS
+
+Intro:
+Nuestros combos están pensados para arrancar bien, cortar el día o regalarse un rato rico sin vueltas.
+
+Official combo names:
+- LA ENTRADA
+- TENTAZIONE
+- ENTRE PANES
+- LO JUSTO
+- EL TANO
+- VITAL
+- MILANO
+- CHIPANINI
+
+Optional support line:
+Hay opciones para el que va al grano, para el que comparte y para el que quiere quedarse largo.
+
+---
+
+# 8. CAFÉ
+
+Section title:
+CAFÉ DE ESPECIALIDAD
+
+Intro:
+En Lombardo el café se toma en serio, pero se vive sin solemnidad. Buen grano, buena mano y cero sanata.
+
+Support paragraph:
+Trabajamos con café de especialidad para ofrecer una experiencia rica, pareja y disfrutable, desde un espresso corto hasta una taza más larga para quedarse conversando.
+
+Coffee sizes and items:
+
+Category title:
+POCILLO · 90 ML
+Items:
+- ESPRESSO
+- DOPPIO
+- CORTADO
+
+Category title:
+MEDIANO · 160 ML
+Items:
+- FLAT WHITE
+- CAPUCCINO
+
+Category title:
+GRANDE · 220 ML
+Items:
+- LATTE
+- MOCHA
+- ESPECIAL DE LA CASA
+
+Tea block title:
+TÉ EN HEBRAS
+
+Tea text:
+También ofrecemos té en hebras, servido con tetera en la mesa para acompañar el momento con más calma.
 
 Closing line:
-
-Un buen café siempre encuentra su momento.
+UN BUEN CAFÉ SIEMPRE ENCUENTRA SU MOMENTO.
 
 ---
 
-# WINE EXPERIENCE SECTION
+# 9. PASTELERÍA
 
 Section title:
+PASTELERÍA
 
-La cultura del vino
+Intro:
+Para acompañar el café o para cortar el día con algo rico, nuestra selección suma clásicos y favoritos de siempre.
 
-Intro text:
+Items:
+- TORTAS POR PORCIÓN
+- BUDINES
+- COOKIES
+- ROSQUITAS
 
-El vino es parte central de la experiencia Lombardo. Una selección pensada para descubrir, disfrutar y compartir sin formalidades.
+---
 
-Supporting text:
+# 10. ALMUERZOS
 
-Nuestra propuesta combina etiquetas seleccionadas, vinos por copa y recomendaciones pensadas para que cada visita sea diferente.
+Section title:
+ALMUERZOS FÁCILES
+
+Intro:
+Opciones simples, ricas y bien resueltas para cuando querés comer algo sin perder el ritmo del día.
+
+Examples:
+- TOSTADOS
+- SÁNDWICHES
+- PLATOS SIMPLES
+
+---
+
+# 11. VINOS
+
+Section title:
+VINOS
+
+Intro:
+El vino es una parte central de Lombardo. Hay etiquetas para descubrir, copas para disfrutar y recomendaciones para encontrar eso que te gusta sin tanta vuelta.
+
+Support paragraph:
+Nuestra selección mezcla clásicos, etiquetas boutique y opciones pensadas para distintos momentos, desde una copa después del trabajo hasta una noche para brindar.
 
 Highlights:
-
-vinos por copa  
-etiquetas boutique  
-recomendaciones de la casa  
-descubrir nuevos sabores
+- VINOS POR COPA
+- ETIQUETAS SELECCIONADAS
+- RECOMENDACIONES DE LA CASA
+- CATA Y DESCUBRIMIENTO
 
 Closing line:
-
-El vino se disfruta mejor cuando se comparte.
-
----
-
-# EXPERIENCES / EVENTS SECTION
-
-Section title:
-
-Experiencias Lombardo
-
-Intro text:
-
-Más que una vinería, Lombardo es un punto de encuentro para vivir momentos especiales.
-
-Supporting text:
-
-Catas guiadas, encuentros entre amigos, eventos privados y noches donde el vino y la conversación son protagonistas.
-
-Experience blocks:
-
-Catas de vino  
-Eventos privados  
-Encuentros en el balcón  
-Happy hour  
-Noches especiales
-
-Closing phrase:
-
-Cada encuentro tiene su propio sabor.
+UN BUEN TINTO = CORAZÓN CONTENTO.
 
 ---
 
-# GALLERY SECTION
+# 12. BEBIDAS Y HAPPY HOUR
 
 Section title:
+BEBIDAS Y HAPPY HOUR
 
-La atmósfera Lombardo
+Intro:
+Cuando baja la tarde, Lombardo cambia de ritmo pero no de onda.
 
-Intro text:
+Items:
+- CERVEZA TIRADA
+- SIDRA TIRADA
+- VINOS POR COPA
+- TRAGOS CLÁSICOS
 
-Un espacio pensado para disfrutar del vino, del café y del momento.
+Happy Hour text:
+HAPPY HOUR DE 18 A 20 HS.
 
-Suggested image themes:
-
-copas brindando  
-vino sirviéndose  
-tazas de café  
-mesas compartidas  
-botellas  
-texturas cálidas  
-momentos reales
-
-Closing phrase:
-
-Un lugar para quedarse.
+Happy Hour support:
+Una franja pensada para encontrarse, brindar y arrancar la noche con algo bien servido.
 
 ---
 
-# VISIT US / CONTACT SECTION
+# 13. EXPERIENCIAS
 
 Section title:
+EXPERIENCIAS
 
-Te esperamos en Lombardo
+Intro:
+Más que venir a consumir, en Lombardo también podés venir a vivir algo distinto.
 
-Intro text:
+Experience items:
+- CATAS DE VINO
+- ENCUENTROS EN EL BALCÓN
+- AFTER OFFICE
+- MOMENTOS COMPARTIDOS
+- EXPERIENCIAS GASTRONÓMICAS
+- REGALOS Y DESCUBRIMIENTOS
 
-Un espacio donde el vino, el café y los encuentros se disfrutan sin apuro.
+Support paragraph:
+Queremos que cada visita tenga algo propio: una copa, una charla, una cata, una merienda o una excusa para quedarse un rato más.
 
-Location label:
+---
 
-Ubicación
+# 14. EVENTOS
+
+Section title:
+EVENTOS
+
+Intro:
+Siempre hay una buena razón para volver. Catas, encuentros, noches especiales y propuestas pensadas para compartir.
+
+Possible blocks:
+- CATAS GUIADAS
+- FECHAS ESPECIALES
+- EVENTOS PRIVADOS
+- NOCHES LOMBARDO
+- EXPERIENCIAS POR TEMPORADA
+
+CTA:
+CONSULTÁ PRÓXIMOS EVENTOS
+
+---
+
+# 15. CLUB LOMBARDO
+
+Section title:
+CLUB LOMBARDO
+
+Intro:
+En Club Lombardo, los que saben tienen su lugar.
+
+Support paragraph:
+Accedé a descuentos, catas y experiencias exclusivas pensadas para quienes quieren vivir Lombardo un poco más de cerca.
+
+Benefits:
+- DESCUENTOS ESPECIALES
+- CATAS
+- EXPERIENCIAS EXCLUSIVAS
+- NOVEDADES Y BENEFICIOS
+
+CTA:
+QUIERO SABER MÁS
+
+Alternative CTA:
+SUMARME AL CLUB
+
+---
+
+# 16. TIENDA / ECOMMERCE FUTURO
+
+Section title:
+TIENDA LOMBARDO
+
+Intro:
+Muy pronto vas a poder encontrar también una selección curada para llevarte Lombardo a tu casa.
+
+Support text:
+La tienda online va a sumar vinos, delicatessen, regalos y productos especiales seleccionados con el mismo criterio que se vive en el local.
+
+Future categories:
+- VINOS
+- DELICATESSEN
+- CONSERVAS
+- FIAMBRES
+- CARNES ENVASADAS
+- REGALOS
+- EXPERIENCIAS
+
+Status label:
+PRÓXIMAMENTE
+
+---
+
+# 17. GALERÍA
+
+Section title:
+GALERÍA
+
+Intro:
+Un poco de lo que pasa cuando el café, el vino y los buenos momentos se encuentran.
+
+Closing line:
+UN LUGAR AL QUE DAN GANAS DE VOLVER.
+
+---
+
+# 18. CONTACTO Y UBICACIÓN
+
+Section title:
+CONTACTO
+
+Intro:
+Si querés venir, escribirnos o encontrarnos fácil, acá tenés todo.
+
+Address label:
+UBICACIÓN
+
+Address:
+COLECTORA J. B. ALBERDI 1915, PUEBLO ESTHER
+
+Region:
+SANTA FE, ARGENTINA
+
+Map label:
+VER EN EL MAPA
 
 Hours label:
+HORARIOS
 
-Horarios
+Hours placeholder:
+AGREGAR HORARIOS ACTUALIZADOS
 
-Contact label:
+Instagram label:
+INSTAGRAM
 
-Contacto
+Instagram value:
+@LOMBARDOMERCATO
 
-Suggested CTA:
+WhatsApp CTA:
+ESCRIBINOS POR WHATSAPP
 
-Escribinos
-
-Closing phrase:
-
-Venís por una copa… y te quedás por el momento.
-
----
-
-# FOOTER
-
-Brand phrase:
-
-vino · café · encuentros
-
-Short description:
-
-Vinería boutique y café de especialidad en Pueblo Esther.
-
-Footer navigation:
-
-Inicio  
-Café  
-Vinos  
-Experiencias  
-Galería  
-Contacto
-
-Social media label:
-
-Seguinos
-
-Closing message:
-
-Lombardo — un lugar para disfrutar sin apuro.
-
----
-
-# MICROCOPY (UI TEXT)
-
-Buttons:
-
-Descubrir Lombardo  
-Ver experiencias  
-Contactanos  
-Escribinos  
-Ver ubicación  
-Reservar experiencia
-
-Form labels:
-
-Nombre  
-Email  
-Mensaje
+Contact form labels:
+- NOMBRE
+- EMAIL
+- MENSAJE
 
 Form button:
+ENVIAR MENSAJE
 
-Enviar mensaje
-
-Success message:
-
-Gracias por escribirnos. Pronto vamos a responderte.
-
-Error message:
-
-Por favor completá los campos requeridos.
+Support line:
+VENÍS POR UNA COPA… Y TE QUEDÁS POR EL MOMENTO.
 
 ---
 
-# SEO META TEXT
+# 19. FOOTER
+
+Brand line:
+LOMBARDO
+
+Support line:
+TU PUNTO DE ENCUENTRO EN PUEBLO ESTHER.
+
+Footer phrase:
+CAFÉ, VINO Y BUENOS MOMENTOS.
+
+Footer links:
+- INICIO
+- CARTA
+- EXPERIENCIAS
+- CLUB LOMBARDO
+- CONTACTO
+
+Footer small line:
+LOMBARDO — MERCATO DE ENCUENTRO
+
+---
+
+# 20. MICROCOPY
+
+Buttons:
+- VER CARTA
+- CONOCÉ LOMBARDO
+- VER CARTA COMPLETA
+- VER VINOS
+- VER CAFÉ
+- CONSULTAR EVENTOS
+- SUMARME AL CLUB
+- ESCRIBINOS
+- VER UBICACIÓN
+- IR AL MAPA
+- PRÓXIMAMENTE
+
+Messages:
+- GRACIAS POR ESCRIBIRNOS.
+- PRONTO VAMOS A RESPONDERTE.
+- COMPLETÁ LOS CAMPOS PARA SEGUIR.
+- MUY PRONTO VAS A PODER COMPRAR ONLINE.
+
+---
+
+# 21. SEO TEXT
 
 Meta title:
-
-Lombardo | Vinería boutique y café de especialidad
+LOMBARDO | CAFÉ, VINO Y BUENOS MOMENTOS EN PUEBLO ESTHER
 
 Meta description:
+Lombardo es tu punto de encuentro en Pueblo Esther: café de especialidad, vinos, desayunos, meriendas, experiencias, eventos y una propuesta con identidad.
 
-Lombardo es una vinería boutique y café de especialidad en Pueblo Esther. Un espacio elegante y relajado para disfrutar vino, café y buenos momentos.
-
-Keywords:
-
-vinería boutique  
-wine bar  
-café de especialidad  
-Pueblo Esther  
-Rosario  
-catas de vino  
-experiencias de vino
+SEO keywords:
+- lombardo
+- pueblo esther
+- café de especialidad
+- vinos por copa
+- carta digital
+- desayuno y merienda
+- catas
+- eventos
+- club lombardo
+- mercato de encuentro
