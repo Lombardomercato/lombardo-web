@@ -1,343 +1,408 @@
 # LOMBARDO — Design System
 
-Version: 1.0
+Version: 2.0
 
-This document defines the UI design system for the Lombardo website.
-It must be used together with brand-guidelines.md.
-
-Goal:
-Create a consistent, elegant, minimal and premium digital experience.
+This document defines the visual and UI system for the Lombardo website.
+It must be used together with:
+- brand-guidelines.md
+- website-structure.md
+- content-copy.md
+- ai-instructions.md
+- project-context.md
+- lombardo-ai-design-system.json
 
 ---
 
-# 1. Design Philosophy
+# 1. Design Direction
 
-The design must follow these principles:
+The Lombardo website must feel:
 
-minimal  
-elegant  
-editorial  
-warm  
-premium  
+- warm
+- modern
+- accessible
+- editorial
+- social
+- memorable
+- premium but not elitist
 
-The interface should feel similar to:
-
-Italian wine bars  
-boutique restaurants  
-editorial lifestyle websites  
+It should combine:
+- local identity
+- strong typography
+- color confidence
+- clean layouts
+- practical usability
 
 Avoid:
-
-visual noise  
-too many colors  
-heavy UI elements  
-tech startup aesthetics
+- luxury hotel style
+- dark generic wine-store aesthetics
+- startup SaaS design language
+- visual clutter
+- over-animated interfaces
 
 ---
 
-# 2. Layout System
+# 2. Layout Principles
 
-Use a centered layout.
+Use a centered responsive layout.
 
-Max width:
-1200px
+Recommended max content width:
+1280px
 
-Standard spacing between sections:
+Recommended inner content width:
+1120px to 1200px depending on section
 
-120px desktop  
-80px tablet  
-60px mobile
+Container padding:
+- desktop: 32px
+- tablet: 24px
+- mobile: 16px
 
-Content alignment:
-centered or left-aligned depending on section.
+Section spacing:
+- desktop: 112px
+- tablet: 80px
+- mobile: 56px
 
-Use generous white space.
+Use generous white/negative space.
+The site must breathe.
 
 ---
 
 # 3. Grid System
 
 Desktop:
-12 columns
+12-column grid
 
 Tablet:
-8 columns
+8-column grid
 
 Mobile:
-single column layout.
+4-column or single-column stack
 
-Use large margins and breathing space.
-
----
-
-# 4. Section Structure
-
-Each section should follow this structure:
-
-SECTION
-  title
-  subtitle
-  content
-  image or gallery
-
-Typical section order:
-
-Hero  
-About / Concept  
-Wine Experience  
-Specialty Coffee  
-Events / Tastings  
-Gallery  
-Location / Contact  
-Footer
+Use the grid to create rhythm and hierarchy, not density.
 
 ---
 
-# 5. Hero Section
+# 4. Color System
 
-The hero must create an emotional first impression.
+Use only official brand colors:
 
-Components:
+- #003A70
+- #D4EB8E
+- #FFB3AB
+- #E4D5D3
+- #E03C31
 
-large headline  
-short poetic sentence  
-background image or subtle texture  
-call-to-action button
+## Recommended usage
 
-Tone:
-elegant and inviting.
+### #003A70
+Use for:
+- nav
+- footer
+- strong backgrounds
+- institutional or elegant sections
+- secondary buttons
+- wine / brand blocks
 
-Example text:
+### #E03C31
+Use for:
+- primary CTA
+- hero emphasis
+- badges
+- highlighted statements
+- key interactions
 
-LOMBARDO  
-vino · café · encuentros
+### #E4D5D3
+Use for:
+- neutral backgrounds
+- warm surfaces
+- cards
+- base sections
+
+### #FFB3AB
+Use for:
+- softer backgrounds
+- coffee-related blocks
+- friendly accents
+- light feature sections
+
+### #D4EB8E
+Use for:
+- subtle accent details only
+- tags
+- small highlights
+- promotional micro-elements
+
+Rules:
+- keep contrast strong
+- avoid rainbow combinations in a single screen
+- do not use all colors with equal weight
+- prioritize clarity and brand recognition
+
+---
+
+# 5. Typography System
+
+## Display font
+Gopher
+
+Usage:
+- H1
+- H2
+- H3
+- hero lines
+- featured claims
+- short CTA emphasis
+
+Rules:
+- ALWAYS UPPERCASE
+- never lowercase
+- never in long paragraphs
+- slightly open tracking
+- keep lines concise
+
+Recommended CSS:
+- text-transform: uppercase;
+- letter-spacing: 0.04em to 0.08em;
+
+## Body font
+Articulat CF
+
+Usage:
+- paragraphs
+- descriptions
+- nav
+- buttons
+- menu items
+- practical info
+- forms
+- cards
+- event details
 
 ---
 
 # 6. Typography Scale
 
-Headings:
+Suggested scale:
 
-H1
-large elegant serif
-48px – 64px
+## H1
+Gopher Bold
+Clamp around 44px–72px
 
-H2
-section titles
-36px – 42px
+## H2
+Gopher Bold
+Clamp around 32px–52px
 
-H3
-subsections
-24px – 28px
+## H3
+Gopher Medium or Bold
+Clamp around 24px–36px
 
-Body text:
+## Body L
+Articulat CF
+18px
 
-16px – 18px
+## Body
+Articulat CF
+16px–18px
+
+## Small UI
+Articulat CF Demi Bold or Normal
+14px–16px
 
 Line height:
-1.6
-
-Headlines should feel editorial.
-
----
-
-# 7. Buttons
-
-Primary button:
-
-background: wine red  
-text: cream  
-padding: 14px 28px  
-border-radius: 6px
-
-Hover:
-
-slightly darker wine tone.
-
-Use buttons sparingly.
+- Body: 1.5 to 1.7
+- Headings: tighter and controlled
 
 ---
 
-# 8. Cards
+# 7. Component System
 
-Cards are used for:
+## Header / Navigation
+Must include:
+- logo
+- main menu
+- CTA to Carta
+- CTA to Contacto or WhatsApp
 
-wine selections  
-menu items  
-events
+Behavior:
+- sticky or semi-sticky
+- clear contrast
+- mobile menu accessible and simple
+
+## Hero
+Must include:
+- brand statement
+- claim or supporting phrase
+- primary CTA
+- secondary CTA
+- strong visual or brand color background
+
+Tone:
+- bold
+- welcoming
+- memorable
+- immediate
+
+## Buttons
+
+### Primary
+Background: #E03C31
+Text: #E4D5D3 or high-contrast equivalent
+
+### Secondary
+Background: #003A70
+Text: #E4D5D3
+
+### Outline / tertiary
+Transparent or light surface
+Border/text in #003A70
+
+Buttons should feel solid, confident and simple.
+Do not over-style them.
+
+## Cards
+Use for:
+- menu items
+- experience highlights
+- events
+- club benefits
+- featured products
 
 Style:
+- simple
+- readable
+- warm surfaces
+- subtle depth if needed
+- not glassmorphism
+- not over-rounded
 
-light background  
-soft shadow  
-rounded corners
+## Menu / Carta modules
+The digital menu must be easy to scan and update.
 
-Padding:
+Support:
+- section headings
+- categories
+- descriptions
+- optional prices
+- combos
+- tags
+- highlights
 
-24px
+It must work extremely well on mobile.
 
-Content:
+## Gallery
+Preferred styles:
+- refined grid
+- masonry
+- alternating editorial layout
 
-title  
-short description  
-optional image
+Must feel:
+- real
+- atmospheric
+- curated
 
----
+## Map block
+Must include:
+- embedded map
+- address
+- city / region
+- hours
+- CTA to WhatsApp or location directions
 
-# 9. Image System
-
-Images are very important.
-
-Use large photography.
-
-Typical ratios:
-
-16:9 for hero  
-4:5 for gallery  
-1:1 for product or wine images
-
-Images should feel natural and warm.
-
----
-
-# 10. Color Usage
-
-Use colors defined in brand-guidelines.md.
-
-Primary UI usage:
-
-Cream → page background  
-Wine red → buttons and accents  
-Black → typography  
-
-Gold should be used sparingly for details.
-
----
-
-# 11. Navigation
-
-Navigation should be simple.
-
-Menu items:
-
-Inicio  
-Vinos  
-Café  
-Experiencias  
-Eventos  
-Contacto
-
-Style:
-
-minimal  
-transparent or cream background
-
-Sticky navigation recommended.
+## Ecommerce placeholder
+Must include:
+- a clear section saying future online store / tienda
+- categories preview
+- soft coming soon messaging
+- no broken or fake commerce flows
 
 ---
 
-# 12. Footer
+# 8. Image Treatment
 
-Footer must contain:
+Use imagery to reinforce:
+- café
+- vino
+- productos
+- encuentros
+- balcón
+- mercado / delicatessen
+- interior del local
+- shared tables
+- real moments
 
-logo  
-short phrase  
-social media  
-location  
-opening hours
-
-Background color:
-
-charcoal black.
-
-Text color:
-
-cream.
-
----
-
-# 13. Animations
-
-Animations should be subtle.
-
-Recommended:
-
-fade-in  
-slow hover transitions  
-soft scroll reveals
-
-Avoid:
-
-fast animations  
-complex effects
+Image rules:
+- large crops are welcome
+- keep warmth
+- avoid excessive filters
+- preserve authenticity
 
 ---
 
-# 14. UX Guidelines
+# 9. Page Behavior and UX
 
-User experience must prioritize:
+The site must balance storytelling and utility.
 
-clarity  
-simplicity  
-emotional atmosphere  
+Primary user tasks:
+- understand what Lombardo is
+- see the menu
+- discover café and wine offer
+- explore experiences and events
+- join Club Lombardo
+- contact the business
+- find the location easily
 
-Rules:
-
-few elements per section  
-clear navigation  
-large readable text  
-comfortable scrolling
-
----
-
-# 15. Components List
-
-Components that may be used:
-
-Hero  
-Section title  
-Image gallery  
-Menu cards  
-Event cards  
-Testimonials  
-Reservation CTA  
-Footer
-
-Components should stay visually consistent.
+The site must not hide practical information.
 
 ---
 
-# 16. Responsive Behavior
-
-Desktop first design.
-
-Breakpoints:
-
-Desktop
-1200px+
-
-Tablet
-768px
-
-Mobile
-480px
+# 10. Responsive Rules
 
 On mobile:
+- stack content clearly
+- keep type readable
+- do not overload hero
+- prioritize Carta, Contacto and Ubicación
+- make buttons easy to tap
+- keep navigation short and accessible
+- digital menu must remain comfortable to scroll
 
-stack elements vertically  
-increase spacing  
-maintain readability.
+The mobile experience must feel premium and practical.
 
 ---
 
-# 17. Final Goal
+# 11. Accessibility and Clarity
 
-The Lombardo website should feel like:
+Minimum rules:
+- proper heading hierarchy
+- sufficient contrast
+- meaningful alt text
+- semantic HTML structure
+- visible focus states
+- accessible nav and buttons
+- readable text over images
 
-a modern Italian wine bar online experience.
+---
 
-Visitors should perceive:
+# 12. Technical Output Expectations
 
-quality  
-taste  
-relaxed elegance.
+Codex / Cursor should produce:
+- clean semantic HTML
+- clean organized CSS
+- minimal JS only when needed
+- reusable sections and patterns
+- architecture ready to scale
+
+Recommended output:
+- index.html
+- carta.html
+- cafe.html
+- vinos.html
+- experiencias.html
+- eventos.html
+- club.html
+- galeria.html
+- contacto.html
+- tienda.html
+- css/style.css
+- js/script.js
+
+If a one-page architecture is preferred initially, these sections must still exist clearly in the site and be easily splittable into future pages.
