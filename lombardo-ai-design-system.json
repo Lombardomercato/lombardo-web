@@ -1,0 +1,629 @@
+{
+  "project": {
+    "name": "LOMBARDO",
+    "version": "1.0",
+    "type": "brand_design_system_for_ai",
+    "primary_use": "Codex/Cursor website generation and redesign",
+    "source_of_truth": [
+      "Brandbook_Lombardo (3).pdf",
+      "brand-guidelines.md",
+      "design-system.md",
+      "website-structure.md",
+      "content-copy.md",
+      "ai-instructions.md",
+      "project-context.md"
+    ]
+  },
+  "brand": {
+    "name": "LOMBARDO",
+    "claim": "TU PUNTO DE ENCUENTRO EN PUEBLO ESTHER.",
+    "secondary_claim": "MERCATO DE ENCUENTRO",
+    "essence": [
+      "punto de encuentro",
+      "café, vino y buenos momentos",
+      "tradición + modernidad",
+      "gastronomía boutique accesible",
+      "comunidad local con estética cuidada"
+    ],
+    "personality": [
+      "cercanía",
+      "comunidad",
+      "diferenciación"
+    ],
+    "archetypes": [
+      "Compañero",
+      "Explorador"
+    ],
+    "voice": [
+      "cálida",
+      "accesible",
+      "auténtica",
+      "clara",
+      "argentina sin exageración",
+      "con carácter pero no pretenciosa"
+    ],
+    "tone_by_context": {
+      "social_media": [
+        "amigable",
+        "cercano",
+        "canchero"
+      ],
+      "website_brand_sections": [
+        "inspirador",
+        "emocional",
+        "cálido"
+      ],
+      "menu_and_product_info": [
+        "informativo",
+        "claro",
+        "simple"
+      ],
+      "events_and_membership": [
+        "atractivo",
+        "social",
+        "con identidad"
+      ]
+    }
+  },
+  "visual_identity": {
+    "logo": {
+      "rules": [
+        "No rotar",
+        "No distorsionar",
+        "No aplicar sombras",
+        "No cambiar colores fuera del sistema oficial",
+        "No alterar composición",
+        "Mantener área de seguridad equivalente a x alrededor del logotipo"
+      ],
+      "digital_min_width_px": 170
+    },
+    "colors": {
+      "official_palette": {
+        "azul_principal": {
+          "hex": "#003A70",
+          "pantone": "654C",
+          "rgb": [
+            0,
+            58,
+            112
+          ],
+          "usage": [
+            "fondos principales",
+            "bloques institucionales",
+            "footer",
+            "secciones sobrias",
+            "botones secundarios",
+            "navegación"
+          ]
+        },
+        "verde_claro": {
+          "hex": "#D4EB8E",
+          "pantone": "372C",
+          "rgb": [
+            212,
+            235,
+            142
+          ],
+          "usage": [
+            "acentos suaves",
+            "detalles juveniles",
+            "highlights muy puntuales",
+            "chips o etiquetas"
+          ]
+        },
+        "coral_suave": {
+          "hex": "#FFB3AB",
+          "pantone": "169C",
+          "rgb": [
+            255,
+            179,
+            171
+          ],
+          "usage": [
+            "fondos cálidos",
+            "acentos amigables",
+            "gráficas de café",
+            "bloques livianos"
+          ]
+        },
+        "gris_rosado": {
+          "hex": "#E4D5D3",
+          "pantone": "7604C",
+          "rgb": [
+            228,
+            213,
+            211
+          ],
+          "usage": [
+            "background base",
+            "secciones neutras",
+            "superficies",
+            "tarjetas"
+          ]
+        },
+        "rojo_lombardo": {
+          "hex": "#E03C31",
+          "pantone": "179C",
+          "rgb": [
+            224,
+            60,
+            49
+          ],
+          "usage": [
+            "llamados a la acción",
+            "hero statements",
+            "elementos de marca",
+            "microdetalles de identidad"
+          ]
+        }
+      },
+      "rules": [
+        "No introducir colores fuera de la paleta oficial",
+        "El sitio debe apoyarse visualmente sobre azul, gris rosado, rojo y coral",
+        "El verde claro solo se usa como acento ocasional, no como color dominante",
+        "Debe existir contraste alto y lectura clara en todo momento",
+        "Las combinaciones deben respetar un equilibrio entre sofisticado y relajado"
+      ],
+      "recommended_combinations": [
+        {
+          "background": "#003A70",
+          "text": "#FFB3AB",
+          "accent": "#D4EB8E"
+        },
+        {
+          "background": "#E03C31",
+          "text": "#E4D5D3",
+          "accent": "#003A70"
+        },
+        {
+          "background": "#E4D5D3",
+          "text": "#003A70",
+          "accent": "#E03C31"
+        },
+        {
+          "background": "#FFB3AB",
+          "text": "#003A70",
+          "accent": "#E03C31"
+        }
+      ]
+    },
+    "typography": {
+      "primary": {
+        "family": "Gopher",
+        "usage": [
+          "títulos",
+          "subtítulos",
+          "frases cortas",
+          "botones destacados muy puntuales"
+        ],
+        "allowed_weights": [
+          "Light",
+          "Regular",
+          "Medium",
+          "Bold"
+        ],
+        "rules": [
+          "Siempre en MAYÚSCULA",
+          "Nunca usar en párrafos largos",
+          "Mantener tracking ligeramente abierto",
+          "Usar para construir personalidad y recordación"
+        ],
+        "css_guidance": {
+          "text_transform": "uppercase",
+          "letter_spacing": "0.04em to 0.08em"
+        }
+      },
+      "secondary": {
+        "family": "Articulat CF",
+        "usage": [
+          "párrafos",
+          "descripciones",
+          "navegación",
+          "UI",
+          "carta digital",
+          "microcopy",
+          "formularios"
+        ],
+        "allowed_weights": [
+          "Normal",
+          "Demi Bold",
+          "Bold"
+        ]
+      },
+      "hierarchy": {
+        "h1": {
+          "font_family": "Gopher",
+          "weight": "Bold",
+          "case": "uppercase"
+        },
+        "h2": {
+          "font_family": "Gopher",
+          "weight": "Bold",
+          "case": "uppercase"
+        },
+        "h3": {
+          "font_family": "Gopher",
+          "weight": "Medium",
+          "case": "uppercase"
+        },
+        "body": {
+          "font_family": "Articulat CF",
+          "weight": "Normal"
+        },
+        "small_ui": {
+          "font_family": "Articulat CF",
+          "weight": "Demi Bold"
+        }
+      }
+    },
+    "graphic_resources": {
+      "illustrations": {
+        "style": "abstractas sobre productos",
+        "mood": "relajado y amigable",
+        "usage": [
+          "fondos suaves",
+          "detalles en señalética digital",
+          "bloques secundarios",
+          "empty states del ecommerce futuro"
+        ]
+      },
+      "photography": {
+        "themes": [
+          "vino sirviéndose",
+          "copas",
+          "cafés",
+          "mesas compartidas",
+          "balcón y encuentros",
+          "botellas y estanterías",
+          "productos gourmet",
+          "momentos reales"
+        ],
+        "mood": [
+          "cálido",
+          "social",
+          "auténtico",
+          "estético",
+          "nada stock corporativo"
+        ]
+      }
+    }
+  },
+  "ux_strategy": {
+    "site_goal": [
+      "presentar el concepto Lombardo",
+      "transmitir atmósfera",
+      "mostrar oferta de café, vino y gastronomía",
+      "facilitar visita, contacto y reserva/consulta",
+      "dejar base preparada para e-commerce y club"
+    ],
+    "primary_actions": [
+      "ver carta digital",
+      "visitar el local",
+      "escribir por WhatsApp",
+      "seguir en Instagram",
+      "consultar por eventos o catas",
+      "sumarse al Club Lombardo"
+    ],
+    "future_actions": [
+      "comprar vinos online",
+      "comprar delicatessen y regalos",
+      "reservar experiencias",
+      "suscribirse al club",
+      "ver productos por categoría"
+    ],
+    "user_segments": [
+      "clientes finales clase media y media-alta",
+      "vecinos de Pueblo Esther",
+      "visitantes de fin de semana",
+      "grupos de amigos",
+      "parejas",
+      "clientes interesados en café, vino y estética",
+      "mayoristas gastronómicos (segunda capa futura)"
+    ],
+    "brand_feeling_targets": [
+      "bienvenida",
+      "confianza",
+      "identidad",
+      "estética cuidada",
+      "ganas de ir",
+      "calidez de barrio con propuesta distinta"
+    ]
+  },
+  "information_architecture": {
+    "navigation": [
+      "Inicio",
+      "Nosotros",
+      "Carta",
+      "Café",
+      "Vinos",
+      "Experiencias",
+      "Eventos",
+      "Club Lombardo",
+      "Tienda",
+      "Galería",
+      "Contacto"
+    ],
+    "site_type": "Sitio principal tipo brand experience + carta digital + base ecommerce futura",
+    "page_structure": {
+      "home_sections_order": [
+        "Hero",
+        "Concepto / propuesta",
+        "Nosotros breve",
+        "Carta destacada",
+        "Café de especialidad",
+        "Vinos",
+        "Experiencias",
+        "Eventos",
+        "Club Lombardo",
+        "Galería",
+        "Ubicación con mapa",
+        "Contacto",
+        "Footer"
+      ],
+      "required_pages_or_sections": {
+        "inicio": "Landing principal con storytelling de marca",
+        "nosotros": "Historia, misión, visión, valores, concepto",
+        "carta": "Carta digital completa, fácil de actualizar",
+        "cafe": "Oferta de especialidad, tamaños, ritual, acompañamientos",
+        "vinos": "Vinos por copa, etiquetas, selección, recomendados",
+        "experiencias": "Catas, encuentros, balcón, after office, privados",
+        "eventos": "Agenda y fechas especiales",
+        "club_lombardo": "Beneficios, descuentos, experiencias exclusivas",
+        "tienda": "Placeholder y arquitectura preparada para ecommerce",
+        "galeria": "Mood y experiencia visual del lugar",
+        "contacto": "Ubicación, mapa, horarios, WhatsApp, Instagram, formulario"
+      }
+    }
+  },
+  "content_requirements": {
+    "must_include": [
+      "claim de marca",
+      "propuesta de valor",
+      "carta digital",
+      "cafetería de especialidad",
+      "vinos por copa",
+      "happy hour",
+      "desayunos y meriendas",
+      "pastelería",
+      "almuerzos fáciles",
+      "té en hebras",
+      "club Lombardo",
+      "espacio para e-commerce futuro",
+      "contacto y ubicación",
+      "mapa embebido",
+      "redes sociales",
+      "CTA a WhatsApp"
+    ],
+    "menu_structure": {
+      "desayunos_y_meriendas": [
+        "La entrada",
+        "Tentazione",
+        "Entre panes",
+        "Lo justo",
+        "El tano",
+        "Vital",
+        "Milano",
+        "Chipanini"
+      ],
+      "cafeteria": {
+        "marca_cafe": "Versé",
+        "sizes": [
+          {
+            "name": "Pocillo",
+            "ml": 90,
+            "items": [
+              "Espresso",
+              "Doppio",
+              "Cortado"
+            ]
+          },
+          {
+            "name": "Mediano",
+            "ml": 160,
+            "items": [
+              "Flat white",
+              "Capuccino"
+            ]
+          },
+          {
+            "name": "Grande",
+            "ml": 220,
+            "items": [
+              "Latte",
+              "Mocha",
+              "Especial de la casa"
+            ]
+          }
+        ]
+      },
+      "te": {
+        "type": "Té en hebras",
+        "service": "Servido con tetera en mesa"
+      },
+      "pasteleria": [
+        "Tortas por porción",
+        "Budines",
+        "Cookies",
+        "Rosquitas"
+      ],
+      "bebidas": [
+        "Cerveza tirada",
+        "Sidra tirada",
+        "Vinos por copa",
+        "Tragos clásicos"
+      ],
+      "happy_hour": {
+        "time": "18:00 a 20:00",
+        "includes": [
+          "Cerveza",
+          "Sidra",
+          "Tragos clásicos"
+        ]
+      },
+      "almuerzos": [
+        "Platos simples",
+        "Opciones rápidas",
+        "Sándwiches / tostados"
+      ],
+      "future_retail": [
+        "Delicatessen",
+        "Conservas",
+        "Fiambres",
+        "Carnes envasadas",
+        "Regalería",
+        "Boutique food"
+      ]
+    },
+    "contact_data_placeholders": {
+      "address": "Colectora J. B. Alberdi 1915, Pueblo Esther",
+      "city_region": "Pueblo Esther, Santa Fe, Argentina",
+      "instagram_handle": "lombardomercato",
+      "website": "lombardomercato.com",
+      "map_embed_required": true,
+      "whatsapp_cta_required": true
+    }
+  },
+  "ui_system": {
+    "layout": {
+      "max_width_px": 1280,
+      "container_padding": {
+        "desktop": 32,
+        "tablet": 24,
+        "mobile": 16
+      },
+      "section_spacing_px": {
+        "desktop": 112,
+        "tablet": 80,
+        "mobile": 56
+      },
+      "grid": {
+        "desktop": 12,
+        "tablet": 8,
+        "mobile": 4
+      }
+    },
+    "components": {
+      "header": {
+        "style": "sticky, clean, high contrast",
+        "must_include": [
+          "logo",
+          "navigation",
+          "CTA carta",
+          "CTA contacto or WhatsApp"
+        ]
+      },
+      "hero": {
+        "must_include": [
+          "brand statement",
+          "claim or subclaim",
+          "primary CTA",
+          "secondary CTA",
+          "brand mood imagery"
+        ],
+        "tone": "impactante, social, cálido"
+      },
+      "menu_cards": {
+        "use_for": [
+          "combos de desayuno",
+          "cafetería",
+          "pastelería",
+          "vinos",
+          "eventos"
+        ],
+        "style": "claras, accesibles, con jerarquía tipográfica fuerte"
+      },
+      "cta_buttons": {
+        "primary": {
+          "bg": "#E03C31",
+          "text": "#E4D5D3"
+        },
+        "secondary": {
+          "bg": "#003A70",
+          "text": "#E4D5D3"
+        },
+        "tertiary": {
+          "bg": "transparent",
+          "text": "#003A70",
+          "border": "#003A70"
+        }
+      },
+      "gallery": {
+        "style": "editorial masonry or refined grid",
+        "ratio_mix": [
+          "portrait",
+          "landscape",
+          "square"
+        ]
+      },
+      "map_block": {
+        "must_include": [
+          "embedded map",
+          "address",
+          "opening hours",
+          "contact CTA"
+        ]
+      },
+      "ecommerce_placeholder": {
+        "must_include": [
+          "title",
+          "brief copy",
+          "coming soon or future expansion messaging",
+          "product categories preview"
+        ]
+      }
+    },
+    "responsive_rules": [
+      "Mantener legibilidad premium en mobile",
+      "Stack vertical claro en pantallas pequeñas",
+      "Botones con buen touch target",
+      "Menú accesible",
+      "Mapa usable",
+      "Carta digital fácil de scrollear"
+    ]
+  },
+  "seo_and_semantics": {
+    "metadata_priorities": [
+      "Lombardo",
+      "Pueblo Esther",
+      "café de especialidad",
+      "vino",
+      "carta digital",
+      "catas",
+      "club de vinos",
+      "vinería",
+      "mercato"
+    ],
+    "semantic_requirements": [
+      "Un solo H1 por página",
+      "Encabezados jerárquicos correctos",
+      "Alt text descriptivo en imágenes",
+      "Schema local business ideal en futura iteración",
+      "Secciones claras para menú, contacto y ubicación"
+    ]
+  },
+  "technical_rules_for_ai": {
+    "build_stack": [
+      "HTML",
+      "CSS",
+      "minimal JavaScript"
+    ],
+    "requirements": [
+      "Código limpio y semántico",
+      "No usar librerías pesadas salvo necesidad real",
+      "Dejar arquitectura lista para escalar a e-commerce",
+      "Centralizar tokens visuales",
+      "No inventar colores ni tipografías fuera del sistema",
+      "No usar Gopher en minúscula",
+      "Usar Articulat CF en cuerpo y UI",
+      "Preparar placeholders editables para menú, eventos y tienda"
+    ],
+    "file_output_expected": [
+      "index.html",
+      "css/style.css",
+      "js/script.js",
+      "assets/images/",
+      "assets/logo/"
+    ]
+  },
+  "master_prompt_for_codex": "Read and follow as source of truth:\n- the Lombardo brandbook PDF\n- brand-guidelines.md\n- design-system.md\n- website-structure.md\n- content-copy.md\n- ai-instructions.md\n- project-context.md\n- lombardo-ai-design-system.json\n\nBuild or redesign the Lombardo website accordingly.\n\nHard rules:\n- Use only the official color palette from lombardo-ai-design-system.json.\n- Use Gopher only in uppercase for headings, short statements and display text.\n- Use Articulat CF for paragraphs, UI, menu content and long text.\n- Keep the website aligned with Lombardo's identity: community, warmth, differentiation, tradition + modernity.\n- The website must include Home, Nosotros, Carta, Café, Vinos, Experiencias, Eventos, Club Lombardo, Tienda, Galería and Contacto.\n- Include digital menu, location with embedded map, WhatsApp CTA, Instagram link and a future-ready ecommerce section.\n- Preserve a premium but accessible aesthetic.\n- Make the site fully responsive and semantically structured.\n- Favor clarity, atmosphere and brand consistency over visual noise.\n\nRequired homepage order:\nHero → Concepto → Nosotros breve → Carta destacada → Café → Vinos → Experiencias → Eventos → Club Lombardo → Galería → Ubicación con mapa → Contacto → Footer\n\nOutput:\n- index.html\n- css/style.css\n- js/script.js\n- any necessary supporting folders and assets references\n"
+}
