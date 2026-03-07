@@ -1449,7 +1449,7 @@ p {
   border-radius: 0;
 }
 
-/* Mobile hardening pass for homepage responsiveness */
+/* Mobile hardening pass for homepage responsiveness (consolidated to avoid merge conflicts) */
 @media (max-width: 760px) {
   .site-header {
     position: sticky;
@@ -1466,11 +1466,15 @@ p {
   }
 
   .main-nav {
-    top: 60px;
+    position: fixed;
+    top: 68px;
     left: 10px;
     right: 10px;
-    max-height: calc(100vh - 90px);
-    overflow: auto;
+    bottom: 12px;
+    max-height: none;
+    overflow-y: auto;
+    align-content: start;
+    z-index: 55;
   }
 
   .main-nav a {
@@ -1493,6 +1497,14 @@ p {
     letter-spacing: 0.12em;
   }
 
+  .home-editorial .hero-layout,
+  .home-editorial .editorial-columns,
+  .home-editorial .split-grid,
+  .home-editorial .image-composition,
+  .home-editorial .editorial-location-grid {
+    grid-template-columns: 1fr;
+  }
+
   .hero-layout {
     gap: 18px;
   }
@@ -1505,21 +1517,28 @@ p {
   .hero-editorial .hero-statement {
     font-size: clamp(1rem, 4vw, 1.2rem);
     line-height: 1.4;
+    max-width: 100%;
   }
 
   .hero-editorial .hero-note {
     padding-left: 12px;
+    max-width: 100%;
   }
 
   .home-editorial .actions {
+    width: 100%;
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
   }
 
+  .home-editorial .btn,
   .home-editorial .actions .btn {
     width: 100%;
     min-height: 44px;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
   }
 
   .home-editorial .section {
@@ -1547,6 +1566,12 @@ p {
   .menu-lines p {
     padding-bottom: 10px;
     font-size: 0.86rem;
+  }
+
+  .home-editorial .menu-lines p span {
+    display: block;
+    min-width: 0;
+    margin-bottom: 5px;
   }
 
   .editorial-list {
@@ -1583,66 +1608,12 @@ p {
     width: min(var(--max), calc(100% - 22px));
   }
 
-  .hero-editorial h1 {
-    font-size: clamp(2.25rem, 17vw, 3.6rem);
-  }
-
-  .home-editorial .btn {
-    font-size: 0.66rem;
-    letter-spacing: 0.08em;
-  }
-}
-
-/* Conflict-safe responsive overrides (single-source mobile behavior) */
-@media (max-width: 760px) {
-  .home-editorial .hero-layout,
-  .home-editorial .editorial-columns,
-  .home-editorial .split-grid,
-  .home-editorial .image-composition,
-  .home-editorial .editorial-location-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .home-editorial .actions {
-    width: 100%;
-  }
-
-  .home-editorial .btn {
-    width: 100%;
-    white-space: normal;
-    text-align: center;
-    justify-content: center;
-  }
-
-  .home-editorial .menu-lines p span {
-    display: block;
-    min-width: 0;
-    margin-bottom: 5px;
-  }
-
-  .home-editorial .hero-note {
-    max-width: 100%;
-  }
-
-  .main-nav {
-    position: fixed;
-    top: 68px;
-    left: 10px;
-    right: 10px;
-    bottom: 12px;
-    overflow-y: auto;
-    align-content: start;
-    z-index: 55;
-  }
-}
-
-@media (max-width: 420px) {
   .home-editorial .hero {
     min-height: 76vh;
   }
 
-  .home-editorial .hero-statement {
-    max-width: 100%;
+  .hero-editorial h1 {
+    font-size: clamp(2.25rem, 17vw, 3.6rem);
   }
 
   .main-nav {
@@ -1650,5 +1621,10 @@ p {
     left: 8px;
     right: 8px;
     bottom: 8px;
+  }
+
+  .home-editorial .btn {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
   }
 }
