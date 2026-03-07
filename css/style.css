@@ -241,10 +241,10 @@ main > .section > .container > h2::after {
 
 .hero {
   background:
-    linear-gradient(120deg, rgba(0, 58, 112, 0.92), rgba(0, 58, 112, 0.55) 46%, rgba(224, 60, 49, 0.82)),
-    url('../assets/hero/hero-home.jpg') center / cover;
+    linear-gradient(110deg, rgba(19, 16, 13, 0.72), rgba(19, 16, 13, 0.45) 45%, rgba(19, 16, 13, 0.8)),
+    url('../assets/fotos/local.jpg') center center / cover no-repeat;
   color: var(--gris);
-  min-height: 90vh;
+  min-height: 100vh;
   display: grid;
   align-items: center;
 }
