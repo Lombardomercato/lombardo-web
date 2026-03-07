@@ -734,35 +734,6 @@ main > .section:nth-of-type(even) .grid-2 > img {
     font-size: 0.74rem;
   }
 
-  .nav-toggle {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid rgba(228, 213, 211, 0.9);
-    background: transparent;
-    color: var(--gris);
-    border-radius: 999px;
-    padding: 8px 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.71rem;
-    font-weight: 700;
-  }
-
-  .main-nav {
-    display: none;
-    position: absolute;
-    top: 64px;
-    left: 12px;
-    right: 12px;
-    background: rgba(0, 58, 112, 0.98);
-    border: 1px solid rgba(255, 179, 171, 0.74);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    gap: 6px;
-  }
-
-  .main-nav.open { display: grid; }
-
   .gallery { grid-template-columns: 1fr 1fr; }
   .g1, .g2, .g3, .g4, .g5 { grid-column: auto; }
 
