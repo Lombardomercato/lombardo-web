@@ -550,6 +550,43 @@ main > .section:nth-of-type(even) .grid-2 > img {
   border-style: solid;
 }
 
+
+.club-highlight .container {
+  align-items: stretch;
+}
+
+.club-highlight .eyebrow {
+  color: var(--verde);
+  margin-bottom: 8px;
+}
+
+.club-highlight .actions {
+  margin-top: 28px;
+}
+
+.club-benefits {
+  background: rgba(228, 213, 211, 0.12);
+  border: 1px solid rgba(228, 213, 211, 0.42);
+  border-top: 3px solid var(--verde);
+  color: var(--gris);
+}
+
+.club-benefits h3 {
+  color: var(--verde);
+  margin-bottom: 14px;
+}
+
+.club-benefits ul {
+  padding-left: 20px;
+}
+
+.club-benefits li {
+  margin-bottom: 10px;
+}
+
+.club-benefits li::marker {
+  color: var(--coral);
+}
 .main-nav a[href="carta.html"],
 .main-nav a[href="contacto.html"] {
   padding-inline: 10px;
