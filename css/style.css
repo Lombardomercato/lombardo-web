@@ -1478,3 +1478,147 @@ p {
   z-index: 0;
   border-radius: 0;
 }
+
+/* Mobile hardening pass for homepage responsiveness */
+@media (max-width: 760px) {
+  .site-header {
+    position: sticky;
+  }
+
+  .nav-wrap {
+    min-height: 68px;
+    gap: 12px;
+  }
+
+  .brand {
+    font-size: 0.84rem;
+    letter-spacing: 0.13em;
+  }
+
+  .main-nav {
+    top: 60px;
+    left: 10px;
+    right: 10px;
+    max-height: calc(100vh - 90px);
+    overflow: auto;
+  }
+
+  .main-nav a {
+    padding: 8px 4px;
+    font-size: 0.72rem;
+  }
+
+  .home-editorial .hero {
+    min-height: 82vh;
+  }
+
+  .hero-editorial .container {
+    padding-top: 18px;
+    padding-bottom: 22px;
+  }
+
+  .hero-editorial .eyebrow {
+    margin-bottom: 22px;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+  }
+
+  .hero-layout {
+    gap: 18px;
+  }
+
+  .hero-editorial h1 {
+    font-size: clamp(2.5rem, 18vw, 4.5rem);
+    line-height: 0.9;
+  }
+
+  .hero-editorial .hero-statement {
+    font-size: clamp(1rem, 4vw, 1.2rem);
+    line-height: 1.4;
+  }
+
+  .hero-editorial .hero-note {
+    padding-left: 12px;
+  }
+
+  .home-editorial .actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .home-editorial .actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .home-editorial .section {
+    padding-block: 52px;
+  }
+
+  .home-editorial h2 {
+    font-size: clamp(1.7rem, 10vw, 2.2rem);
+    line-height: 0.96;
+  }
+
+  .home-editorial p {
+    font-size: 1rem;
+    line-height: 1.62;
+  }
+
+  .editorial-columns {
+    gap: 18px;
+  }
+
+  .intro-kicker {
+    font-size: clamp(1.2rem, 8vw, 1.8rem);
+  }
+
+  .menu-lines p {
+    padding-bottom: 10px;
+    font-size: 0.86rem;
+  }
+
+  .editorial-list {
+    gap: 10px;
+  }
+
+  .editorial-list li {
+    padding-bottom: 10px;
+    font-size: 1rem;
+  }
+
+  .split-grid article {
+    padding: 16px;
+  }
+
+  .map-editorial iframe {
+    min-height: 250px;
+  }
+
+  .float-wa {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .float-wa .btn {
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .container {
+    width: min(var(--max), calc(100% - 22px));
+  }
+
+  .hero-editorial h1 {
+    font-size: clamp(2.25rem, 17vw, 3.6rem);
+  }
+
+  .home-editorial .btn {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+  }
+}
