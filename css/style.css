@@ -588,6 +588,49 @@ main > .section:nth-of-type(even) .grid-2 > img {
   backdrop-filter: blur(6px);
 }
 
+.tienda-hero h1 {
+  max-width: 14ch;
+  margin-bottom: 10px;
+}
+
+.tienda-eyebrow {
+  color: rgba(0, 58, 112, 0.78);
+  margin-bottom: 12px;
+}
+
+.tienda-lead {
+  font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+  max-width: 48ch;
+  margin-bottom: clamp(26px, 4.5vw, 46px);
+}
+
+.tienda-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.tienda-card {
+  display: flex;
+  align-items: center;
+  min-height: 84px;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 58, 112, 0.24);
+  background: rgba(228, 213, 211, 0.66);
+}
+
+.tienda-card h2 {
+  margin: 0;
+  font-family: 'Articulat CF', Arial, sans-serif;
+  font-size: clamp(0.92rem, 1.35vw, 1.02rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  max-width: none;
+}
+
 @media (max-width: 1024px) {
   .container { width: min(var(--max), calc(100% - 54px)); }
 
