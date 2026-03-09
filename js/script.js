@@ -258,6 +258,41 @@ if (sommelierApp) {
     document.querySelector('meta[name="openai-api-key"]')?.getAttribute('content')?.trim() || ''
   );
 
+
+  const getGoogleSheetsEndpoint = () => (
+    document.querySelector('meta[name="google-sheets-endpoint"]')?.getAttribute('content')?.trim() || ''
+  );
+
+  const persistSommelierResponse = async () => {
+    const endpoint = getGoogleSheetsEndpoint();
+
+    if (!endpoint) return;
+
+    const payload = {
+      fecha: new Date().toISOString(),
+      tipo_vino: responses.tipo_vino,
+      presupuesto: responses.presupuesto,
+      ocasion: responses.ocasion,
+      comida: responses.comida,
+      estilo: responses.estilo,
+      texto_libre: responses.texto_libre,
+    };
+
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('No se pudo guardar la respuesta en Google Sheets:', error);
+    }
+  };
+
   const normalizeFreeTextSignals = (payload) => {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
 
@@ -520,6 +555,8 @@ if (sommelierApp) {
       if (!winesCatalog.length) {
         await loadWineCatalog();
       }
+
+      void persistSommelierResponse();
 
       try {
         const freeTextSignals = await getFreeTextSignals(responses.texto_libre);
