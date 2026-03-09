@@ -163,6 +163,7 @@ if (sommelierApp) {
     ocasion: '',
     comida: '',
     estilo: '',
+    texto_libre: '',
   };
 
   let currentStep = 0;
@@ -182,10 +183,14 @@ if (sommelierApp) {
   const submitBtn = sommelierApp.querySelector('[data-submit]');
   const restartBtn = sommelierApp.querySelector('[data-restart]');
   const resultList = sommelierApp.querySelector('[data-result-list]');
+  const freeTextWrap = sommelierApp.querySelector('[data-free-text-wrap]');
+  const freeTextInput = sommelierApp.querySelector('[data-free-text]');
+
+  const requiredQuestionKeys = questions.map((question) => question.key);
 
   if (stepTotal) stepTotal.textContent = String(questions.length);
 
-  const isComplete = () => Object.values(responses).every(Boolean);
+  const isComplete = () => requiredQuestionKeys.every((key) => Boolean(responses[key]));
 
   const setPanelTransition = (panel) => {
     panel.classList.add('is-transitioning');
@@ -222,11 +227,21 @@ if (sommelierApp) {
       optionsWrap.appendChild(button);
     });
 
+    const isFinalStep = currentStep === questions.length - 1;
+
+    if (freeTextWrap) {
+      freeTextWrap.hidden = !isFinalStep;
+    }
+
+    if (freeTextInput) {
+      freeTextInput.value = responses.texto_libre;
+    }
+
     prevBtn.hidden = currentStep === 0;
     const hasSelection = Boolean(selected);
-    nextBtn.hidden = currentStep === questions.length - 1;
+    nextBtn.hidden = isFinalStep;
     nextBtn.disabled = !hasSelection;
-    submitBtn.hidden = currentStep !== questions.length - 1;
+    submitBtn.hidden = !isFinalStep;
     submitBtn.disabled = !isComplete();
   };
 
@@ -314,6 +329,12 @@ if (sommelierApp) {
     const data = await response.json();
     winesCatalog = Array.isArray(data) ? data : [];
   };
+
+  if (freeTextInput) {
+    freeTextInput.addEventListener('input', (event) => {
+      responses.texto_libre = event.target.value;
+    });
+  }
 
   nextBtn.addEventListener('click', () => {
     if (currentStep < questions.length - 1) {
