@@ -804,29 +804,67 @@ if (sommelierApp) {
     ].filter((entry) => entry.wine);
   };
 
+  const getBoxRoleLabel = (role) => {
+    if (role === 'anchor') return 'Vino ancla';
+    if (role === 'upgrade') return 'Vino upgrade';
+    return 'Vino descubrimiento';
+  };
+
+  const getBoxRoleDescription = (role, profile, wine) => {
+    const normalized = getNormalizedAnswers();
+    const occasionLabel = humanizeField('ocasion', 'tu ocasión');
+    const styleLabel = humanizeField('estilo', 'tu estilo');
+    const varietalLabel = wine?.varietal || 'esta etiqueta';
+
+    if (role === 'anchor') {
+      return `La base segura de tu caja: un ${varietalLabel} alineado a ${profile.name} y pensado para ${occasionLabel}.`;
+    }
+
+    if (role === 'upgrade') {
+      return `Una versión más especial de tu perfil ${styleLabel}: suma complejidad y un toque más elegante en copa.`;
+    }
+
+    return `La botella para abrir el paladar con criterio: distinta, compatible con tu perfil y elegida para descubrir sin riesgos.`;
+  };
+
   const buildCuratedBox = (excludeNames = new Set()) => {
     const ranked = getRankedWines(excludeNames);
     const selectedNames = new Set();
 
-    const secure = pickDistinctWine(ranked, selectedNames, (wine) => wine.score >= 24);
-    const special = pickDistinctWine(ranked, selectedNames, (wine) => ['alto', 'premium'].includes((wine.nivel_precio || '').toLowerCase()));
-    const discovery = pickDistinctWine(ranked, selectedNames, (wine) => wine.ocasion === 'descubrir' || wine.tipo_vino !== secure?.tipo_vino);
+    const anchor = pickDistinctWine(ranked, selectedNames, (wine) => wine.score >= 24 || (wine.prioridad_venta || '').toLowerCase() === 'alta');
+    const upgrade = pickDistinctWine(
+      ranked,
+      selectedNames,
+      (wine) => (
+        ['alto', 'premium'].includes((wine.nivel_precio || '').toLowerCase())
+        || (wine.precio || 0) >= (anchor?.precio || 0)
+      ),
+    );
+    const discovery = pickDistinctWine(
+      ranked,
+      selectedNames,
+      (wine) => wine.tipo_vino !== anchor?.tipo_vino || wine.varietal !== anchor?.varietal || wine.ocasion === 'descubrir',
+    );
 
-    return [secure, special, discovery].filter(Boolean);
+    return [
+      { role: 'anchor', wine: anchor },
+      { role: 'upgrade', wine: upgrade },
+      { role: 'discovery', wine: discovery },
+    ].filter((entry) => entry.wine);
   };
 
   const getBoxClosingMessage = (profile) => {
     const normalizedOccasion = answerMappings.ocasion[responses.ocasion] || '';
 
     if (normalizedOccasion === 'regalo') {
-      return `Esta caja fue curada para ${profile.name}: combina una etiqueta segura, una opción elegante y un descubrimiento que suma wow al regalo.`;
+      return 'Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Ideal para regalar con criterio y buena presencia.';
     }
 
     if (normalizedOccasion === 'asado' || normalizedOccasion === 'cena_amigos') {
-      return 'Pensada para compartir: arranca con una base confiable, sube con una opción especial y cierra con un vino que invita a conversar.';
+      return 'Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Funciona muy bien para compartir en mesa.';
     }
 
-    return `Una curaduría equilibrada para ${profile.name}: te resuelve el día a día y, al mismo tiempo, te deja lugar para descubrir nuevas etiquetas.`;
+    return `Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Queda alineada con tu perfil ${profile.name} y con la forma en la que disfrutás el vino.`;
   };
 
   const buildMonthlySelection = (excludeNames = new Set()) => {
@@ -881,7 +919,7 @@ if (sommelierApp) {
     const profile = getWineProfile();
     const recommendedNames = new Set(recommendations.map((entry) => entry.wine.nombre));
     const curatedBox = buildCuratedBox(recommendedNames);
-    const boxNames = new Set(curatedBox.map((wine) => wine.nombre));
+    const boxNames = new Set(curatedBox.map((entry) => entry.wine.nombre));
     const monthlySelection = buildMonthlySelection(new Set([...recommendedNames, ...boxNames]));
 
     recommendations.forEach((entry, index) => {
@@ -913,10 +951,15 @@ if (sommelierApp) {
     });
 
     if (boxList) {
-      curatedBox.forEach((wine) => {
+      curatedBox.forEach((entry) => {
         const item = document.createElement('article');
         item.className = 'sommelier-box-item';
-        item.innerHTML = `<h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
+        item.innerHTML = `
+          <p class="sommelier-box-role">${getBoxRoleLabel(entry.role)}</p>
+          <h4>${entry.wine.nombre}</h4>
+          <p>${formatPrice(entry.wine.precio)}</p>
+          <p class="sommelier-box-role-description">${getBoxRoleDescription(entry.role, profile, entry.wine)}</p>
+        `;
         boxList.appendChild(item);
       });
     }
