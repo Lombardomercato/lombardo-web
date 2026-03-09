@@ -1521,3 +1521,133 @@ p {
     min-height: 200px;
   }
 }
+
+/* Unified section system */
+.section-shell .container {
+  max-width: 1100px;
+}
+
+.shell-head {
+  display: grid;
+  gap: 18px;
+  margin-bottom: clamp(32px, 5vw, 54px);
+}
+
+.section-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 0.74rem;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.section-lead {
+  margin: 0;
+  max-width: 66ch;
+  font-size: clamp(1.04rem, 1.5vw, 1.25rem);
+  line-height: 1.7;
+}
+
+.shell-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(18px, 2.4vw, 30px);
+  align-items: stretch;
+}
+
+.shell-grid-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.section-card {
+  min-height: 100%;
+  background: rgba(228, 213, 211, 0.7);
+}
+
+.bg-azul .section-card {
+  background: rgba(228, 213, 211, 0.08);
+  border-color: rgba(228, 213, 211, 0.28);
+}
+
+.section-card h2 {
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  max-width: none;
+}
+
+.section-card p,
+.section-card li {
+  font-size: 0.97rem;
+}
+
+.section-media {
+  margin: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow-media);
+  min-height: 280px;
+}
+
+.section-media img {
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s ease;
+}
+
+.section-media:hover img,
+.premium-gallery img:hover {
+  transform: scale(1.04);
+}
+
+.premium-gallery {
+  gap: clamp(12px, 1.8vw, 20px);
+}
+
+.premium-gallery div {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.tienda-grid-ux {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.contact-grid {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.motion-enabled .reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.motion-enabled .reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 900px) {
+  .shell-grid,
+  .shell-grid-cards,
+  .cards-grid,
+  .tienda-grid-ux,
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-media {
+    min-height: 220px;
+  }
+}
