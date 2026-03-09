@@ -2470,6 +2470,7 @@ main > .section:last-child::after,
 @media (max-width: 1024px) {
   .site-header {
     position: relative;
+    z-index: 120;
   }
 
   .nav-wrap {
@@ -2484,19 +2485,42 @@ main > .section:last-child::after,
     letter-spacing: 0.14em;
     font-weight: 400;
     border-color: rgba(228, 213, 211, 0.62);
+    position: relative;
+    z-index: 2;
   }
 
   .main-nav {
+    display: grid;
+    position: absolute;
     top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    width: 100%;
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 16px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.24s ease, transform 0.24s ease, visibility 0.24s ease;
+    z-index: 110;
+  }
+
+  .main-nav.open {
+    display: grid;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
   }
 
   .nav-primary,
   .nav-secondary {
     display: grid;
     gap: 8px;
+    justify-self: stretch;
+    width: 100%;
   }
 
   .main-nav a {
@@ -2519,37 +2543,17 @@ main > .section:last-child::after,
     text-align: center;
     border-color: rgba(255, 179, 171, 0.85);
     background: rgba(255, 179, 171, 0.2);
+    justify-self: stretch;
+    width: 100%;
+    padding-inline: 14px;
   }
 
   .nav-secondary {
     order: 3;
   }
-}
 
-
-/* Mobile navigation alignment fixes */
-@media (max-width: 1024px) {
-  .main-nav {
-    left: 0;
-    right: 0;
-    width: 100%;
-    position: absolute;
-  }
-
-  .main-nav.open {
-    display: grid;
-  }
-
-  .nav-primary,
-  .nav-secondary {
-    justify-self: stretch;
-    width: 100%;
-  }
-
-  .main-nav .nav-cta {
-    justify-self: stretch;
-    width: 100%;
-    padding-inline: 14px;
+  body.nav-open {
+    overflow: hidden;
   }
 }
 

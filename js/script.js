@@ -2,14 +2,20 @@ const navToggle = document.querySelector('.nav-toggle');
 const mainNav = document.querySelector('.main-nav');
 
 if (navToggle && mainNav) {
+  const syncMenuState = (open) => {
+    mainNav.classList.toggle('open', open);
+    navToggle.classList.toggle('is-active', open);
+    navToggle.setAttribute('aria-expanded', String(open));
+    navToggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+    document.body.classList.toggle('nav-open', open && window.matchMedia('(max-width: 1024px)').matches);
+  };
+
   const closeMenu = () => {
-    mainNav.classList.remove('open');
-    navToggle.setAttribute('aria-expanded', 'false');
+    syncMenuState(false);
   };
 
   navToggle.addEventListener('click', () => {
-    const open = mainNav.classList.toggle('open');
-    navToggle.setAttribute('aria-expanded', String(open));
+    syncMenuState(!mainNav.classList.contains('open'));
   });
 
   mainNav.querySelectorAll('a').forEach((link) => {
@@ -26,6 +32,10 @@ if (navToggle && mainNav) {
 
   window.addEventListener('resize', () => {
     if (!window.matchMedia('(max-width: 1024px)').matches) closeMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && mainNav.classList.contains('open')) closeMenu();
   });
 }
 
@@ -944,4 +954,3 @@ if (sommelierApp) {
 
   renderQuestion();
 }
-
