@@ -1436,3 +1436,88 @@ p {
     grid-column: auto;
   }
 }
+
+/* Mobile polish pass */
+@media (max-width: 760px) {
+  body {
+    line-height: 1.58;
+  }
+
+  .nav-wrap {
+    min-height: 64px;
+  }
+
+  .main-nav {
+    top: calc(100% + 2px);
+    padding: 10px;
+  }
+
+  .main-nav a {
+    font-size: 0.74rem;
+    letter-spacing: 0.035em;
+  }
+
+  .hero,
+  .hero-editorial {
+    min-height: 70vh;
+  }
+
+  .hero-editorial h1 {
+    font-size: clamp(2.2rem, 14vw, 3.6rem);
+    line-height: 0.94;
+  }
+
+  p {
+    font-size: 0.98rem;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .btn {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    width: min(var(--max), calc(100% - 24px));
+  }
+
+  .section,
+  main > .section:nth-of-type(odd):not(.hero),
+  main > .section:nth-of-type(even):not(.hero) {
+    padding-block: 48px;
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 11.5vw, 2.55rem);
+  }
+
+  h2 {
+    font-size: clamp(1.4rem, 8.4vw, 2rem);
+  }
+
+  .hero .container {
+    padding-block: 10px;
+  }
+
+  .hero,
+  .hero-editorial {
+    min-height: 64vh;
+  }
+
+  .hero-note {
+    padding: 12px;
+  }
+
+  .grid-2 > img,
+  .image-side img,
+  .image-main img,
+  .image-wide img {
+    min-height: 200px;
+  }
+}
