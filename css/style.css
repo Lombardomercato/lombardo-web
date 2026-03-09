@@ -646,6 +646,17 @@ main > .section:nth-of-type(even) .grid-2 > img {
   letter-spacing: 0.03em;
 }
 
+.footer-dev {
+  margin: 12px 0 0;
+}
+
+.footer-dev a {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
 .float-wa .btn {
   border: 0;
   backdrop-filter: blur(6px);
