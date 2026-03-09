@@ -184,6 +184,9 @@ if (sommelierApp) {
   const submitBtn = sommelierApp.querySelector('[data-submit]');
   const restartBtn = sommelierApp.querySelector('[data-restart]');
   const resultList = sommelierApp.querySelector('[data-result-list]');
+  const profileBlock = sommelierApp.querySelector('[data-profile]');
+  const profileName = sommelierApp.querySelector('[data-profile-name]');
+  const profileDescription = sommelierApp.querySelector('[data-profile-description]');
   const freeTextWrap = sommelierApp.querySelector('[data-free-text-wrap]');
   const freeTextInput = sommelierApp.querySelector('[data-free-text]');
 
@@ -483,6 +486,60 @@ if (sommelierApp) {
     return score;
   };
 
+  const getWineProfile = () => {
+    const normalizedResponses = {
+      tipo_vino: answerMappings.tipo_vino[responses.tipo_vino] || '',
+      presupuesto: answerMappings.presupuesto[responses.presupuesto] || '',
+      ocasion: answerMappings.ocasion[responses.ocasion] || '',
+      comida: answerMappings.comida[responses.comida] || '',
+      estilo: responses.estilo ? responses.estilo.toLowerCase() : '',
+    };
+
+    if (
+      normalizedResponses.tipo_vino === 'tinto'
+      && normalizedResponses.comida === 'carne'
+      && normalizedResponses.estilo === 'intenso'
+    ) {
+      return {
+        name: 'Clásico Malbec',
+        description: 'Te gustan vinos intensos y gastronómicos, ideales para carnes y comidas importantes.',
+      };
+    }
+
+    if (normalizedResponses.ocasion === 'descubrir') {
+      return {
+        name: 'Explorador de Vinos',
+        description: 'Te gusta probar cosas nuevas y salir de lo tradicional.',
+      };
+    }
+
+    if (normalizedResponses.estilo === 'suave') {
+      return {
+        name: 'Amante de Vinos Suaves',
+        description: 'Preferís vinos más ligeros, fáciles de tomar y elegantes.',
+      };
+    }
+
+    if (normalizedResponses.ocasion === 'cena_amigos') {
+      return {
+        name: 'Wine Lover Social',
+        description: 'Disfrutás el vino como parte del encuentro y de compartir.',
+      };
+    }
+
+    if (normalizedResponses.presupuesto === 'premium') {
+      return {
+        name: 'Buscador de Joyitas',
+        description: 'Te gusta subir un poco el nivel y descubrir vinos especiales.',
+      };
+    }
+
+    return {
+      name: 'Paladar Lombardo',
+      description: 'Tenés un perfil versátil y abierto para disfrutar distintas etiquetas según el momento.',
+    };
+  };
+
   const getTopRecommendations = () => {
     const activeWines = winesCatalog.filter((wine) => wine.activo === true);
 
@@ -510,6 +567,13 @@ if (sommelierApp) {
       card.innerHTML = `<h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p><p>${getRecommendationMessage()}</p>`;
       resultList.appendChild(card);
     });
+
+    if (profileBlock && profileName && profileDescription) {
+      const profile = getWineProfile();
+      profileName.textContent = profile.name;
+      profileDescription.textContent = profile.description;
+      profileBlock.hidden = false;
+    }
   };
 
   const loadWineCatalog = async () => {
@@ -591,6 +655,7 @@ if (sommelierApp) {
     inferredSignals = null;
     currentStep = 0;
     resultPanel.hidden = true;
+    if (profileBlock) profileBlock.hidden = true;
     quizPanel.hidden = false;
     setPanelTransition(quizPanel);
     renderQuestion();
