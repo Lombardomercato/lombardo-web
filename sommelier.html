@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOMMELIER DE VINOS | LOMBARDO</title>
+  <meta name="description" content="Descubrí tu vino ideal con el Sommelier IA de Lombardo. Respondé 5 preguntas y recibí una recomendación personalizada." />
+  <link rel="icon" type="image/png" href="assets/logo/logo-completo-azul.png" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="index.html">LOMBARDO<sup class="tm">TM</sup></a>
+      <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">MENU</button>
+      <nav class="main-nav" aria-label="Principal">
+        <a href="index.html">Inicio</a><a href="nosotros.html">Nosotros</a><a href="carta.html">Carta</a><a href="cafe.html">Café</a><a href="vinos.html">Vinos</a><a href="sommelier.html">Sommelier IA</a><a href="experiencias.html">Experiencias</a><a href="eventos.html">Eventos</a><a href="club.html">Club Lombardo</a><a href="tienda.html">Tienda</a><a href="galeria.html">Galería</a><a href="contacto.html">Contacto</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section sommelier-hero">
+      <div class="container sommelier-intro reveal">
+        <p class="eyebrow">Sommelier de Vinos</p>
+        <h1>Descubrí tu vino ideal</h1>
+        <p class="sommelier-lead">Respondé estas preguntas y te recomendamos una selección de vinos según tu gusto, tu ocasión y tu presupuesto.</p>
+        <p class="sommelier-note">Una experiencia pensada para ayudarte a elegir mejor en Lombardo.</p>
+      </div>
+    </section>
+
+    <section class="section sommelier-section">
+      <div class="container">
+        <div id="sommelier-app" class="sommelier-app reveal" aria-live="polite">
+          <div class="sommelier-progress-wrap">
+            <div class="sommelier-progress-meta">
+              <p class="sommelier-step">Paso <span data-step-current>1</span> de <span data-step-total>5</span></p>
+              <p class="sommelier-step-title" data-step-title>¿Qué tipo de vino preferís?</p>
+            </div>
+            <div class="sommelier-progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-label="Progreso del cuestionario">
+              <span data-progress-fill></span>
+            </div>
+          </div>
+
+          <div class="sommelier-panel" data-quiz-panel>
+            <h2 data-question-title>¿Qué tipo de vino preferís?</h2>
+            <p data-question-helper>Elegí la opción que mejor represente tu preferencia.</p>
+            <div class="sommelier-options" data-options></div>
+
+            <div class="sommelier-actions">
+              <button type="button" class="btn btn-secondary" data-prev>Anterior</button>
+              <button type="button" class="btn btn-primary" data-next disabled>Continuar</button>
+              <button type="button" class="btn btn-primary" data-submit disabled>Recibir recomendación</button>
+            </div>
+          </div>
+
+          <div class="sommelier-result" data-result hidden>
+            <div class="sommelier-result-head">
+              <p class="eyebrow">Resultado simulado</p>
+              <h2>Tu recomendación Lombardo</h2>
+              <p>Seleccionamos estas opciones según lo que nos contaste.</p>
+            </div>
+
+            <div class="sommelier-result-grid" data-result-list></div>
+
+            <div class="sommelier-result-actions">
+              <button type="button" class="btn btn-secondary" data-restart>Volver a elegir</button>
+              <a class="btn btn-primary" data-wa-link href="https://wa.me/543412762319?text=Hola%2C%20us%C3%A9%20el%20Sommelier%20de%20Vinos%20de%20Lombardo%20y%20quiero%20consultar%20por%20una%20recomendaci%C3%B3n." target="_blank" rel="noopener">Consultar por WhatsApp</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <h3>LOMBARDO<sup class="tm">TM</sup></h3><p>TU PUNTO DE ENCUENTRO EN PUEBLO ESTHER. CAFÉ, VINO Y BUENOS MOMENTOS.</p>
+      <nav><a href="index.html">INICIO</a><a href="carta.html">CARTA</a><a href="sommelier.html">SOMMELIER IA</a><a href="experiencias.html">EXPERIENCIAS</a><a href="club.html">CLUB LOMBARDO</a><a href="contacto.html">CONTACTO</a></nav>
+      <small>LOMBARDO — MERCATO DE ENCUENTRO · <span data-year></span></small>
+    </div>
+  </footer>
+
+  <div class="float-wa"><a class="btn btn-primary btn-whatsapp" data-wa="Hola Lombardo, quiero info sobre el Sommelier de Vinos." aria-label="Escribinos por WhatsApp"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.52 3.48A11.84 11.84 0 0 0 12.09 0C5.58 0 .24 5.34.24 11.84c0 2.08.54 4.12 1.57 5.92L0 24l6.42-1.68a11.8 11.8 0 0 0 5.67 1.45h.01c6.5 0 11.84-5.34 11.84-11.84 0-3.16-1.23-6.12-3.42-8.45Zm-8.43 18.3h-.01a9.86 9.86 0 0 1-5.03-1.38l-.36-.21-3.81 1 1.02-3.71-.23-.38a9.86 9.86 0 0 1-1.5-5.26c0-5.44 4.44-9.88 9.9-9.88 2.63 0 5.1 1.02 6.95 2.88a9.8 9.8 0 0 1 2.9 6.99c0 5.44-4.45 9.88-9.83 9.88Zm5.42-7.4c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.35.23-.64.08-.3-.15-1.26-.47-2.4-1.5a8.98 8.98 0 0 1-1.66-2.06c-.17-.3-.02-.45.13-.6.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.38-.03-.53-.08-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.57c-.2 0-.53.08-.8.38-.27.3-1.03 1.02-1.03 2.48s1.06 2.87 1.2 3.08c.15.2 2.07 3.16 5.03 4.43.7.3 1.25.48 1.67.61.7.22 1.35.19 1.86.12.57-.08 1.75-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.12-.27-.2-.57-.35Z"/></svg><span>WhatsApp</span></a></div>
+  <script src="js/script.js"></script>
+</body>
+</html>
