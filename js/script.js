@@ -227,6 +227,7 @@ if (sommelierApp) {
   const progressFill = sommelierApp.querySelector('[data-progress-fill]');
   const quizPanel = sommelierApp.querySelector('[data-quiz-panel]');
   const resultPanel = sommelierApp.querySelector('[data-result]');
+  const loadingPanel = sommelierApp.querySelector('[data-result-loading]');
   const questionTitle = sommelierApp.querySelector('[data-question-title]');
   const questionHelper = sommelierApp.querySelector('[data-question-helper]');
   const optionsWrap = sommelierApp.querySelector('[data-options]');
@@ -248,6 +249,9 @@ if (sommelierApp) {
   const membershipNote = sommelierApp.querySelector('[data-membership-note]');
   const membershipWaLink = sommelierApp.querySelector('[data-membership-wa]');
   const sommelierQuote = sommelierApp.querySelector('[data-sommelier-quote]');
+  const futureAiBlock = sommelierApp.querySelector('[data-future-ai]');
+  const closingBlock = sommelierApp.querySelector('[data-sommelier-closing]');
+  const resultActions = sommelierApp.querySelector('.sommelier-result-actions');
   const waLink = sommelierApp.querySelector('[data-wa-link]');
 
   const requiredQuestionKeys = questions.map((question) => question.key);
@@ -960,6 +964,42 @@ if (sommelierApp) {
     updateSommelierWhatsAppLink(recommendations, profile, monthlySelection);
   };
 
+  const animateResultSequence = () => {
+    const primaryCard = resultList.querySelector('.sommelier-wine-card.is-primary');
+    const secondaryCards = [...resultList.querySelectorAll('.sommelier-wine-card.is-secondary')];
+
+    const sequence = [
+      primaryCard,
+      ...secondaryCards,
+      profileBlock,
+      boxBlock,
+      membershipBlock,
+      futureAiBlock,
+      closingBlock,
+      resultActions,
+    ].filter((element) => element && !element.hidden);
+
+    sequence.forEach((element) => {
+      element.classList.remove('is-visible');
+      element.classList.add('is-staged');
+    });
+
+    if (prefersReducedMotion) {
+      sequence.forEach((element) => {
+        element.classList.remove('is-staged');
+        element.classList.add('is-visible');
+      });
+      return;
+    }
+
+    sequence.forEach((element, index) => {
+      window.setTimeout(() => {
+        element.classList.remove('is-staged');
+        element.classList.add('is-visible');
+      }, 170 * index);
+    });
+  };
+
   const loadWineCatalog = async () => {
     const response = await fetch('vinos_lombardo_base.json');
 
@@ -999,6 +1039,14 @@ if (sommelierApp) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Buscando vinos...';
 
+    setPanelTransition(quizPanel);
+    quizPanel.hidden = true;
+    resultPanel.hidden = true;
+    if (loadingPanel) {
+      loadingPanel.hidden = false;
+      setPanelTransition(loadingPanel);
+    }
+
     try {
       if (!winesCatalog.length) {
         await loadWineCatalog();
@@ -1017,14 +1065,21 @@ if (sommelierApp) {
       }
 
       renderResults();
-      setPanelTransition(quizPanel);
-      quizPanel.hidden = true;
+      if (!prefersReducedMotion) {
+        await new Promise((resolve) => window.setTimeout(resolve, 620));
+      }
+
+      if (loadingPanel) loadingPanel.hidden = true;
       resultPanel.hidden = false;
       setPanelTransition(resultPanel);
+      animateResultSequence();
       sommelierApp.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(error);
+      if (loadingPanel) loadingPanel.hidden = true;
+      quizPanel.hidden = false;
+      setPanelTransition(quizPanel);
       alert('No pudimos cargar las recomendaciones en este momento. Intentá nuevamente.');
     } finally {
       submitBtn.disabled = false;
@@ -1039,6 +1094,7 @@ if (sommelierApp) {
     inferredSignals = null;
     currentStep = 0;
     resultPanel.hidden = true;
+    if (loadingPanel) loadingPanel.hidden = true;
     if (profileBlock) profileBlock.hidden = true;
     if (boxBlock) boxBlock.hidden = true;
     if (membershipBlock) membershipBlock.hidden = true;

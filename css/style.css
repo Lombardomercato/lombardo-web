@@ -2054,14 +2054,34 @@ main > .section:last-child::after,
 }
 
 .sommelier-panel,
-.sommelier-result {
+.sommelier-result,
+.sommelier-loading {
   transition: opacity 240ms ease, transform 240ms ease;
 }
 
 .sommelier-panel.is-transitioning,
-.sommelier-result.is-transitioning {
+.sommelier-result.is-transitioning,
+.sommelier-loading.is-transitioning {
   opacity: 0;
   transform: translateY(8px);
+}
+
+.sommelier-loading {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 245, 255, 0.84));
+  padding: clamp(24px, 4vw, 34px);
+  box-shadow: 0 14px 30px rgba(0, 58, 112, 0.09);
+}
+
+.sommelier-loading h2 {
+  margin: 8px 0 10px;
+  max-width: 22ch;
+}
+
+.sommelier-loading p {
+  margin: 0;
+  color: rgba(0, 58, 112, 0.82);
 }
 
 .sommelier-panel h2,
@@ -2180,6 +2200,17 @@ main > .section:last-child::after,
   grid-template-columns: 1fr;
   gap: 14px;
   margin: 26px 0 34px;
+}
+
+.sommelier-result .is-staged {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.sommelier-result .is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 420ms ease, transform 420ms ease;
 }
 
 .sommelier-wine-card {
