@@ -565,33 +565,79 @@ if (sommelierApp) {
   };
 
   const getRecommendationMessage = (role, wine, profile) => {
-    const occasionLabel = humanizeField('ocasion');
-    const foodLabel = humanizeField('comida', 'tu tipo de comidas');
-    const styleLabel = humanizeField('estilo', 'estilo versátil');
-    const profileName = profile?.name || 'tu perfil';
+    const normalized = getNormalizedAnswers();
+    const occasion = normalized.ocasion || '';
+    const style = normalized.estilo || '';
+    const food = normalized.comida || '';
+    const wineType = (wine?.tipo_vino || '').toLowerCase();
+    const typeLabel = wineType ? wineType.charAt(0).toUpperCase() + wineType.slice(1) : 'vino';
+    const varietalLabel = wine?.varietal || 'de corte';
+    const profileName = profile?.name || 'Paladar Lombardo';
 
-    const messages = {
-      principal: [
-        `Es la opción más segura para ${occasionLabel}: se lleva muy bien con ${foodLabel} y respeta tu búsqueda de ${styleLabel}.`,
-        `Si querés acertar sin vueltas, esta etiqueta encaja perfecto con ${occasionLabel}. Tiene un perfil pensado para ${foodLabel}.`,
-        `Tu base ideal para empezar: equilibrada, fácil de disfrutar y alineada con lo que nos marcaste para ${occasionLabel}.`,
-      ],
-      premium: [
-        `Una versión más elegante de tu elección: mantiene la línea de ${profileName} y suma más profundidad en copa.`,
-        `Para subir un escalón sin perder tu estilo: una etiqueta premium que acompaña ${foodLabel} con más presencia.`,
-        `Si querés darte un gusto, esta es tu opción sofisticada: refinada, expresiva y muy alineada con ${occasionLabel}.`,
-      ],
-      descubrir: [
-        'Acá aparece el factor sorpresa: una etiqueta distinta para abrir el paladar y descubrir algo nuevo dentro de tu estilo.',
-        'Esta recomendación está pensada para explorar: mantiene coherencia con lo que te gusta, pero con un giro más aventurero.',
-        'Una invitación a salir de lo habitual con seguridad: diferente, pero en sintonía con tu forma de disfrutar el vino.',
-      ],
-    };
+    const occasionFocus = {
+      regalo: 'como regalo, transmite criterio y buen gusto desde el primer momento',
+      asado: 'en mesa con carnes responde con carácter y buena estructura',
+      cena_amigos: 'en una cena con amigos fluye fácil y sostiene la charla',
+      descubrir: 'cuando querés probar algo nuevo, suma interés sin perder equilibrio',
+      relax: 'para bajar un cambio, acompaña con un ritmo amable y disfrutable',
+    }[occasion] || 'se adapta al momento con una propuesta confiable';
 
-    const list = messages[role] || messages.principal;
-    const seed = `${wine?.nombre || ''}-${role}-${responses.ocasion}-${responses.comida}`;
-    const index = Math.abs(seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % list.length;
-    return list[index];
+    const foodFocus = {
+      carne: 'con carnes logra maridajes redondos',
+      pasta: 'con pastas se vuelve expresivo sin tapar el plato',
+      picada: 'con picada se luce por su versatilidad',
+      pescado_sushi: 'con pescados y sushi mantiene frescura y precisión',
+      sin_comida: 'funciona muy bien incluso sin comida, solo para disfrutar la copa',
+    }[food] || 'acompaña distintos platos con criterio';
+
+    const styleFocus = {
+      suave: 'de paso sedoso y final amable',
+      frutado: 'frutado y expresivo, con mucha identidad en nariz',
+      intenso: 'con buen cuerpo, energía y persistencia',
+      elegante: 'fino, prolijo y de perfil elegante',
+    }[style] || 'equilibrado y versátil';
+
+    const profileFocus = profileName === 'Explorador de Vinos'
+      ? 'Encaja con tu perfil explorador porque aporta novedad con base técnica sólida.'
+      : profileName === 'Clásico Malbec'
+        ? 'Va perfecto con tu perfil clásico: seguro, gastronómico y consistente.'
+        : `Está alineado con tu perfil ${profileName} y la forma en la que disfrutás el vino.`;
+
+    if (role === 'premium') {
+      const premiumByOccasion = occasion === 'regalo'
+        ? 'Es la botella que eleva la experiencia y deja una impresión más sofisticada.'
+        : 'Es un upgrade natural: mantiene tu línea de gusto y suma más profundidad en copa.';
+
+      return `${premiumByOccasion} Este ${typeLabel} ${varietalLabel} se siente ${styleFocus}; ${foodFocus}.`;
+    }
+
+    if (role === 'descubrir') {
+      const discoveryLead = profileName === 'Explorador de Vinos'
+        ? 'Acá está tu recomendación de descubrimiento: distinta, expresiva y con personalidad propia.'
+        : `Como tercera opción, esta etiqueta te abre una puerta nueva dentro de tu estilo ${style || 'preferido'}.`;
+
+      return `${discoveryLead} ${occasionFocus}. ${profileFocus}`;
+    }
+
+    return `Tu recomendación principal es este ${typeLabel} ${varietalLabel}: la opción más segura para acertar con lo que buscás. ${occasionFocus}; ${foodFocus}. ${profileFocus}`;
+  };
+
+  const getPrimaryRecommendationDetail = (wine, profile) => {
+    const normalized = getNormalizedAnswers();
+    const occasionLabel = humanizeField('ocasion', 'tu ocasión');
+    const foodLabel = humanizeField('comida', 'tu comida ideal');
+    const styleLabel = humanizeField('estilo', 'perfil versátil');
+    const typeLabel = wine?.tipo_vino ? wine.tipo_vino.charAt(0).toUpperCase() + wine.tipo_vino.slice(1) : 'Vino';
+    const varietalLabel = wine?.varietal || 'de corte';
+    const profileName = profile?.name || 'Paladar Lombardo';
+
+    const refinedNote = normalized.ocasion === 'regalo'
+      ? 'Tiene presencia y elegancia para quedar bien sin margen de error.'
+      : normalized.ocasion === 'asado'
+        ? 'En una mesa con comida responde con estructura, fruta y muy buen ritmo.'
+        : 'Mantiene equilibrio entre disfrute inmediato y carácter en copa.';
+
+    return `${typeLabel} ${varietalLabel} seleccionado como eje de tu experiencia en ${occasionLabel}. Está pensado para acompañar ${foodLabel}, respetar tu búsqueda de ${styleLabel} y representar fielmente tu perfil ${profileName}. ${refinedNote}`;
   };
 
   const getPrimaryRecommendationDetail = (wine, profile) => {
