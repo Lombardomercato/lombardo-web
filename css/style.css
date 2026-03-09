@@ -2246,6 +2246,27 @@ main > .section:last-child::after,
   color: rgba(0, 58, 112, 0.86);
 }
 
+.sommelier-closing {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 58, 112, 0.14);
+  background: rgba(255, 255, 255, 0.8);
+  padding: clamp(16px, 2.8vw, 22px);
+  margin: -8px 0 30px;
+}
+
+.sommelier-closing h3 {
+  margin: 0 0 10px;
+  font-size: clamp(1.18rem, 1.05rem + 0.58vw, 1.45rem);
+}
+
+.sommelier-closing p {
+  margin: 0;
+  color: rgba(0, 58, 112, 0.86);
+  font-style: italic;
+  line-height: 1.7;
+  max-width: 58ch;
+}
+
 .sommelier-result-actions {
   display: flex;
   gap: 12px;
