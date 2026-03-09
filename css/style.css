@@ -651,6 +651,23 @@ main > .section:nth-of-type(even) .grid-2 > img {
   backdrop-filter: blur(6px);
 }
 
+.btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.wa-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+}
+
+.float-wa .btn-whatsapp {
+  min-width: auto;
+  padding-inline: 14px;
+}
+
 .tienda-hero h1 {
   max-width: 14ch;
   margin-bottom: 10px;
@@ -1321,6 +1338,14 @@ p {
 .split-grid article {
   border-top: 1px solid rgba(0, 58, 112, 0.35);
   padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.split-grid article .btn {
+  margin-top: auto;
+  align-self: flex-start;
 }
 
 .split-eyebrow {
@@ -1334,6 +1359,42 @@ p {
 
 .editorial-gallery-block {
   background: #e2d2cf;
+}
+
+.editorial-intro,
+.editorial-split,
+.editorial-gallery-block,
+.editorial-contact-end {
+  position: relative;
+  overflow: hidden;
+}
+
+.editorial-intro::before,
+.editorial-split::before,
+.editorial-gallery-block::before,
+.editorial-contact-end::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.3), transparent 58%);
+  pointer-events: none;
+}
+
+.editorial-intro .editorial-columns,
+.editorial-split .split-grid,
+.editorial-gallery-block .container,
+.editorial-contact-end .editorial-columns {
+  position: relative;
+  z-index: 1;
+}
+
+.editorial-offer .editorial-list,
+.editorial-menu .menu-lines {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(0, 58, 112, 0.12);
+  padding: clamp(16px, 1.8vw, 24px);
+  border-radius: 14px;
+  backdrop-filter: blur(3px);
 }
 
 .editorial-gallery-block .actions {
