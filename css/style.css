@@ -1956,6 +1956,10 @@ main > .section:last-child::after,
 /* Sommelier IA */
 .sommelier-hero {
   padding-bottom: clamp(34px, 6vw, 68px);
+  background:
+    radial-gradient(circle at 8% 12%, rgba(224, 60, 49, 0.18), transparent 48%),
+    radial-gradient(circle at 90% 14%, rgba(0, 58, 112, 0.2), transparent 42%),
+    linear-gradient(180deg, rgba(252, 247, 242, 0.8), rgba(255, 255, 255, 0));
 }
 
 .sommelier-intro {
@@ -1983,11 +1987,25 @@ main > .section:last-child::after,
 }
 
 .sommelier-app {
+  position: relative;
+  isolation: isolate;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(0, 58, 112, 0.13);
-  background: linear-gradient(140deg, rgba(228, 213, 211, 0.74), rgba(255, 255, 255, 0.82));
-  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(0, 58, 112, 0.18);
+  background: linear-gradient(140deg, rgba(252, 246, 239, 0.98), rgba(243, 236, 235, 0.9));
+  box-shadow: 0 24px 60px rgba(0, 58, 112, 0.16);
   padding: clamp(22px, 5vw, 48px);
+  overflow: hidden;
+}
+
+.sommelier-app::before {
+  content: '';
+  position: absolute;
+  inset: -18% -30% auto auto;
+  width: clamp(220px, 38vw, 460px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224, 60, 49, 0.22), transparent 68%);
+  z-index: -1;
 }
 
 .sommelier-progress-wrap {
@@ -2005,7 +2023,7 @@ main > .section:last-child::after,
 .sommelier-step {
   margin: 0;
   font-size: 0.9rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -2031,19 +2049,19 @@ main > .section:last-child::after,
   inset: 0 auto 0 0;
   width: 20%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #e03c31, #ffb3ab);
-  transition: width 260ms ease;
+  background: linear-gradient(90deg, #ab1e3a, #e03c31, #ffb3ab);
+  transition: width 320ms ease;
 }
 
 .sommelier-panel,
 .sommelier-result {
-  transition: opacity 220ms ease, transform 220ms ease;
+  transition: opacity 240ms ease, transform 240ms ease;
 }
 
 .sommelier-panel.is-transitioning,
 .sommelier-result.is-transitioning {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(8px);
 }
 
 .sommelier-panel h2,
@@ -2066,7 +2084,7 @@ main > .section:last-child::after,
   width: 100%;
   border: 1px solid rgba(0, 58, 112, 0.2);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.8);
   color: var(--azul);
   padding: 15px 16px;
   text-align: left;
@@ -2078,16 +2096,15 @@ main > .section:last-child::after,
 
 .sommelier-option:hover {
   transform: translateY(-2px);
-  border-color: rgba(224, 60, 49, 0.55);
-  box-shadow: 0 10px 24px rgba(0, 58, 112, 0.12);
+  border-color: rgba(224, 60, 49, 0.6);
+  box-shadow: 0 14px 30px rgba(0, 58, 112, 0.12);
 }
 
 .sommelier-option.is-selected {
   border-color: rgba(224, 60, 49, 0.88);
-  background: rgba(255, 179, 171, 0.3);
-  box-shadow: 0 12px 26px rgba(224, 60, 49, 0.17);
+  background: linear-gradient(160deg, rgba(255, 179, 171, 0.48), rgba(255, 245, 242, 0.9));
+  box-shadow: 0 14px 30px rgba(224, 60, 49, 0.18);
 }
-
 
 .sommelier-textarea-wrap {
   margin: -4px 0 28px;
@@ -2115,7 +2132,7 @@ main > .section:last-child::after,
   resize: vertical;
   border-radius: calc(var(--radius-md) + 2px);
   border: 1px solid rgba(0, 58, 112, 0.22);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.86);
   color: var(--azul);
   font: inherit;
   line-height: 1.5;
@@ -2135,7 +2152,7 @@ main > .section:last-child::after,
 .sommelier-textarea:focus {
   outline: none;
   border-color: rgba(224, 60, 49, 0.78);
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 0 0 4px rgba(224, 60, 49, 0.14), 0 10px 24px rgba(0, 58, 112, 0.08);
 }
 
@@ -2167,9 +2184,30 @@ main > .section:last-child::after,
 
 .sommelier-wine-card {
   border-radius: var(--radius-md);
-  border: 1px solid rgba(0, 58, 112, 0.15);
-  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  background: rgba(255, 255, 255, 0.9);
   padding: 18px;
+  box-shadow: 0 10px 26px rgba(0, 58, 112, 0.08);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.sommelier-wine-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(0, 58, 112, 0.11);
+}
+
+.sommelier-wine-card.is-highlighted {
+  border-color: rgba(171, 30, 58, 0.6);
+  background: linear-gradient(165deg, rgba(255, 244, 241, 0.96), rgba(255, 255, 255, 0.92));
+}
+
+.sommelier-wine-role {
+  margin: 0 0 8px;
+  color: #ab1e3a;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .sommelier-wine-card h3 {
@@ -2183,51 +2221,66 @@ main > .section:last-child::after,
 }
 
 .sommelier-wine-card p {
-  margin: 0;
+  margin-top: 0;
+}
+
+.sommelier-profile,
+.sommelier-box,
+.sommelier-membership,
+.sommelier-future-ai,
+.sommelier-closing {
+  border-radius: var(--radius-md);
+  padding: clamp(18px, 3vw, 24px);
+  margin: -8px 0 30px;
 }
 
 .sommelier-profile {
-  border-radius: var(--radius-md);
   border: 1px solid rgba(0, 58, 112, 0.2);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 244, 242, 0.82));
-  padding: clamp(18px, 3vw, 24px);
-  margin: -8px 0 30px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(239, 245, 255, 0.82));
   box-shadow: 0 12px 28px rgba(0, 58, 112, 0.08);
 }
 
-.sommelier-profile h3 {
+.sommelier-profile h3,
+.sommelier-box h3,
+.sommelier-membership h3,
+.sommelier-future-ai h3 {
   margin: 8px 0 10px;
-  font-size: clamp(1.35rem, 1.1rem + 0.8vw, 1.8rem);
+  font-size: clamp(1.3rem, 1.1rem + 0.8vw, 1.75rem);
 }
 
-.sommelier-profile p {
-  margin: 0;
+.sommelier-profile p,
+.sommelier-box-subtitle,
+.sommelier-membership-subtitle,
+.sommelier-membership-note,
+.sommelier-box-note,
+.sommelier-future-ai p {
   color: rgba(0, 58, 112, 0.84);
-  max-width: 58ch;
+  max-width: 60ch;
 }
-
 
 .sommelier-box {
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(224, 60, 49, 0.28);
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.95), rgba(255, 244, 242, 0.86));
-  padding: clamp(18px, 3vw, 24px);
-  margin: -8px 0 32px;
+  border: 1px solid rgba(224, 60, 49, 0.3);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.95), rgba(255, 240, 236, 0.84));
   box-shadow: 0 14px 30px rgba(0, 58, 112, 0.08);
 }
 
-.sommelier-box h3 {
-  margin: 8px 0 8px;
-  font-size: clamp(1.3rem, 1.1rem + 0.8vw, 1.7rem);
+.sommelier-membership {
+  border: 1px solid rgba(0, 58, 112, 0.24);
+  background: linear-gradient(146deg, rgba(242, 248, 255, 0.88), rgba(255, 255, 255, 0.95));
+  box-shadow: 0 14px 28px rgba(0, 58, 112, 0.09);
 }
 
-.sommelier-box-subtitle {
-  margin: 0;
-  color: rgba(0, 58, 112, 0.82);
-  max-width: 58ch;
+.sommelier-membership .btn {
+  margin-top: 16px;
 }
 
-.sommelier-box-list {
+.sommelier-future-ai {
+  border: 1px dashed rgba(0, 58, 112, 0.3);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.sommelier-box-list,
+.sommelier-membership-list {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
@@ -2237,7 +2290,7 @@ main > .section:last-child::after,
 .sommelier-box-item {
   border-radius: calc(var(--radius-md) - 4px);
   border: 1px solid rgba(0, 58, 112, 0.16);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.84);
   padding: 12px 14px;
 }
 
@@ -2252,17 +2305,9 @@ main > .section:last-child::after,
   font-weight: 600;
 }
 
-.sommelier-box-note {
-  margin: 0;
-  color: rgba(0, 58, 112, 0.86);
-}
-
 .sommelier-closing {
-  border-radius: var(--radius-md);
   border: 1px solid rgba(0, 58, 112, 0.14);
   background: rgba(255, 255, 255, 0.8);
-  padding: clamp(16px, 2.8vw, 22px);
-  margin: -8px 0 30px;
 }
 
 .sommelier-closing h3 {
@@ -2289,16 +2334,18 @@ main > .section:last-child::after,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .sommelier-result-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .sommelier-box-list {
+  .sommelier-result-grid,
+  .sommelier-box-list,
+  .sommelier-membership-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
+  .sommelier-app {
+    padding: 18px;
+  }
+
   .sommelier-progress-meta {
     flex-direction: column;
     align-items: flex-start;
@@ -2314,7 +2361,8 @@ main > .section:last-child::after,
   }
 
   .sommelier-actions .btn,
-  .sommelier-result-actions .btn {
+  .sommelier-result-actions .btn,
+  .sommelier-membership .btn {
     width: 100%;
   }
 }

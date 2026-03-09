@@ -233,6 +233,10 @@ if (sommelierApp) {
   const boxBlock = sommelierApp.querySelector('[data-box]');
   const boxList = sommelierApp.querySelector('[data-box-list]');
   const boxNote = sommelierApp.querySelector('[data-box-note]');
+  const membershipBlock = sommelierApp.querySelector('[data-membership]');
+  const membershipList = sommelierApp.querySelector('[data-membership-list]');
+  const membershipNote = sommelierApp.querySelector('[data-membership-note]');
+  const membershipWaLink = sommelierApp.querySelector('[data-membership-wa]');
   const sommelierQuote = sommelierApp.querySelector('[data-sommelier-quote]');
   const waLink = sommelierApp.querySelector('[data-wa-link]');
 
@@ -256,7 +260,11 @@ if (sommelierApp) {
     if (questionTitle) questionTitle.textContent = question.title;
     if (questionHelper) questionHelper.textContent = question.helper;
     if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(currentStep + 1));
-    if (progressFill) progressFill.style.width = `${((currentStep + 1) / questions.length) * 100}%`;
+
+    if (progressFill) {
+      const progressValue = ((currentStep + 1) / questions.length) * 100;
+      progressFill.style.width = `${progressValue}%`;
+    }
 
     optionsWrap.innerHTML = '';
 
@@ -265,9 +273,10 @@ if (sommelierApp) {
       button.type = 'button';
       button.className = 'sommelier-option';
       button.textContent = option;
-      button.setAttribute('aria-pressed', String(selected === option));
 
-      if (selected === option) button.classList.add('is-selected');
+      if (option === selected) {
+        button.classList.add('is-selected');
+      }
 
       button.addEventListener('click', () => {
         responses[question.key] = option;
@@ -300,17 +309,21 @@ if (sommelierApp) {
     return `$${new Intl.NumberFormat('es-AR').format(value)}`;
   };
 
-
   const OPENAI_MODEL = 'gpt-4o-mini';
 
   const getOpenAIApiKey = () => (
     document.querySelector('meta[name="openai-api-key"]')?.getAttribute('content')?.trim() || ''
   );
 
+  const getGoogleSheetsEndpoint = () => {
+    const configEndpoint = window.LOMBARDO_CONFIG?.googleSheetsEndpoint;
+    if (typeof configEndpoint === 'string' && configEndpoint.trim()) return configEndpoint.trim();
 
-  const getGoogleSheetsEndpoint = () => (
-    document.querySelector('meta[name="google-sheets-endpoint"]')?.getAttribute('content')?.trim() || ''
-  );
+    const dataEndpoint = sommelierApp.dataset.googleSheetsEndpoint;
+    if (typeof dataEndpoint === 'string' && dataEndpoint.trim()) return dataEndpoint.trim();
+
+    return document.querySelector('meta[name="google-sheets-endpoint"]')?.getAttribute('content')?.trim() || '';
+  };
 
   const persistSommelierResponse = async () => {
     const endpoint = getGoogleSheetsEndpoint();
@@ -328,7 +341,7 @@ if (sommelierApp) {
     };
 
     try {
-      await fetch(endpoint, {
+      const savePromise = fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -336,9 +349,25 @@ if (sommelierApp) {
         body: JSON.stringify(payload),
         keepalive: true,
       });
+
+      const timeoutPromise = new Promise((resolve) => {
+        window.setTimeout(() => resolve(null), 3500);
+      });
+
+      await Promise.race([savePromise, timeoutPromise]);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.warn('No se pudo guardar la respuesta en Google Sheets:', error);
+
+      if (navigator.sendBeacon) {
+        try {
+          const beaconPayload = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon(endpoint, beaconPayload);
+        } catch (beaconError) {
+          // eslint-disable-next-line no-console
+          console.warn('No se pudo guardar la respuesta con sendBeacon:', beaconError);
+        }
+      }
     }
   };
 
@@ -481,9 +510,79 @@ if (sommelierApp) {
     }
   };
 
-  const getRecommendationMessage = () => (
-    `Una gran opción para ${responses.comida.toLowerCase()} y ${responses.ocasion.toLowerCase()}, dentro de tu rango de precio.`
-  );
+  const getNormalizedAnswers = () => ({
+    tipo_vino: answerMappings.tipo_vino[responses.tipo_vino] || '',
+    presupuesto: answerMappings.presupuesto[responses.presupuesto] || '',
+    ocasion: answerMappings.ocasion[responses.ocasion] || '',
+    comida: answerMappings.comida[responses.comida] || '',
+    estilo: responses.estilo ? responses.estilo.toLowerCase() : '',
+  });
+
+  const humanizeField = (fieldKey, fallback = 'tu momento') => {
+    const dictionary = {
+      ocasion: {
+        asado: 'asado o comida con carácter',
+        cena_amigos: 'cena con amigos',
+        regalo: 'regalo con impacto',
+        diario: 'disfrutar todos los días',
+        descubrir: 'salir de lo de siempre',
+      },
+      comida: {
+        carne: 'carnes y platos intensos',
+        pasta: 'pastas y platos de cocina casera',
+        picada: 'picadas y tapeo',
+        pescado_sushi: 'pescados, sushi y sabores frescos',
+        sin_comida: 'brindar sin necesidad de comida',
+      },
+      estilo: {
+        suave: 'perfil suave',
+        frutado: 'perfil frutado',
+        intenso: 'perfil intenso',
+        elegante: 'perfil elegante',
+      },
+    };
+
+    const normalizedAnswers = getNormalizedAnswers();
+    const value = normalizedAnswers[fieldKey] || '';
+
+    return dictionary[fieldKey]?.[value] || fallback;
+  };
+
+  const getRoleLabel = (role) => {
+    if (role === 'principal') return 'Recomendación principal';
+    if (role === 'premium') return 'Toque premium';
+    return 'Para descubrir';
+  };
+
+  const getRecommendationMessage = (role, wine, profile) => {
+    const occasionLabel = humanizeField('ocasion');
+    const foodLabel = humanizeField('comida', 'tu tipo de comidas');
+    const styleLabel = humanizeField('estilo', 'estilo versátil');
+    const profileName = profile?.name || 'tu perfil';
+
+    const messages = {
+      principal: [
+        `Es la opción más segura para ${occasionLabel}: se lleva muy bien con ${foodLabel} y respeta tu búsqueda de ${styleLabel}.`,
+        `Si querés acertar sin vueltas, esta etiqueta encaja perfecto con ${occasionLabel}. Tiene un perfil pensado para ${foodLabel}.`,
+        `Tu base ideal para empezar: equilibrada, fácil de disfrutar y alineada con lo que nos marcaste para ${occasionLabel}.`,
+      ],
+      premium: [
+        `Una versión más elegante de tu elección: mantiene la línea de ${profileName} y suma más profundidad en copa.`,
+        `Para subir un escalón sin perder tu estilo: una etiqueta premium que acompaña ${foodLabel} con más presencia.`,
+        `Si querés darte un gusto, esta es tu opción sofisticada: refinada, expresiva y muy alineada con ${occasionLabel}.`,
+      ],
+      descubrir: [
+        'Acá aparece el factor sorpresa: una etiqueta distinta para abrir el paladar y descubrir algo nuevo dentro de tu estilo.',
+        'Esta recomendación está pensada para explorar: mantiene coherencia con lo que te gusta, pero con un giro más aventurero.',
+        'Una invitación a salir de lo habitual con seguridad: diferente, pero en sintonía con tu forma de disfrutar el vino.',
+      ],
+    };
+
+    const list = messages[role] || messages.principal;
+    const seed = `${wine?.nombre || ''}-${role}-${responses.ocasion}-${responses.comida}`;
+    const index = Math.abs(seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % list.length;
+    return list[index];
+  };
 
   const sortByPriorityAndPrice = (a, b) => {
     const priorityOrder = { alta: 3, media: 2, baja: 1 };
@@ -502,21 +601,10 @@ if (sommelierApp) {
     const selectedComida = answerMappings.comida[responses.comida];
     const selectedOcasion = answerMappings.ocasion[responses.ocasion];
 
-    if (selectedTipo && wine.tipo_vino?.toLowerCase() === selectedTipo) {
-      score += 25;
-    }
-
-    if (selectedPrecio && wine.nivel_precio?.toLowerCase() === selectedPrecio) {
-      score += 20;
-    }
-
-    if (selectedComida && wine.maridaje_principal?.toLowerCase() === selectedComida) {
-      score += 25;
-    }
-
-    if (selectedOcasion && wine.ocasion?.toLowerCase() === selectedOcasion) {
-      score += 20;
-    }
+    if (selectedTipo && wine.tipo_vino?.toLowerCase() === selectedTipo) score += 25;
+    if (selectedPrecio && wine.nivel_precio?.toLowerCase() === selectedPrecio) score += 20;
+    if (selectedComida && wine.maridaje_principal?.toLowerCase() === selectedComida) score += 25;
+    if (selectedOcasion && wine.ocasion?.toLowerCase() === selectedOcasion) score += 20;
 
     if (inferredSignals) {
       if (inferredSignals.tipo_vino && inferredSignals.tipo_vino === wine.tipo_vino?.toLowerCase()) score += 6;
@@ -525,21 +613,13 @@ if (sommelierApp) {
       if (inferredSignals.ocasion && inferredSignals.ocasion === wine.ocasion?.toLowerCase()) score += 5;
     }
 
-    if ((wine.prioridad_venta || '').toLowerCase() === 'alta') {
-      score += 10;
-    }
+    if ((wine.prioridad_venta || '').toLowerCase() === 'alta') score += 10;
 
     return score;
   };
 
   const getWineProfile = () => {
-    const normalizedResponses = {
-      tipo_vino: answerMappings.tipo_vino[responses.tipo_vino] || '',
-      presupuesto: answerMappings.presupuesto[responses.presupuesto] || '',
-      ocasion: answerMappings.ocasion[responses.ocasion] || '',
-      comida: answerMappings.comida[responses.comida] || '',
-      estilo: responses.estilo ? responses.estilo.toLowerCase() : '',
-    };
+    const normalizedResponses = getNormalizedAnswers();
 
     if (
       normalizedResponses.tipo_vino === 'tinto'
@@ -586,39 +666,96 @@ if (sommelierApp) {
     };
   };
 
+  const getRankedWines = (excludeNames = new Set()) => winesCatalog
+    .filter((wine) => wine.activo === true && !excludeNames.has(wine.nombre))
+    .map((wine) => ({ ...wine, score: getWineScore(wine) }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return sortByPriorityAndPrice(a, b);
+    });
 
-  const getBoxClosingMessage = () => {
+  const pickDistinctWine = (pool, selectedNames, predicate) => {
+    const candidate = pool.find((wine) => !selectedNames.has(wine.nombre) && predicate(wine));
+    if (candidate) {
+      selectedNames.add(candidate.nombre);
+      return candidate;
+    }
+
+    const fallback = pool.find((wine) => !selectedNames.has(wine.nombre));
+    if (fallback) {
+      selectedNames.add(fallback.nombre);
+      return fallback;
+    }
+
+    return null;
+  };
+
+  const buildRecommendationSet = () => {
+    const ranked = getRankedWines();
+    const selectedNames = new Set();
+
+    const principal = pickDistinctWine(ranked, selectedNames, (wine) => wine.score >= 30 || wine.prioridad_venta === 'alta');
+    const premium = pickDistinctWine(
+      ranked,
+      selectedNames,
+      (wine) => ['alto', 'premium'].includes((wine.nivel_precio || '').toLowerCase()) || (wine.precio || 0) >= 22000,
+    );
+    const principalType = principal?.tipo_vino;
+    const discovery = pickDistinctWine(
+      ranked,
+      selectedNames,
+      (wine) => wine.tipo_vino !== principalType || wine.ocasion === 'descubrir' || wine.varietal !== principal?.varietal,
+    );
+
+    return [
+      { role: 'principal', wine: principal },
+      { role: 'premium', wine: premium },
+      { role: 'descubrir', wine: discovery },
+    ].filter((entry) => entry.wine);
+  };
+
+  const buildCuratedBox = (excludeNames = new Set()) => {
+    const ranked = getRankedWines(excludeNames);
+    const selectedNames = new Set();
+
+    const secure = pickDistinctWine(ranked, selectedNames, (wine) => wine.score >= 24);
+    const special = pickDistinctWine(ranked, selectedNames, (wine) => ['alto', 'premium'].includes((wine.nivel_precio || '').toLowerCase()));
+    const discovery = pickDistinctWine(ranked, selectedNames, (wine) => wine.ocasion === 'descubrir' || wine.tipo_vino !== secure?.tipo_vino);
+
+    return [secure, special, discovery].filter(Boolean);
+  };
+
+  const getBoxClosingMessage = (profile) => {
     const normalizedOccasion = answerMappings.ocasion[responses.ocasion] || '';
 
     if (normalizedOccasion === 'regalo') {
-      return 'Ideal para regalar una experiencia completa: un vino elegante, uno versátil y uno con efecto sorpresa.';
+      return `Esta caja fue curada para ${profile.name}: combina una etiqueta segura, una opción elegante y un descubrimiento que suma wow al regalo.`;
     }
 
     if (normalizedOccasion === 'asado' || normalizedOccasion === 'cena_amigos') {
-      return 'Ideal para compartir en la mesa: una etiqueta confiable, otra gastronómica y una para sumar conversación.';
+      return 'Pensada para compartir: arranca con una base confiable, sube con una opción especial y cierra con un vino que invita a conversar.';
     }
 
-    return 'Ideal para llevar una opción segura, una para compartir y otra para descubrir.';
+    return `Una curaduría equilibrada para ${profile.name}: te resuelve el día a día y, al mismo tiempo, te deja lugar para descubrir nuevas etiquetas.`;
   };
 
-  const getTopRecommendations = () => {
-    const activeWines = winesCatalog.filter((wine) => wine.activo === true);
+  const buildMonthlySelection = (excludeNames = new Set()) => {
+    const ranked = getRankedWines(excludeNames);
+    const selectedNames = new Set();
 
-    const scoredWines = activeWines
-      .map((wine) => ({ ...wine, score: getWineScore(wine) }))
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return sortByPriorityAndPrice(a, b);
-      });
+    const alignedOne = pickDistinctWine(ranked, selectedNames, (wine) => wine.score >= 24);
+    const alignedTwo = pickDistinctWine(ranked, selectedNames, (wine) => wine.tipo_vino === alignedOne?.tipo_vino || wine.score >= 20);
+    const discoverOne = pickDistinctWine(ranked, selectedNames, (wine) => wine.tipo_vino !== alignedOne?.tipo_vino || wine.ocasion === 'descubrir');
 
-    const withMatches = scoredWines.filter((wine) => wine.score > 0).slice(0, 3);
-
-    if (withMatches.length) return withMatches;
-
-    return activeWines.sort(sortByPriorityAndPrice).slice(0, 3);
+    return [alignedOne, alignedTwo, discoverOne].filter(Boolean);
   };
 
-  const updateSommelierWhatsAppLink = (recommendations, profile) => {
+  const getMembershipMessage = (profile) => {
+    const styleLabel = humanizeField('estilo', 'perfil equilibrado');
+    return `Una selección pensada para alguien con perfil ${profile.name.toLowerCase()}: dos etiquetas alineadas a tu ${styleLabel} y una opción de descubrimiento para ampliar tu cava con criterio.`;
+  };
+
+  const updateSommelierWhatsAppLink = (recommendations, profile, monthlySelection) => {
     if (!waLink) return;
 
     const messageLines = [
@@ -626,22 +763,18 @@ if (sommelierApp) {
       '',
     ];
 
-    recommendations.forEach((wine) => {
-      if (wine?.nombre) {
-        messageLines.push(`- ${wine.nombre}`);
-      }
+    recommendations.forEach((item) => {
+      const wine = item.wine;
+      if (wine?.nombre) messageLines.push(`- ${wine.nombre} (${getRoleLabel(item.role)})`);
     });
 
-    if (profile?.name) {
-      messageLines.push('', `Mi perfil fue: ${profile.name}`);
-    }
+    if (profile?.name) messageLines.push('', `Mi perfil fue: ${profile.name}`);
+    if (responses.ocasion) messageLines.push(`Ocasión: ${responses.ocasion}`);
+    if (responses.presupuesto) messageLines.push(`Presupuesto: ${responses.presupuesto}`);
 
-    if (responses.ocasion) {
-      messageLines.push(`Ocasión: ${responses.ocasion}`);
-    }
-
-    if (responses.presupuesto) {
-      messageLines.push(`Presupuesto: ${responses.presupuesto}`);
+    if (monthlySelection?.length) {
+      messageLines.push('', 'También quiero consultar esta mensualidad:');
+      monthlySelection.forEach((wine) => messageLines.push(`- ${wine.nombre}`));
     }
 
     messageLines.push('', 'Quiero consultar disponibilidad.');
@@ -652,23 +785,40 @@ if (sommelierApp) {
   const renderResults = () => {
     resultList.innerHTML = '';
     if (boxList) boxList.innerHTML = '';
+    if (membershipList) membershipList.innerHTML = '';
 
-    const recommendations = getTopRecommendations();
+    const recommendations = buildRecommendationSet();
     const profile = getWineProfile();
+    const recommendedNames = new Set(recommendations.map((entry) => entry.wine.nombre));
+    const curatedBox = buildCuratedBox(recommendedNames);
+    const boxNames = new Set(curatedBox.map((wine) => wine.nombre));
+    const monthlySelection = buildMonthlySelection(new Set([...recommendedNames, ...boxNames]));
 
-    recommendations.forEach((wine) => {
+    recommendations.forEach((entry, index) => {
+      const wine = entry.wine;
       const card = document.createElement('article');
-      card.className = 'sommelier-wine-card reveal is-visible';
-      card.innerHTML = `<h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p><p>${getRecommendationMessage()}</p>`;
+      card.className = `sommelier-wine-card reveal is-visible ${index === 0 ? 'is-highlighted' : ''}`.trim();
+      card.innerHTML = `<p class="sommelier-wine-role">${getRoleLabel(entry.role)}</p><h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p><p>${getRecommendationMessage(entry.role, wine, profile)}</p>`;
       resultList.appendChild(card);
+    });
 
-      if (boxList) {
+    if (boxList) {
+      curatedBox.forEach((wine) => {
         const item = document.createElement('article');
         item.className = 'sommelier-box-item';
         item.innerHTML = `<h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
         boxList.appendChild(item);
-      }
-    });
+      });
+    }
+
+    if (membershipList) {
+      monthlySelection.forEach((wine) => {
+        const item = document.createElement('article');
+        item.className = 'sommelier-box-item';
+        item.innerHTML = `<h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
+        membershipList.appendChild(item);
+      });
+    }
 
     if (profileBlock && profileName && profileDescription) {
       profileName.textContent = profile.name;
@@ -677,8 +827,23 @@ if (sommelierApp) {
     }
 
     if (boxBlock && boxNote) {
-      boxNote.textContent = getBoxClosingMessage();
+      boxNote.textContent = getBoxClosingMessage(profile);
       boxBlock.hidden = false;
+    }
+
+    if (membershipBlock && membershipNote) {
+      membershipNote.textContent = getMembershipMessage(profile);
+      membershipBlock.hidden = false;
+
+      if (membershipWaLink) {
+        const lines = [
+          'Hola Lombardo, quiero consultar esta mensualidad recomendada:',
+          ...monthlySelection.map((wine) => `- ${wine.nombre}`),
+          '',
+          `Perfil detectado: ${profile.name}`,
+        ];
+        membershipWaLink.href = `https://wa.me/543412762319?text=${encodeURIComponent(lines.join('\n'))}`;
+      }
     }
 
     if (sommelierQuote) {
@@ -686,7 +851,7 @@ if (sommelierApp) {
       sommelierQuote.textContent = `“${sommelierQuotes[randomIndex]}”`;
     }
 
-    updateSommelierWhatsAppLink(recommendations, profile);
+    updateSommelierWhatsAppLink(recommendations, profile, monthlySelection);
   };
 
   const loadWineCatalog = async () => {
@@ -770,6 +935,7 @@ if (sommelierApp) {
     resultPanel.hidden = true;
     if (profileBlock) profileBlock.hidden = true;
     if (boxBlock) boxBlock.hidden = true;
+    if (membershipBlock) membershipBlock.hidden = true;
     quizPanel.hidden = false;
     setPanelTransition(quizPanel);
     renderQuestion();
@@ -778,3 +944,4 @@ if (sommelierApp) {
 
   renderQuestion();
 }
+
