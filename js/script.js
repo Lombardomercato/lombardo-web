@@ -125,23 +125,37 @@ if (sommelierApp) {
     },
   ];
 
-  const mockRecommendations = [
-    {
-      name: 'Trumpeter Malbec',
-      price: '$18.500',
-      reason: 'Una opción intensa y muy gastronómica, ideal para carnes y encuentros con amigos.',
+  const answerMappings = {
+    tipo_vino: {
+      Tinto: 'tinto',
+      Blanco: 'blanco',
+      Rosado: 'rosado',
+      Espumoso: 'espumoso',
+      'Me da igual': '',
     },
-    {
-      name: 'Saint Felicien Malbec',
-      price: '$19.800',
-      reason: 'Más elegante y estructurado, perfecto si querés subir un poco el nivel sin salirte de una línea clásica.',
+    presupuesto: {
+      'Hasta $12.000': 'bajo',
+      '$12.000 a $20.000': 'medio',
+      '$20.000 a $35.000': 'alto',
+      'Más de $35.000': 'premium',
     },
-    {
-      name: 'Rutini Cabernet Malbec',
-      price: '$21.000',
-      reason: 'Gran alternativa para compartir, con presencia y buen equilibrio para comidas importantes.',
+    ocasion: {
+      'Asado o comida': 'asado',
+      'Cena con amigos': 'cena_amigos',
+      Regalo: 'regalo',
+      'Para todos los días': 'diario',
+      'Quiero descubrir algo nuevo': 'descubrir',
     },
-  ];
+    comida: {
+      Carne: 'carne',
+      Pasta: 'pasta',
+      Picada: 'picada',
+      'Pescado / sushi': 'pescado_sushi',
+      'Sin comida': 'sin_comida',
+    },
+  };
+
+  let winesCatalog = [];
 
   const responses = {
     tipo_vino: '',
@@ -216,15 +230,89 @@ if (sommelierApp) {
     submitBtn.disabled = !isComplete();
   };
 
+  const formatPrice = (value) => {
+    if (typeof value !== 'number') return value;
+    return `$${new Intl.NumberFormat('es-AR').format(value)}`;
+  };
+
+  const getRecommendationMessage = () => (
+    `Una gran opción para ${responses.comida.toLowerCase()} y ${responses.ocasion.toLowerCase()}, dentro de tu rango de precio.`
+  );
+
+  const sortByPriorityAndPrice = (a, b) => {
+    const priorityOrder = { alta: 3, media: 2, baja: 1 };
+    const aPriority = priorityOrder[(a.prioridad_venta || '').toLowerCase()] || 0;
+    const bPriority = priorityOrder[(b.prioridad_venta || '').toLowerCase()] || 0;
+
+    if (bPriority !== aPriority) return bPriority - aPriority;
+    return (a.precio || 0) - (b.precio || 0);
+  };
+
+  const getWineScore = (wine) => {
+    let score = 0;
+
+    if (answerMappings.tipo_vino[responses.tipo_vino]
+      && wine.tipo_vino?.toLowerCase() === answerMappings.tipo_vino[responses.tipo_vino]) {
+      score += 25;
+    }
+
+    if (wine.nivel_precio?.toLowerCase() === answerMappings.presupuesto[responses.presupuesto]) {
+      score += 20;
+    }
+
+    if (wine.maridaje_principal?.toLowerCase() === answerMappings.comida[responses.comida]) {
+      score += 25;
+    }
+
+    if (wine.ocasion?.toLowerCase() === answerMappings.ocasion[responses.ocasion]) {
+      score += 20;
+    }
+
+    if ((wine.prioridad_venta || '').toLowerCase() === 'alta') {
+      score += 10;
+    }
+
+    return score;
+  };
+
+  const getTopRecommendations = () => {
+    const activeWines = winesCatalog.filter((wine) => wine.activo === true);
+
+    const scoredWines = activeWines
+      .map((wine) => ({ ...wine, score: getWineScore(wine) }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return sortByPriorityAndPrice(a, b);
+      });
+
+    const withMatches = scoredWines.filter((wine) => wine.score > 0).slice(0, 3);
+
+    if (withMatches.length) return withMatches;
+
+    return activeWines.sort(sortByPriorityAndPrice).slice(0, 3);
+  };
+
   const renderResults = () => {
     resultList.innerHTML = '';
+    const recommendations = getTopRecommendations();
 
-    mockRecommendations.forEach((wine) => {
+    recommendations.forEach((wine) => {
       const card = document.createElement('article');
       card.className = 'sommelier-wine-card reveal is-visible';
-      card.innerHTML = `<h3>${wine.name}</h3><p class="sommelier-price">${wine.price}</p><p>${wine.reason}</p>`;
+      card.innerHTML = `<h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p><p>${getRecommendationMessage()}</p>`;
       resultList.appendChild(card);
     });
+  };
+
+  const loadWineCatalog = async () => {
+    const response = await fetch('vinos_lombardo_base.json');
+
+    if (!response.ok) {
+      throw new Error('No se pudo cargar la base de vinos.');
+    }
+
+    const data = await response.json();
+    winesCatalog = Array.isArray(data) ? data : [];
   };
 
   nextBtn.addEventListener('click', () => {
@@ -243,18 +331,31 @@ if (sommelierApp) {
     }
   });
 
-  submitBtn.addEventListener('click', () => {
+  submitBtn.addEventListener('click', async () => {
     if (!isComplete()) return;
 
-    renderResults();
-    setPanelTransition(quizPanel);
-    quizPanel.hidden = true;
-    resultPanel.hidden = false;
-    setPanelTransition(resultPanel);
-    sommelierApp.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Buscando vinos...';
 
-    // punto futuro para integración con backend / IA
-    // sendSommelierAnswers(responses)
+    try {
+      if (!winesCatalog.length) {
+        await loadWineCatalog();
+      }
+
+      renderResults();
+      setPanelTransition(quizPanel);
+      quizPanel.hidden = true;
+      resultPanel.hidden = false;
+      setPanelTransition(resultPanel);
+      sommelierApp.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+      alert('No pudimos cargar las recomendaciones en este momento. Intentá nuevamente.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Recibir recomendación';
+    }
   });
 
   restartBtn.addEventListener('click', () => {
