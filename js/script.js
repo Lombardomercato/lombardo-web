@@ -594,6 +594,16 @@ if (sommelierApp) {
     return list[index];
   };
 
+  const getPrimaryRecommendationDetail = (wine, profile) => {
+    const typeLabel = wine?.tipo_vino ? wine.tipo_vino.charAt(0).toUpperCase() + wine.tipo_vino.slice(1) : 'Vino';
+    const varietalLabel = wine?.varietal || 'blend';
+    const occasionLabel = humanizeField('ocasion', 'tu ocasión');
+    const foodLabel = humanizeField('comida', 'tu comida ideal');
+    const profileName = profile?.name || 'tu perfil';
+
+    return `Un ${typeLabel} ${varietalLabel} elegido como eje principal para ${occasionLabel}. Acompaña especialmente bien ${foodLabel} y sostiene el estilo de ${profileName} con una experiencia equilibrada y de excelente relación precio-calidad.`;
+  };
+
   const sortByPriorityAndPrice = (a, b) => {
     const priorityOrder = { alta: 3, media: 2, baja: 1 };
     const aPriority = priorityOrder[(a.prioridad_venta || '').toLowerCase()] || 0;
@@ -807,8 +817,26 @@ if (sommelierApp) {
     recommendations.forEach((entry, index) => {
       const wine = entry.wine;
       const card = document.createElement('article');
-      card.className = `sommelier-wine-card reveal is-visible ${index === 0 ? 'is-highlighted' : ''}`.trim();
-      card.innerHTML = `<p class="sommelier-wine-role">${getRoleLabel(entry.role)}</p><h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p><p>${getRecommendationMessage(entry.role, wine, profile)}</p>`;
+      const isPrimary = index === 0;
+      card.className = `sommelier-wine-card reveal is-visible ${isPrimary ? 'is-highlighted is-primary' : 'is-secondary'}`.trim();
+
+      if (isPrimary) {
+        card.innerHTML = `
+          <p class="sommelier-primary-badge">Recomendado para vos</p>
+          <p class="sommelier-wine-role">${getRoleLabel(entry.role)}</p>
+          <h3>${wine.nombre}</h3>
+          <p class="sommelier-price">${formatPrice(wine.precio)}</p>
+          <p class="sommelier-wine-description">${getPrimaryRecommendationDetail(wine, profile)}</p>
+        `;
+      } else {
+        card.innerHTML = `
+          <p class="sommelier-wine-role">${getRoleLabel(entry.role)}</p>
+          <h3>${wine.nombre}</h3>
+          <p class="sommelier-price">${formatPrice(wine.precio)}</p>
+          <p class="sommelier-wine-description">${getRecommendationMessage(entry.role, wine, profile)}</p>
+        `;
+      }
+
       resultList.appendChild(card);
     });
 
