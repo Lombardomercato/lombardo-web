@@ -879,8 +879,15 @@ if (sommelierApp) {
   };
 
   const getMembershipMessage = (profile) => {
-    const styleLabel = humanizeField('estilo', 'perfil equilibrado');
-    return `Una selección pensada para alguien con perfil ${profile.name.toLowerCase()}: dos etiquetas alineadas a tu ${styleLabel} y una opción de descubrimiento para ampliar tu cava con criterio.`;
+    const normalized = getNormalizedAnswers();
+    const styleTone = {
+      intenso: 'disfruta vinos con presencia',
+      elegante: 'busca vinos finos y con criterio',
+      suave: 'valora vinos amables y fáciles de disfrutar',
+      frutado: 'prefiere vinos expresivos y frutados',
+    }[normalized.estilo] || 'disfruta vinos con personalidad';
+
+    return `Una selección pensada para alguien que ${styleTone}, pero también quiere abrir espacio a nuevas etiquetas. Queda alineada con tu perfil ${profile.name} y con la forma en la que vivís el vino mes a mes.`;
   };
 
   const updateSommelierWhatsAppLink = (recommendations, profile, monthlySelection) => {
@@ -965,10 +972,11 @@ if (sommelierApp) {
     }
 
     if (membershipList) {
-      monthlySelection.forEach((wine) => {
+      monthlySelection.forEach((wine, index) => {
         const item = document.createElement('article');
         item.className = 'sommelier-box-item';
-        item.innerHTML = `<h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
+        const roleLabel = index < 2 ? 'Alineado con tu estilo' : 'Descubrimiento del mes';
+        item.innerHTML = `<p class="sommelier-box-role">${roleLabel}</p><h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
         membershipList.appendChild(item);
       });
     }
@@ -990,7 +998,7 @@ if (sommelierApp) {
 
       if (membershipWaLink) {
         const lines = [
-          'Hola Lombardo, quiero consultar esta mensualidad recomendada:',
+          'Hola, usé el Sommelier de Lombardo y quiero consultar por la mensualidad recomendada.',
           ...monthlySelection.map((wine) => `- ${wine.nombre}`),
           '',
           `Perfil detectado: ${profile.name}`,
