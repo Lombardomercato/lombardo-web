@@ -47,6 +47,19 @@
             <p data-question-helper>Elegí la opción que mejor represente tu preferencia.</p>
             <div class="sommelier-options" data-options></div>
 
+            <div class="sommelier-textarea-wrap" data-free-text-wrap hidden>
+              <label class="sommelier-textarea-label" for="sommelier-texto-libre">¿Querés contarnos algo más?</label>
+              <p class="sommelier-textarea-helper">Opcional. Podés escribirnos qué tipo de vino buscás, para quién es o qué te gustaría encontrar.</p>
+              <textarea
+                id="sommelier-texto-libre"
+                name="texto_libre"
+                class="sommelier-textarea"
+                data-free-text
+                rows="4"
+                placeholder="Ej: Quiero algo para un asado con amigos, rico pero no tan pesado"
+              ></textarea>
+            </div>
+
             <div class="sommelier-actions">
               <button type="button" class="btn btn-secondary" data-prev>Anterior</button>
               <button type="button" class="btn btn-primary" data-next disabled>Continuar</button>
