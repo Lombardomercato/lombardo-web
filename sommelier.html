@@ -43,6 +43,10 @@
 
     <section class="section sommelier-section">
       <div class="container">
+        <div class="sommelier-local-context" data-local-context hidden>
+          <p>Estás en Lombardo. Te ayudamos a elegir el vino perfecto para llevar hoy.</p>
+        </div>
+
         <div id="sommelier-app" class="sommelier-app reveal" aria-live="polite">
           <div class="sommelier-progress-wrap">
             <div class="sommelier-progress-meta">
@@ -52,6 +56,12 @@
             <div class="sommelier-progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-label="Progreso del cuestionario">
               <span data-progress-fill></span>
             </div>
+          </div>
+
+          <div class="sommelier-loading" data-result-loading hidden>
+            <p class="eyebrow">Sommelier IA</p>
+            <h2>Nuestro sommelier está eligiendo tus vinos</h2>
+            <p>Seleccionando tu recomendación personalizada…</p>
           </div>
 
           <div class="sommelier-panel" data-quiz-panel>
@@ -97,7 +107,7 @@
             <div class="sommelier-box" data-box hidden>
               <p class="eyebrow">Caja recomendada</p>
               <h3>Tu caja ideal</h3>
-              <p class="sommelier-box-subtitle">Una selección pensada según tu gusto, tu ocasión y tu presupuesto.</p>
+              <p class="sommelier-box-subtitle">Una selección pensada según tu gusto, tu ocasión y tu forma de disfrutar el vino.</p>
               <div class="sommelier-box-list" data-box-list></div>
               <p class="sommelier-box-note" data-box-note></p>
             </div>
@@ -105,10 +115,14 @@
             <div class="sommelier-membership" data-membership hidden>
               <p class="eyebrow">Selección mensual</p>
               <h3>Tu mensualidad recomendada</h3>
-              <p class="sommelier-membership-subtitle">Una propuesta tipo club para que sigas disfrutando Lombardo en casa.</p>
+              <p class="sommelier-membership-subtitle">Según lo que nos contaste, creemos que te puede gustar recibir cada mes una selección como esta.</p>
+              <ul class="sommelier-membership-logic" aria-label="Lógica de la selección mensual">
+                <li>2 vinos alineados con tu estilo</li>
+                <li>1 vino para descubrir algo distinto</li>
+              </ul>
               <div class="sommelier-membership-list" data-membership-list></div>
               <p class="sommelier-membership-note" data-membership-note></p>
-              <a class="btn btn-primary" data-membership-wa href="https://wa.me/543412762319?text=Hola%2C%20quiero%20consultar%20la%20mensualidad%20recomendada%20del%20Sommelier%20de%20Lombardo." target="_blank" rel="noopener">Consultar esta mensualidad</a>
+              <a class="btn btn-primary" data-membership-wa href="https://wa.me/543412762319?text=Hola%2C%20us%C3%A9%20el%20Sommelier%20de%20Lombardo%20y%20quiero%20consultar%20por%20la%20mensualidad%20recomendada." target="_blank" rel="noopener">Consultar esta mensualidad</a>
             </div>
 
             <div class="sommelier-future-ai" data-future-ai>

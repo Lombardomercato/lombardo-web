@@ -1986,6 +1986,22 @@ main > .section:last-child::after,
   padding-top: 0;
 }
 
+.sommelier-local-context {
+  margin: 0 0 16px;
+  border: 1px solid rgba(0, 58, 112, 0.14);
+  border-radius: calc(var(--radius-md) - 2px);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(245, 249, 255, 0.84));
+  padding: 12px 14px;
+  box-shadow: 0 8px 20px rgba(0, 58, 112, 0.06);
+}
+
+.sommelier-local-context p {
+  margin: 0;
+  color: rgba(0, 58, 112, 0.85);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .sommelier-app {
   position: relative;
   isolation: isolate;
@@ -2054,14 +2070,34 @@ main > .section:last-child::after,
 }
 
 .sommelier-panel,
-.sommelier-result {
+.sommelier-result,
+.sommelier-loading {
   transition: opacity 240ms ease, transform 240ms ease;
 }
 
 .sommelier-panel.is-transitioning,
-.sommelier-result.is-transitioning {
+.sommelier-result.is-transitioning,
+.sommelier-loading.is-transitioning {
   opacity: 0;
   transform: translateY(8px);
+}
+
+.sommelier-loading {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 245, 255, 0.84));
+  padding: clamp(24px, 4vw, 34px);
+  box-shadow: 0 14px 30px rgba(0, 58, 112, 0.09);
+}
+
+.sommelier-loading h2 {
+  margin: 8px 0 10px;
+  max-width: 22ch;
+}
+
+.sommelier-loading p {
+  margin: 0;
+  color: rgba(0, 58, 112, 0.82);
 }
 
 .sommelier-panel h2,
@@ -2182,6 +2218,17 @@ main > .section:last-child::after,
   margin: 26px 0 34px;
 }
 
+.sommelier-result .is-staged {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.sommelier-result .is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 420ms ease, transform 420ms ease;
+}
+
 .sommelier-wine-card {
   border-radius: var(--radius-md);
   border: 1px solid rgba(0, 58, 112, 0.16);
@@ -2271,6 +2318,34 @@ main > .section:last-child::after,
   line-height: 1.58;
 }
 
+
+.sommelier-wine-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sommelier-wine-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  background: rgba(239, 245, 255, 0.8);
+  color: rgba(0, 58, 112, 0.9);
+  font-size: 0.73rem;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.sommelier-wine-card.is-primary .sommelier-wine-badge {
+  background: rgba(255, 244, 241, 0.9);
+  border-color: rgba(171, 30, 58, 0.22);
+  color: rgba(111, 12, 34, 0.92);
+}
+
 .sommelier-wine-card p {
   margin-top: 0;
 }
@@ -2317,8 +2392,34 @@ main > .section:last-child::after,
 
 .sommelier-membership {
   border: 1px solid rgba(0, 58, 112, 0.24);
-  background: linear-gradient(146deg, rgba(242, 248, 255, 0.88), rgba(255, 255, 255, 0.95));
-  box-shadow: 0 14px 28px rgba(0, 58, 112, 0.09);
+  background: linear-gradient(146deg, rgba(236, 245, 255, 0.92), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 16px 34px rgba(0, 58, 112, 0.1);
+}
+
+.sommelier-membership-logic {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: calc(var(--radius-md) - 4px);
+  border: 1px solid rgba(0, 58, 112, 0.14);
+  background: rgba(255, 255, 255, 0.8);
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.sommelier-membership-logic li {
+  position: relative;
+  padding-left: 16px;
+  color: rgba(0, 58, 112, 0.86);
+  font-size: 0.94rem;
+}
+
+.sommelier-membership-logic li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #ab1e3a;
+  font-weight: 700;
 }
 
 .sommelier-membership .btn {
@@ -2354,6 +2455,23 @@ main > .section:last-child::after,
   margin: 4px 0 0;
   color: rgba(0, 58, 112, 0.86);
   font-weight: 600;
+}
+
+.sommelier-box-role {
+  margin: 0 0 8px;
+  color: #ab1e3a;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sommelier-box-role-description {
+  margin-top: 8px;
+  font-weight: 500;
+  color: rgba(0, 58, 112, 0.8);
+  line-height: 1.5;
+  font-size: 0.92rem;
 }
 
 .sommelier-closing {

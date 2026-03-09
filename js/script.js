@@ -146,6 +146,7 @@ if (!prefersReducedMotion) {
 const sommelierApp = document.querySelector('#sommelier-app');
 
 if (sommelierApp) {
+  const localContextBanner = document.querySelector('[data-local-context]');
   const questions = [
     {
       key: 'tipo_vino',
@@ -238,6 +239,7 @@ if (sommelierApp) {
   const progressFill = sommelierApp.querySelector('[data-progress-fill]');
   const quizPanel = sommelierApp.querySelector('[data-quiz-panel]');
   const resultPanel = sommelierApp.querySelector('[data-result]');
+  const loadingPanel = sommelierApp.querySelector('[data-result-loading]');
   const questionTitle = sommelierApp.querySelector('[data-question-title]');
   const questionHelper = sommelierApp.querySelector('[data-question-helper]');
   const optionsWrap = sommelierApp.querySelector('[data-options]');
@@ -259,6 +261,9 @@ if (sommelierApp) {
   const membershipNote = sommelierApp.querySelector('[data-membership-note]');
   const membershipWaLink = sommelierApp.querySelector('[data-membership-wa]');
   const sommelierQuote = sommelierApp.querySelector('[data-sommelier-quote]');
+  const futureAiBlock = sommelierApp.querySelector('[data-future-ai]');
+  const closingBlock = sommelierApp.querySelector('[data-sommelier-closing]');
+  const resultActions = sommelierApp.querySelector('.sommelier-result-actions');
   const waLink = sommelierApp.querySelector('[data-wa-link]');
 
   const requiredQuestionKeys = questions.map((question) => question.key);
@@ -270,6 +275,16 @@ if (sommelierApp) {
   const setPanelTransition = (panel) => {
     panel.classList.add('is-transitioning');
     window.setTimeout(() => panel.classList.remove('is-transitioning'), 200);
+  };
+
+  const showLocalContextIfNeeded = () => {
+    if (!localContextBanner) return;
+    const isLocalVisit = new URLSearchParams(window.location.search).get('local') === 'true';
+    localContextBanner.hidden = !isLocalVisit;
+  };
+
+  const hideLocalContext = () => {
+    if (localContextBanner) localContextBanner.hidden = true;
   };
 
   const renderQuestion = () => {
@@ -300,6 +315,7 @@ if (sommelierApp) {
       }
 
       button.addEventListener('click', () => {
+        hideLocalContext();
         responses[question.key] = option;
         renderQuestion();
       });
@@ -651,15 +667,35 @@ if (sommelierApp) {
     return `${typeLabel} ${varietalLabel} seleccionado como eje de tu experiencia en ${occasionLabel}. Está pensado para acompañar ${foodLabel}, respetar tu búsqueda de ${styleLabel} y representar fielmente tu perfil ${profileName}. ${refinedNote}`;
   };
 
-  const getPrimaryRecommendationDetail = (wine, profile) => {
-    const typeLabel = wine?.tipo_vino ? wine.tipo_vino.charAt(0).toUpperCase() + wine.tipo_vino.slice(1) : 'Vino';
-    const varietalLabel = wine?.varietal || 'blend';
-    const occasionLabel = humanizeField('ocasion', 'tu ocasión');
-    const foodLabel = humanizeField('comida', 'tu comida ideal');
-    const profileName = profile?.name || 'tu perfil';
+  const getRecommendationBadges = (role, wine) => {
+    const normalized = getNormalizedAnswers();
+    const foodSource = (wine?.maridaje_principal || normalized.comida || '').toLowerCase();
+    const styleSource = (normalized.estilo || '').toLowerCase();
 
-    return `Un ${typeLabel} ${varietalLabel} elegido como eje principal para ${occasionLabel}. Acompaña especialmente bien ${foodLabel} y sostiene el estilo de ${profileName} con una experiencia equilibrada y de excelente relación precio-calidad.`;
+    const foodBadge = {
+      carne: 'Ideal para carne',
+      pasta: 'Ideal para pasta',
+      picada: 'Ideal para picadas',
+      pescado_sushi: 'Ideal para sushi',
+      sin_comida: 'Ideal para brindar',
+    }[foodSource] || 'Maridaje versátil';
+
+    const styleBadge = {
+      suave: 'Vino suave',
+      frutado: 'Vino frutado',
+      intenso: 'Vino intenso',
+      elegante: 'Vino elegante',
+    }[styleSource] || 'Estilo equilibrado';
+
+    const roleBadge = {
+      principal: 'Opción segura',
+      premium: 'Opción elegante',
+      descubrir: 'Para descubrir',
+    }[role] || 'Recomendado para vos';
+
+    return [foodBadge, styleBadge, roleBadge].slice(0, 3);
   };
+
 
   const sortByPriorityAndPrice = (a, b) => {
     const priorityOrder = { alta: 3, media: 2, baja: 1 };
@@ -791,29 +827,67 @@ if (sommelierApp) {
     ].filter((entry) => entry.wine);
   };
 
+  const getBoxRoleLabel = (role) => {
+    if (role === 'anchor') return 'Vino ancla';
+    if (role === 'upgrade') return 'Vino upgrade';
+    return 'Vino descubrimiento';
+  };
+
+  const getBoxRoleDescription = (role, profile, wine) => {
+    const normalized = getNormalizedAnswers();
+    const occasionLabel = humanizeField('ocasion', 'tu ocasión');
+    const styleLabel = humanizeField('estilo', 'tu estilo');
+    const varietalLabel = wine?.varietal || 'esta etiqueta';
+
+    if (role === 'anchor') {
+      return `La base segura de tu caja: un ${varietalLabel} alineado a ${profile.name} y pensado para ${occasionLabel}.`;
+    }
+
+    if (role === 'upgrade') {
+      return `Una versión más especial de tu perfil ${styleLabel}: suma complejidad y un toque más elegante en copa.`;
+    }
+
+    return `La botella para abrir el paladar con criterio: distinta, compatible con tu perfil y elegida para descubrir sin riesgos.`;
+  };
+
   const buildCuratedBox = (excludeNames = new Set()) => {
     const ranked = getRankedWines(excludeNames);
     const selectedNames = new Set();
 
-    const secure = pickDistinctWine(ranked, selectedNames, (wine) => wine.score >= 24);
-    const special = pickDistinctWine(ranked, selectedNames, (wine) => ['alto', 'premium'].includes((wine.nivel_precio || '').toLowerCase()));
-    const discovery = pickDistinctWine(ranked, selectedNames, (wine) => wine.ocasion === 'descubrir' || wine.tipo_vino !== secure?.tipo_vino);
+    const anchor = pickDistinctWine(ranked, selectedNames, (wine) => wine.score >= 24 || (wine.prioridad_venta || '').toLowerCase() === 'alta');
+    const upgrade = pickDistinctWine(
+      ranked,
+      selectedNames,
+      (wine) => (
+        ['alto', 'premium'].includes((wine.nivel_precio || '').toLowerCase())
+        || (wine.precio || 0) >= (anchor?.precio || 0)
+      ),
+    );
+    const discovery = pickDistinctWine(
+      ranked,
+      selectedNames,
+      (wine) => wine.tipo_vino !== anchor?.tipo_vino || wine.varietal !== anchor?.varietal || wine.ocasion === 'descubrir',
+    );
 
-    return [secure, special, discovery].filter(Boolean);
+    return [
+      { role: 'anchor', wine: anchor },
+      { role: 'upgrade', wine: upgrade },
+      { role: 'discovery', wine: discovery },
+    ].filter((entry) => entry.wine);
   };
 
   const getBoxClosingMessage = (profile) => {
     const normalizedOccasion = answerMappings.ocasion[responses.ocasion] || '';
 
     if (normalizedOccasion === 'regalo') {
-      return `Esta caja fue curada para ${profile.name}: combina una etiqueta segura, una opción elegante y un descubrimiento que suma wow al regalo.`;
+      return 'Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Ideal para regalar con criterio y buena presencia.';
     }
 
     if (normalizedOccasion === 'asado' || normalizedOccasion === 'cena_amigos') {
-      return 'Pensada para compartir: arranca con una base confiable, sube con una opción especial y cierra con un vino que invita a conversar.';
+      return 'Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Funciona muy bien para compartir en mesa.';
     }
 
-    return `Una curaduría equilibrada para ${profile.name}: te resuelve el día a día y, al mismo tiempo, te deja lugar para descubrir nuevas etiquetas.`;
+    return `Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Queda alineada con tu perfil ${profile.name} y con la forma en la que disfrutás el vino.`;
   };
 
   const buildMonthlySelection = (excludeNames = new Set()) => {
@@ -828,8 +902,15 @@ if (sommelierApp) {
   };
 
   const getMembershipMessage = (profile) => {
-    const styleLabel = humanizeField('estilo', 'perfil equilibrado');
-    return `Una selección pensada para alguien con perfil ${profile.name.toLowerCase()}: dos etiquetas alineadas a tu ${styleLabel} y una opción de descubrimiento para ampliar tu cava con criterio.`;
+    const normalized = getNormalizedAnswers();
+    const styleTone = {
+      intenso: 'disfruta vinos con presencia',
+      elegante: 'busca vinos finos y con criterio',
+      suave: 'valora vinos amables y fáciles de disfrutar',
+      frutado: 'prefiere vinos expresivos y frutados',
+    }[normalized.estilo] || 'disfruta vinos con personalidad';
+
+    return `Una selección pensada para alguien que ${styleTone}, pero también quiere abrir espacio a nuevas etiquetas. Queda alineada con tu perfil ${profile.name} y con la forma en la que vivís el vino mes a mes.`;
   };
 
   const updateSommelierWhatsAppLink = (recommendations, profile, monthlySelection) => {
@@ -868,7 +949,7 @@ if (sommelierApp) {
     const profile = getWineProfile();
     const recommendedNames = new Set(recommendations.map((entry) => entry.wine.nombre));
     const curatedBox = buildCuratedBox(recommendedNames);
-    const boxNames = new Set(curatedBox.map((wine) => wine.nombre));
+    const boxNames = new Set(curatedBox.map((entry) => entry.wine.nombre));
     const monthlySelection = buildMonthlySelection(new Set([...recommendedNames, ...boxNames]));
 
     recommendations.forEach((entry, index) => {
@@ -884,6 +965,7 @@ if (sommelierApp) {
           <h3>${wine.nombre}</h3>
           <p class="sommelier-price">${formatPrice(wine.precio)}</p>
           <p class="sommelier-wine-description">${getPrimaryRecommendationDetail(wine, profile)}</p>
+          <div class="sommelier-wine-badges">${getRecommendationBadges(entry.role, wine).map((badge) => `<span class="sommelier-wine-badge">${badge}</span>`).join('')}</div>
         `;
       } else {
         card.innerHTML = `
@@ -891,6 +973,7 @@ if (sommelierApp) {
           <h3>${wine.nombre}</h3>
           <p class="sommelier-price">${formatPrice(wine.precio)}</p>
           <p class="sommelier-wine-description">${getRecommendationMessage(entry.role, wine, profile)}</p>
+          <div class="sommelier-wine-badges">${getRecommendationBadges(entry.role, wine).map((badge) => `<span class="sommelier-wine-badge">${badge}</span>`).join('')}</div>
         `;
       }
 
@@ -898,19 +981,25 @@ if (sommelierApp) {
     });
 
     if (boxList) {
-      curatedBox.forEach((wine) => {
+      curatedBox.forEach((entry) => {
         const item = document.createElement('article');
         item.className = 'sommelier-box-item';
-        item.innerHTML = `<h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
+        item.innerHTML = `
+          <p class="sommelier-box-role">${getBoxRoleLabel(entry.role)}</p>
+          <h4>${entry.wine.nombre}</h4>
+          <p>${formatPrice(entry.wine.precio)}</p>
+          <p class="sommelier-box-role-description">${getBoxRoleDescription(entry.role, profile, entry.wine)}</p>
+        `;
         boxList.appendChild(item);
       });
     }
 
     if (membershipList) {
-      monthlySelection.forEach((wine) => {
+      monthlySelection.forEach((wine, index) => {
         const item = document.createElement('article');
         item.className = 'sommelier-box-item';
-        item.innerHTML = `<h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
+        const roleLabel = index < 2 ? 'Alineado con tu estilo' : 'Descubrimiento del mes';
+        item.innerHTML = `<p class="sommelier-box-role">${roleLabel}</p><h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
         membershipList.appendChild(item);
       });
     }
@@ -932,7 +1021,7 @@ if (sommelierApp) {
 
       if (membershipWaLink) {
         const lines = [
-          'Hola Lombardo, quiero consultar esta mensualidad recomendada:',
+          'Hola, usé el Sommelier de Lombardo y quiero consultar por la mensualidad recomendada.',
           ...monthlySelection.map((wine) => `- ${wine.nombre}`),
           '',
           `Perfil detectado: ${profile.name}`,
@@ -947,6 +1036,42 @@ if (sommelierApp) {
     }
 
     updateSommelierWhatsAppLink(recommendations, profile, monthlySelection);
+  };
+
+  const animateResultSequence = () => {
+    const primaryCard = resultList.querySelector('.sommelier-wine-card.is-primary');
+    const secondaryCards = [...resultList.querySelectorAll('.sommelier-wine-card.is-secondary')];
+
+    const sequence = [
+      primaryCard,
+      ...secondaryCards,
+      profileBlock,
+      boxBlock,
+      membershipBlock,
+      futureAiBlock,
+      closingBlock,
+      resultActions,
+    ].filter((element) => element && !element.hidden);
+
+    sequence.forEach((element) => {
+      element.classList.remove('is-visible');
+      element.classList.add('is-staged');
+    });
+
+    if (prefersReducedMotion) {
+      sequence.forEach((element) => {
+        element.classList.remove('is-staged');
+        element.classList.add('is-visible');
+      });
+      return;
+    }
+
+    sequence.forEach((element, index) => {
+      window.setTimeout(() => {
+        element.classList.remove('is-staged');
+        element.classList.add('is-visible');
+      }, 170 * index);
+    });
   };
 
   const loadWineCatalog = async () => {
@@ -985,8 +1110,17 @@ if (sommelierApp) {
   submitBtn.addEventListener('click', async () => {
     if (!isComplete()) return;
 
+    hideLocalContext();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Buscando vinos...';
+
+    setPanelTransition(quizPanel);
+    quizPanel.hidden = true;
+    resultPanel.hidden = true;
+    if (loadingPanel) {
+      loadingPanel.hidden = false;
+      setPanelTransition(loadingPanel);
+    }
 
     try {
       if (!winesCatalog.length) {
@@ -1006,14 +1140,21 @@ if (sommelierApp) {
       }
 
       renderResults();
-      setPanelTransition(quizPanel);
-      quizPanel.hidden = true;
+      if (!prefersReducedMotion) {
+        await new Promise((resolve) => window.setTimeout(resolve, 620));
+      }
+
+      if (loadingPanel) loadingPanel.hidden = true;
       resultPanel.hidden = false;
       setPanelTransition(resultPanel);
+      animateResultSequence();
       sommelierApp.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(error);
+      if (loadingPanel) loadingPanel.hidden = true;
+      quizPanel.hidden = false;
+      setPanelTransition(quizPanel);
       alert('No pudimos cargar las recomendaciones en este momento. Intentá nuevamente.');
     } finally {
       submitBtn.disabled = false;
@@ -1028,6 +1169,7 @@ if (sommelierApp) {
     inferredSignals = null;
     currentStep = 0;
     resultPanel.hidden = true;
+    if (loadingPanel) loadingPanel.hidden = true;
     if (profileBlock) profileBlock.hidden = true;
     if (boxBlock) boxBlock.hidden = true;
     if (membershipBlock) membershipBlock.hidden = true;
@@ -1037,5 +1179,6 @@ if (sommelierApp) {
     sommelierApp.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
   });
 
+  showLocalContextIfNeeded();
   renderQuestion();
 }
