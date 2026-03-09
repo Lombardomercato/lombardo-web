@@ -166,6 +166,7 @@ if (sommelierApp) {
     texto_libre: '',
   };
 
+  let inferredSignals = null;
   let currentStep = 0;
 
   const stepCurrent = sommelierApp.querySelector('[data-step-current]');
@@ -250,6 +251,152 @@ if (sommelierApp) {
     return `$${new Intl.NumberFormat('es-AR').format(value)}`;
   };
 
+
+  const OPENAI_MODEL = 'gpt-4o-mini';
+
+  const getOpenAIApiKey = () => (
+    document.querySelector('meta[name="openai-api-key"]')?.getAttribute('content')?.trim() || ''
+  );
+
+  const normalizeFreeTextSignals = (payload) => {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+
+    const normalize = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+
+    return {
+      tipo_vino: normalize(payload.tipo_vino),
+      ocasion: normalize(payload.ocasion),
+      comida: normalize(payload.comida),
+      estilo: normalize(payload.estilo),
+      nivel_precio: normalize(payload.nivel_precio),
+    };
+  };
+
+  const getFreeTextSignals = async (freeText) => {
+    const trimmedText = freeText.trim();
+
+    if (!trimmedText) return null;
+
+    const apiKey = getOpenAIApiKey();
+
+    if (!apiKey) {
+      // eslint-disable-next-line no-console
+      console.warn('OpenAI API key no configurada. Se omite interpretación de texto libre.');
+      return null;
+    }
+
+    const prompt = [
+      'Actuá como sommelier y analista de intención.',
+      'Analizá el texto del cliente y detectá posibles señales sobre:',
+      'tipo_vino',
+      'ocasion',
+      'comida',
+      'estilo',
+      'nivel_precio',
+      'No inventes vinos.',
+      'Solo interpretá intención.',
+      'Respondé solo en JSON con esta estructura:',
+      '{',
+      '  "tipo_vino": "",',
+      '  "ocasion": "",',
+      '  "comida": "",',
+      '  "estilo": "",',
+      '  "nivel_precio": ""',
+      '}',
+      `Texto del cliente: """${trimmedText}"""`,
+    ].join('\n');
+
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        input: prompt,
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'sommelier_intent_signals',
+            schema: {
+              type: 'object',
+              properties: {
+                tipo_vino: { type: 'string' },
+                ocasion: { type: 'string' },
+                comida: { type: 'string' },
+                estilo: { type: 'string' },
+                nivel_precio: { type: 'string' },
+              },
+              required: ['tipo_vino', 'ocasion', 'comida', 'estilo', 'nivel_precio'],
+              additionalProperties: false,
+            },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('No se pudo interpretar el texto libre con OpenAI.');
+    }
+
+    const data = await response.json();
+    const rawOutput = data.output_text;
+
+    if (!rawOutput) return null;
+
+    try {
+      return normalizeFreeTextSignals(JSON.parse(rawOutput));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('No se pudo parsear la respuesta JSON de OpenAI:', error);
+      return null;
+    }
+  };
+
+  const mapResponseValue = (key, value) => {
+    if (!value) return '';
+
+    const normalizedValue = value.toLowerCase();
+    const options = answerMappings[key] || {};
+
+    return Object.keys(options).find((option) => options[option] === normalizedValue) || '';
+  };
+
+  const applyFreeTextSignals = (signals) => {
+    if (!signals) return;
+
+    const inferredTipo = mapResponseValue('tipo_vino', signals.tipo_vino);
+    const inferredOcasion = mapResponseValue('ocasion', signals.ocasion);
+    const inferredComida = mapResponseValue('comida', signals.comida);
+    const inferredPresupuesto = mapResponseValue('presupuesto', signals.nivel_precio);
+
+    if (!responses.tipo_vino && inferredTipo) responses.tipo_vino = inferredTipo;
+    if (!responses.ocasion && inferredOcasion) responses.ocasion = inferredOcasion;
+    if (!responses.comida && inferredComida) responses.comida = inferredComida;
+    if (!responses.presupuesto && inferredPresupuesto) responses.presupuesto = inferredPresupuesto;
+
+    if (!responses.estilo && signals.estilo) {
+      const normalizedStyle = signals.estilo.toLowerCase();
+      const styleAliases = {
+        suave: 'Suave',
+        liviano: 'Suave',
+        ligero: 'Suave',
+        frutado: 'Frutado',
+        fresco: 'Frutado',
+        intenso: 'Intenso',
+        robusto: 'Intenso',
+        elegante: 'Elegante',
+        medio: 'No sé',
+      };
+
+      const styleOption = styleAliases[normalizedStyle];
+      if (styleOption && questions.find((question) => question.key === 'estilo')?.options.includes(styleOption)) {
+        responses.estilo = styleOption;
+      }
+    }
+  };
+
   const getRecommendationMessage = () => (
     `Una gran opción para ${responses.comida.toLowerCase()} y ${responses.ocasion.toLowerCase()}, dentro de tu rango de precio.`
   );
@@ -266,21 +413,32 @@ if (sommelierApp) {
   const getWineScore = (wine) => {
     let score = 0;
 
-    if (answerMappings.tipo_vino[responses.tipo_vino]
-      && wine.tipo_vino?.toLowerCase() === answerMappings.tipo_vino[responses.tipo_vino]) {
+    const selectedTipo = answerMappings.tipo_vino[responses.tipo_vino];
+    const selectedPrecio = answerMappings.presupuesto[responses.presupuesto];
+    const selectedComida = answerMappings.comida[responses.comida];
+    const selectedOcasion = answerMappings.ocasion[responses.ocasion];
+
+    if (selectedTipo && wine.tipo_vino?.toLowerCase() === selectedTipo) {
       score += 25;
     }
 
-    if (wine.nivel_precio?.toLowerCase() === answerMappings.presupuesto[responses.presupuesto]) {
+    if (selectedPrecio && wine.nivel_precio?.toLowerCase() === selectedPrecio) {
       score += 20;
     }
 
-    if (wine.maridaje_principal?.toLowerCase() === answerMappings.comida[responses.comida]) {
+    if (selectedComida && wine.maridaje_principal?.toLowerCase() === selectedComida) {
       score += 25;
     }
 
-    if (wine.ocasion?.toLowerCase() === answerMappings.ocasion[responses.ocasion]) {
+    if (selectedOcasion && wine.ocasion?.toLowerCase() === selectedOcasion) {
       score += 20;
+    }
+
+    if (inferredSignals) {
+      if (inferredSignals.tipo_vino && inferredSignals.tipo_vino === wine.tipo_vino?.toLowerCase()) score += 6;
+      if (inferredSignals.nivel_precio && inferredSignals.nivel_precio === wine.nivel_precio?.toLowerCase()) score += 5;
+      if (inferredSignals.comida && inferredSignals.comida === wine.maridaje_principal?.toLowerCase()) score += 6;
+      if (inferredSignals.ocasion && inferredSignals.ocasion === wine.ocasion?.toLowerCase()) score += 5;
     }
 
     if ((wine.prioridad_venta || '').toLowerCase() === 'alta') {
@@ -363,6 +521,16 @@ if (sommelierApp) {
         await loadWineCatalog();
       }
 
+      try {
+        const freeTextSignals = await getFreeTextSignals(responses.texto_libre);
+        inferredSignals = freeTextSignals;
+        applyFreeTextSignals(freeTextSignals);
+      } catch (error) {
+        inferredSignals = null;
+        // eslint-disable-next-line no-console
+        console.error(error);
+      }
+
       renderResults();
       setPanelTransition(quizPanel);
       quizPanel.hidden = true;
@@ -383,6 +551,7 @@ if (sommelierApp) {
     Object.keys(responses).forEach((key) => {
       responses[key] = '';
     });
+    inferredSignals = null;
     currentStep = 0;
     resultPanel.hidden = true;
     quizPanel.hidden = false;
