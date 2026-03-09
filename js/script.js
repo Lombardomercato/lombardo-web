@@ -189,6 +189,9 @@ if (sommelierApp) {
   const profileDescription = sommelierApp.querySelector('[data-profile-description]');
   const freeTextWrap = sommelierApp.querySelector('[data-free-text-wrap]');
   const freeTextInput = sommelierApp.querySelector('[data-free-text]');
+  const boxBlock = sommelierApp.querySelector('[data-box]');
+  const boxList = sommelierApp.querySelector('[data-box-list]');
+  const boxNote = sommelierApp.querySelector('[data-box-note]');
 
   const requiredQuestionKeys = questions.map((question) => question.key);
 
@@ -540,6 +543,21 @@ if (sommelierApp) {
     };
   };
 
+
+  const getBoxClosingMessage = () => {
+    const normalizedOccasion = answerMappings.ocasion[responses.ocasion] || '';
+
+    if (normalizedOccasion === 'regalo') {
+      return 'Ideal para regalar una experiencia completa: un vino elegante, uno versátil y uno con efecto sorpresa.';
+    }
+
+    if (normalizedOccasion === 'asado' || normalizedOccasion === 'cena_amigos') {
+      return 'Ideal para compartir en la mesa: una etiqueta confiable, otra gastronómica y una para sumar conversación.';
+    }
+
+    return 'Ideal para llevar una opción segura, una para compartir y otra para descubrir.';
+  };
+
   const getTopRecommendations = () => {
     const activeWines = winesCatalog.filter((wine) => wine.activo === true);
 
@@ -559,6 +577,8 @@ if (sommelierApp) {
 
   const renderResults = () => {
     resultList.innerHTML = '';
+    if (boxList) boxList.innerHTML = '';
+
     const recommendations = getTopRecommendations();
 
     recommendations.forEach((wine) => {
@@ -566,6 +586,13 @@ if (sommelierApp) {
       card.className = 'sommelier-wine-card reveal is-visible';
       card.innerHTML = `<h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p><p>${getRecommendationMessage()}</p>`;
       resultList.appendChild(card);
+
+      if (boxList) {
+        const item = document.createElement('article');
+        item.className = 'sommelier-box-item';
+        item.innerHTML = `<h4>${wine.nombre}</h4><p>${formatPrice(wine.precio)}</p>`;
+        boxList.appendChild(item);
+      }
     });
 
     if (profileBlock && profileName && profileDescription) {
@@ -573,6 +600,11 @@ if (sommelierApp) {
       profileName.textContent = profile.name;
       profileDescription.textContent = profile.description;
       profileBlock.hidden = false;
+    }
+
+    if (boxBlock && boxNote) {
+      boxNote.textContent = getBoxClosingMessage();
+      boxBlock.hidden = false;
     }
   };
 
@@ -656,6 +688,7 @@ if (sommelierApp) {
     currentStep = 0;
     resultPanel.hidden = true;
     if (profileBlock) profileBlock.hidden = true;
+    if (boxBlock) boxBlock.hidden = true;
     quizPanel.hidden = false;
     setPanelTransition(quizPanel);
     renderQuestion();
