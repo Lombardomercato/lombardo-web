@@ -125,6 +125,14 @@ if (sommelierApp) {
     },
   ];
 
+  const sommelierQuotes = [
+    'El mejor vino no siempre es el más caro, sino el que mejor acompaña el momento.',
+    'Si estás entre dos opciones, elegí la que más te dé curiosidad.',
+    'Un buen vino cambia una comida; uno muy bueno cambia la noche.',
+    'El vino también es descubrimiento. Animate a probar algo distinto.',
+    'A veces el mejor vino es simplemente el que compartís.',
+  ];
+
   const answerMappings = {
     tipo_vino: {
       Tinto: 'tinto',
@@ -192,6 +200,7 @@ if (sommelierApp) {
   const boxBlock = sommelierApp.querySelector('[data-box]');
   const boxList = sommelierApp.querySelector('[data-box-list]');
   const boxNote = sommelierApp.querySelector('[data-box-note]');
+  const sommelierQuote = sommelierApp.querySelector('[data-sommelier-quote]');
   const waLink = sommelierApp.querySelector('[data-wa-link]');
 
   const requiredQuestionKeys = questions.map((question) => question.key);
@@ -637,6 +646,11 @@ if (sommelierApp) {
     if (boxBlock && boxNote) {
       boxNote.textContent = getBoxClosingMessage();
       boxBlock.hidden = false;
+    }
+
+    if (sommelierQuote) {
+      const randomIndex = Math.floor(Math.random() * sommelierQuotes.length);
+      sommelierQuote.textContent = `“${sommelierQuotes[randomIndex]}”`;
     }
 
     updateSommelierWhatsAppLink(recommendations, profile);
