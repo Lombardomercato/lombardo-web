@@ -17,7 +17,7 @@ Por derechos/licencias, este ZIP deja la carpeta /fonts lista, pero vos tenés q
 Las rutas ya están configuradas en css/styles.css.
 
 4) CARTA (PDF)
-assets/menu/menu-lombardo.pdf (ya incluido).
+assets/pdf/menu-lombardo.pdf (ya incluido).
 Si lo cambiás, mantené el mismo nombre o actualizá carta.html.
 
 5) WHATSAPP
