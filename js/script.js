@@ -19,6 +19,18 @@ document.querySelectorAll('[data-wa]').forEach((el) => {
 const year = document.querySelector('[data-year]');
 if (year) year.textContent = new Date().getFullYear();
 
+const footerContainer = document.querySelector('.footer .container');
+if (footerContainer && !footerContainer.querySelector('.footer-dev')) {
+  const footerDev = document.createElement('p');
+  footerDev.className = 'footer-dev';
+
+  const phone = '543416186760';
+  const text = encodeURIComponent('Vi una web desarrollada por vos y quiero cotizar algo similar.');
+
+  footerDev.innerHTML = `<a href="https://wa.me/${phone}?text=${text}" target="_blank" rel="noopener">Developed by Alex Santillan</a>`;
+  footerContainer.appendChild(footerDev);
+}
+
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const header = document.querySelector('.site-header');
