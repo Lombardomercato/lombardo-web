@@ -2175,6 +2175,26 @@ main > .section:last-child::after,
   margin: 0;
 }
 
+.sommelier-profile {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 244, 242, 0.82));
+  padding: clamp(18px, 3vw, 24px);
+  margin: -8px 0 30px;
+  box-shadow: 0 12px 28px rgba(0, 58, 112, 0.08);
+}
+
+.sommelier-profile h3 {
+  margin: 8px 0 10px;
+  font-size: clamp(1.35rem, 1.1rem + 0.8vw, 1.8rem);
+}
+
+.sommelier-profile p {
+  margin: 0;
+  color: rgba(0, 58, 112, 0.84);
+  max-width: 58ch;
+}
+
 .sommelier-result-actions {
   display: flex;
   gap: 12px;
