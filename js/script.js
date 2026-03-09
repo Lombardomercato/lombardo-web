@@ -135,6 +135,7 @@ if (!prefersReducedMotion) {
 const sommelierApp = document.querySelector('#sommelier-app');
 
 if (sommelierApp) {
+  const localContextBanner = document.querySelector('[data-local-context]');
   const questions = [
     {
       key: 'tipo_vino',
@@ -265,6 +266,16 @@ if (sommelierApp) {
     window.setTimeout(() => panel.classList.remove('is-transitioning'), 200);
   };
 
+  const showLocalContextIfNeeded = () => {
+    if (!localContextBanner) return;
+    const isLocalVisit = new URLSearchParams(window.location.search).get('local') === 'true';
+    localContextBanner.hidden = !isLocalVisit;
+  };
+
+  const hideLocalContext = () => {
+    if (localContextBanner) localContextBanner.hidden = true;
+  };
+
   const renderQuestion = () => {
     const question = questions[currentStep];
     const selected = responses[question.key];
@@ -293,6 +304,7 @@ if (sommelierApp) {
       }
 
       button.addEventListener('click', () => {
+        hideLocalContext();
         responses[question.key] = option;
         renderQuestion();
       });
@@ -1087,6 +1099,7 @@ if (sommelierApp) {
   submitBtn.addEventListener('click', async () => {
     if (!isComplete()) return;
 
+    hideLocalContext();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Buscando vinos...';
 
@@ -1155,5 +1168,6 @@ if (sommelierApp) {
     sommelierApp.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
   });
 
+  showLocalContextIfNeeded();
   renderQuestion();
 }

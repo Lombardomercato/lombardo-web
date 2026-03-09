@@ -1986,6 +1986,22 @@ main > .section:last-child::after,
   padding-top: 0;
 }
 
+.sommelier-local-context {
+  margin: 0 0 16px;
+  border: 1px solid rgba(0, 58, 112, 0.14);
+  border-radius: calc(var(--radius-md) - 2px);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(245, 249, 255, 0.84));
+  padding: 12px 14px;
+  box-shadow: 0 8px 20px rgba(0, 58, 112, 0.06);
+}
+
+.sommelier-local-context p {
+  margin: 0;
+  color: rgba(0, 58, 112, 0.85);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .sommelier-app {
   position: relative;
   isolation: isolate;
