@@ -2201,6 +2201,30 @@ main > .section:last-child::after,
   background: linear-gradient(165deg, rgba(255, 244, 241, 0.96), rgba(255, 255, 255, 0.92));
 }
 
+.sommelier-wine-card.is-primary {
+  padding: clamp(22px, 4vw, 34px);
+  box-shadow: 0 20px 44px rgba(0, 58, 112, 0.14);
+  margin-bottom: 8px;
+}
+
+.sommelier-primary-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 14px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(171, 30, 58, 0.12);
+  color: #8a0f28;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sommelier-wine-card.is-secondary {
+  opacity: 0.96;
+}
+
 .sommelier-wine-role {
   margin: 0 0 8px;
   color: #ab1e3a;
@@ -2212,12 +2236,67 @@ main > .section:last-child::after,
 
 .sommelier-wine-card h3 {
   margin-bottom: 10px;
+  font-size: clamp(1.18rem, 1.04rem + 0.55vw, 1.5rem);
+}
+
+.sommelier-wine-card.is-primary h3 {
+  font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem);
+  margin-bottom: 14px;
 }
 
 .sommelier-price {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   font-weight: 700;
   font-size: 1.08rem;
+}
+
+.sommelier-wine-card.is-primary .sommelier-price {
+  font-size: clamp(1.14rem, 1.03rem + 0.6vw, 1.42rem);
+  margin-bottom: 14px;
+}
+
+.sommelier-wine-description {
+  margin: 0;
+  color: rgba(0, 58, 112, 0.86);
+}
+
+.sommelier-wine-card.is-primary .sommelier-wine-description {
+  font-size: clamp(1rem, 0.94rem + 0.35vw, 1.12rem);
+  line-height: 1.75;
+  max-width: 58ch;
+}
+
+.sommelier-wine-card.is-secondary .sommelier-wine-description {
+  font-size: 0.95rem;
+  line-height: 1.58;
+}
+
+
+.sommelier-wine-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sommelier-wine-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  background: rgba(239, 245, 255, 0.8);
+  color: rgba(0, 58, 112, 0.9);
+  font-size: 0.73rem;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.sommelier-wine-card.is-primary .sommelier-wine-badge {
+  background: rgba(255, 244, 241, 0.9);
+  border-color: rgba(171, 30, 58, 0.22);
+  color: rgba(111, 12, 34, 0.92);
 }
 
 .sommelier-wine-card p {
@@ -2334,7 +2413,15 @@ main > .section:last-child::after,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .sommelier-result-grid,
+  .sommelier-result-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .sommelier-wine-card.is-primary {
+    grid-column: 1 / -1;
+  }
+
   .sommelier-box-list,
   .sommelier-membership-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
