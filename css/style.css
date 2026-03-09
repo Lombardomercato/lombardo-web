@@ -2521,9 +2521,9 @@ main > .section:last-child::after,
 
 .main-nav a[href="carta.html"],
 .main-nav a[href="contacto.html"] {
-  border: 0;
+  border-bottom: 1px solid transparent;
   border-radius: 0;
-  padding-inline: 0;
+  padding: 7px 2px;
 }
 
 @media (max-width: 1024px) {
@@ -2549,21 +2549,29 @@ main > .section:last-child::after,
   }
 
   .main-nav {
-    display: grid;
-    position: absolute;
-    top: calc(100% + 6px);
+    display: none;
+    position: fixed;
+    top: 88px;
     left: 0;
     right: 0;
-    width: 100%;
+    width: min(92vw, 460px);
+    margin-inline: auto;
+    max-height: min(68vh, 430px);
+    overflow-y: auto;
     grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 16px;
+    gap: 14px;
+    padding: 18px;
+    background: linear-gradient(180deg, rgba(0, 58, 112, 0.95), rgba(0, 58, 112, 0.92));
+    border: 1px solid rgba(255, 179, 171, 0.52);
+    border-radius: 16px;
+    box-shadow: 0 18px 34px rgba(0, 25, 49, 0.28);
+    backdrop-filter: blur(8px);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transform: translateY(-8px);
-    transition: opacity 0.24s ease, transform 0.24s ease, visibility 0.24s ease;
-    z-index: 110;
+    transform: translateY(-10px) scale(0.985);
+    transition: opacity 0.22s ease, transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.22s ease;
+    z-index: 140;
   }
 
   .main-nav.open {
@@ -2571,13 +2579,13 @@ main > .section:last-child::after,
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 
   .nav-primary,
   .nav-secondary {
     display: grid;
-    gap: 8px;
+    gap: 10px;
     justify-self: stretch;
     width: 100%;
   }
@@ -2585,12 +2593,28 @@ main > .section:last-child::after,
   .main-nav a {
     display: block;
     width: 100%;
-    border: 1px solid rgba(228, 213, 211, 0.2);
+    border: 1px solid rgba(228, 213, 211, 0.18);
     border-radius: 12px;
-    padding: 11px 14px;
+    padding: 12px 14px;
     text-align: left;
     font-size: 0.72rem;
     letter-spacing: 0.12em;
+    font-weight: 700;
+    background: rgba(0, 58, 112, 0.22);
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .main-nav a[href="carta.html"],
+  .main-nav a[href="contacto.html"] {
+    border: 1px solid rgba(228, 213, 211, 0.18);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .main-nav a:hover {
+    background: rgba(255, 179, 171, 0.08);
+    border-color: rgba(255, 179, 171, 0.48);
+    transform: translateY(-1px);
   }
 
   .main-nav a::after {
@@ -2599,12 +2623,16 @@ main > .section:last-child::after,
 
   .main-nav .nav-cta {
     order: 2;
-    text-align: center;
-    border-color: rgba(255, 179, 171, 0.85);
-    background: rgba(255, 179, 171, 0.2);
+    text-align: left;
+    border-color: rgba(255, 179, 171, 0.9);
+    background: rgba(255, 179, 171, 0.24);
     justify-self: stretch;
     width: 100%;
-    padding-inline: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    letter-spacing: 0.12em;
+    font-size: 0.72rem;
+    font-weight: 700;
   }
 
   .nav-secondary {
@@ -2613,6 +2641,23 @@ main > .section:last-child::after,
 
   body.nav-open {
     overflow: hidden;
+  }
+
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 20, 42, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+    z-index: 118;
+  }
+
+  .nav-backdrop.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
   }
 }
 
@@ -2637,8 +2682,10 @@ main > .section:last-child::after,
   }
 
   .main-nav {
+    top: 78px;
+    width: min(94vw, 430px);
     gap: 10px;
-    padding: 12px;
+    padding: 14px;
   }
 
   .main-nav a,

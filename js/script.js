@@ -2,12 +2,21 @@ const navToggle = document.querySelector('.nav-toggle');
 const mainNav = document.querySelector('.main-nav');
 
 if (navToggle && mainNav) {
+  const navWrap = navToggle.closest('.nav-wrap');
+  const navBackdrop = document.createElement('div');
+  navBackdrop.className = 'nav-backdrop';
+  document.body.appendChild(navBackdrop);
+
   const syncMenuState = (open) => {
-    mainNav.classList.toggle('open', open);
-    navToggle.classList.toggle('is-active', open);
-    navToggle.setAttribute('aria-expanded', String(open));
-    navToggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
-    document.body.classList.toggle('nav-open', open && window.matchMedia('(max-width: 1024px)').matches);
+    const isMobile = window.matchMedia('(max-width: 1024px)').matches;
+    const shouldOpen = open && isMobile;
+
+    mainNav.classList.toggle('open', shouldOpen);
+    navToggle.classList.toggle('is-active', shouldOpen);
+    navToggle.setAttribute('aria-expanded', String(shouldOpen));
+    navToggle.setAttribute('aria-label', shouldOpen ? 'Cerrar menú' : 'Abrir menú');
+    document.body.classList.toggle('nav-open', shouldOpen);
+    navBackdrop.classList.toggle('is-visible', shouldOpen);
   };
 
   const closeMenu = () => {
@@ -26,9 +35,11 @@ if (navToggle && mainNav) {
 
   document.addEventListener('click', (event) => {
     if (!mainNav.classList.contains('open')) return;
-    if (event.target.closest('.nav-wrap')) return;
+    if (navWrap && event.target.closest('.nav-wrap')) return;
     closeMenu();
   });
+
+  navBackdrop.addEventListener('click', closeMenu);
 
   window.addEventListener('resize', () => {
     if (!window.matchMedia('(max-width: 1024px)').matches) closeMenu();
