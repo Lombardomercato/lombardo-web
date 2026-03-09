@@ -2420,6 +2420,10 @@ main > .section:last-child::after,
 }
 
 @media (max-width: 1024px) {
+  .site-header {
+    position: relative;
+  }
+
   .nav-wrap {
     grid-template-columns: auto auto;
     min-height: 72px;
@@ -2481,6 +2485,7 @@ main > .section:last-child::after,
     left: 0;
     right: 0;
     width: 100%;
+    position: absolute;
   }
 
   .main-nav.open {
@@ -2501,6 +2506,10 @@ main > .section:last-child::after,
 }
 
 @media (max-width: 760px) {
+  .site-header {
+    position: relative;
+  }
+
   .nav-wrap {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
