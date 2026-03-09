@@ -2,10 +2,15 @@ const navToggle = document.querySelector('.nav-toggle');
 const mainNav = document.querySelector('.main-nav');
 
 if (navToggle && mainNav) {
+  const isMobileNav = () => window.matchMedia('(max-width: 1024px)').matches;
+
   const closeMenu = () => {
     mainNav.classList.remove('open');
     navToggle.setAttribute('aria-expanded', 'false');
   };
+
+  // Keep menu state deterministic on load.
+  closeMenu();
 
   navToggle.addEventListener('click', () => {
     const open = mainNav.classList.toggle('open');
@@ -14,7 +19,7 @@ if (navToggle && mainNav) {
 
   mainNav.querySelectorAll('a').forEach((link) => {
     link.addEventListener('click', () => {
-      if (window.matchMedia('(max-width: 1024px)').matches) closeMenu();
+      if (isMobileNav()) closeMenu();
     });
   });
 
@@ -25,8 +30,12 @@ if (navToggle && mainNav) {
   });
 
   window.addEventListener('resize', () => {
-    if (!window.matchMedia('(max-width: 1024px)').matches) closeMenu();
+    if (!isMobileNav()) closeMenu();
   });
+
+  window.addEventListener('scroll', () => {
+    if (isMobileNav() && mainNav.classList.contains('open')) closeMenu();
+  }, { passive: true });
 }
 
 document.querySelectorAll('[data-wa]').forEach((el) => {
@@ -584,6 +593,19 @@ if (sommelierApp) {
     return list[index];
   };
 
+  const getPrincipalExtraDescription = (wine) => {
+    const details = [];
+    if (wine?.varietal) details.push(`Varietal ${wine.varietal}`);
+    if (wine?.region) details.push(`origen ${wine.region}`);
+    if (wine?.maridaje_principal) details.push(`ideal para ${wine.maridaje_principal}`);
+
+    if (!details.length) {
+      return 'Es una etiqueta pensada para darte una experiencia redonda desde la primera copa.';
+    }
+
+    return `${details.join(', ')}. Una elección protagonista para disfrutar hoy o guardar como caballito de batalla.`;
+  };
+
   const sortByPriorityAndPrice = (a, b) => {
     const priorityOrder = { alta: 3, media: 2, baja: 1 };
     const aPriority = priorityOrder[(a.prioridad_venta || '').toLowerCase()] || 0;
@@ -797,8 +819,35 @@ if (sommelierApp) {
     recommendations.forEach((entry, index) => {
       const wine = entry.wine;
       const card = document.createElement('article');
-      card.className = `sommelier-wine-card reveal is-visible ${index === 0 ? 'is-highlighted' : ''}`.trim();
-      card.innerHTML = `<p class="sommelier-wine-role">${getRoleLabel(entry.role)}</p><h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p><p>${getRecommendationMessage(entry.role, wine, profile)}</p>`;
+      const isMainRecommendation = index === 0;
+      const cardClasses = [
+        'sommelier-wine-card',
+        'reveal',
+        'is-visible',
+        isMainRecommendation ? 'is-main' : 'is-secondary',
+        isMainRecommendation ? 'is-highlighted' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      card.className = cardClasses;
+
+      const roleMarkup = `<p class="sommelier-wine-role">${getRoleLabel(entry.role)}</p>`;
+      const headingMarkup = `<h3>${wine.nombre}</h3><p class="sommelier-price">${formatPrice(wine.precio)}</p>`;
+      const descriptionMarkup = `<p>${getRecommendationMessage(entry.role, wine, profile)}</p>`;
+
+      if (isMainRecommendation) {
+        card.innerHTML = `
+          <p class="sommelier-wine-badge">RECOMENDADO PARA VOS</p>
+          ${roleMarkup}
+          ${headingMarkup}
+          ${descriptionMarkup}
+          <p class="sommelier-wine-extra">${getPrincipalExtraDescription(wine)}</p>
+        `;
+      } else {
+        card.innerHTML = `${roleMarkup}${headingMarkup}${descriptionMarkup}`;
+      }
+
       resultList.appendChild(card);
     });
 
@@ -944,4 +993,3 @@ if (sommelierApp) {
 
   renderQuestion();
 }
-
