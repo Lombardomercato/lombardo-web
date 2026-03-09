@@ -192,6 +192,7 @@ if (sommelierApp) {
   const boxBlock = sommelierApp.querySelector('[data-box]');
   const boxList = sommelierApp.querySelector('[data-box-list]');
   const boxNote = sommelierApp.querySelector('[data-box-note]');
+  const waLink = sommelierApp.querySelector('[data-wa-link]');
 
   const requiredQuestionKeys = questions.map((question) => question.key);
 
@@ -575,11 +576,43 @@ if (sommelierApp) {
     return activeWines.sort(sortByPriorityAndPrice).slice(0, 3);
   };
 
+  const updateSommelierWhatsAppLink = (recommendations, profile) => {
+    if (!waLink) return;
+
+    const messageLines = [
+      'Hola, usé el Sommelier de Vinos de Lombardo y me recomendó estas opciones:',
+      '',
+    ];
+
+    recommendations.forEach((wine) => {
+      if (wine?.nombre) {
+        messageLines.push(`- ${wine.nombre}`);
+      }
+    });
+
+    if (profile?.name) {
+      messageLines.push('', `Mi perfil fue: ${profile.name}`);
+    }
+
+    if (responses.ocasion) {
+      messageLines.push(`Ocasión: ${responses.ocasion}`);
+    }
+
+    if (responses.presupuesto) {
+      messageLines.push(`Presupuesto: ${responses.presupuesto}`);
+    }
+
+    messageLines.push('', 'Quiero consultar disponibilidad.');
+
+    waLink.href = `https://wa.me/543412762319?text=${encodeURIComponent(messageLines.join('\n'))}`;
+  };
+
   const renderResults = () => {
     resultList.innerHTML = '';
     if (boxList) boxList.innerHTML = '';
 
     const recommendations = getTopRecommendations();
+    const profile = getWineProfile();
 
     recommendations.forEach((wine) => {
       const card = document.createElement('article');
@@ -596,7 +629,6 @@ if (sommelierApp) {
     });
 
     if (profileBlock && profileName && profileDescription) {
-      const profile = getWineProfile();
       profileName.textContent = profile.name;
       profileDescription.textContent = profile.description;
       profileBlock.hidden = false;
@@ -606,6 +638,8 @@ if (sommelierApp) {
       boxNote.textContent = getBoxClosingMessage();
       boxBlock.hidden = false;
     }
+
+    updateSommelierWhatsAppLink(recommendations, profile);
   };
 
   const loadWineCatalog = async () => {
