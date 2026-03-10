@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SOMMELIER DE VINOS | LOMBARDO</title>
-  <meta name="description" content="Descubrí tu vino ideal con el Sommelier IA de Lombardo. Respondé 5 preguntas y recibí una recomendación personalizada." />
+  <title>SOMMELIER IA | LOMBARDO</title>
+  <meta name="description" content="Descubrí tu perfil con Tinder Wine y obtené recomendaciones con Sommelier IA en Lombardo." />
   <meta name="openai-api-key" content="" />
   <meta name="google-sheets-endpoint" content="" />
   <link rel="icon" type="image/jpeg" href="assets/favicon/favicom.jpg" />
@@ -17,7 +17,7 @@
       <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">MENU</button>
       <nav class="main-nav" aria-label="Principal">
         <div class="nav-primary">
-          <a href="sommelier.html">SOMMELIER</a>
+          <a href="sommelier.html">SOMMELIER IA</a>
           <div class="nav-item has-submenu">
             <a href="experiencias.html">EXPERIENCIAS</a>
             <button class="submenu-toggle" type="button" data-submenu-trigger aria-label="ABRIR SUBMENÚ DE EXPERIENCIAS" aria-expanded="false"></button>
@@ -51,10 +51,10 @@
   <main>
     <section class="section sommelier-hero">
       <div class="container sommelier-intro reveal">
-        <p class="eyebrow">Sommelier de Vinos</p>
-        <h1>Descubrí tu vino ideal</h1>
-        <p class="sommelier-lead">Respondé estas preguntas y te recomendamos una selección de vinos según tu gusto, tu ocasión y tu presupuesto.</p>
-        <p class="sommelier-note">Una experiencia pensada para ayudarte a elegir mejor en Lombardo.</p>
+        <p class="eyebrow">Descubrí tu vino</p>
+        <h1>Descubrí tu vino con Tinder Wine</h1>
+        <p class="sommelier-lead">Deslizá etiquetas, elegí con el pulgar y obtené un perfil instantáneo para armar tu próxima caja.</p>
+        <p class="sommelier-note">Viví la experiencia tipo Tinder y encontrá rápido el estilo de vino que más va con vos.</p>
       </div>
     </section>
 
@@ -64,7 +64,7 @@
           <div class="wine-tinder-start" data-tinder-start>
             <p class="eyebrow">Wine Tinder</p>
             <h2>Descubrí tu perfil de vino</h2>
-            <p>Deslizá vinos según lo que te guste y descubrí qué estilo va mejor con vos.</p>
+            <p>Deslizá vinos según lo que te guste y descubrí qué estilo va mejor con vos. Cada ronda arma una selección dinámica y personalizada.</p>
             <button type="button" class="btn btn-primary" data-tinder-start-btn>Empezar</button>
           </div>
 
@@ -79,18 +79,21 @@
 
             <div class="wine-tinder-card-wrap">
               <article class="wine-tinder-card" data-tinder-card>
+                <div class="wine-tinder-stamp wine-tinder-stamp-nope" data-tinder-stamp-nope>NOPE</div>
+                <div class="wine-tinder-stamp wine-tinder-stamp-like" data-tinder-stamp-like>LIKE</div>
                 <img src="assets/fotos/vino.jpg" alt="Vino recomendado" data-tinder-image />
                 <div class="wine-tinder-card-content">
                   <p class="wine-tinder-varietal" data-tinder-varietal></p>
                   <h3 data-tinder-name></h3>
                   <p data-tinder-description></p>
+                  <div class="wine-tinder-chip-row" data-tinder-chips></div>
                 </div>
               </article>
             </div>
 
             <div class="wine-tinder-actions">
-              <button type="button" class="btn btn-secondary" data-tinder-dislike>No me gusta</button>
-              <button type="button" class="btn btn-primary" data-tinder-like>Me gusta</button>
+              <button type="button" class="btn btn-secondary" data-tinder-dislike><span aria-hidden="true">✕</span> Nope</button>
+              <button type="button" class="btn btn-primary" data-tinder-like><span aria-hidden="true">❤</span> Like</button>
             </div>
           </div>
 
@@ -98,6 +101,7 @@
             <p class="eyebrow">Resultado perfil</p>
             <h3 data-tinder-profile-name></h3>
             <p data-tinder-profile-description></p>
+            <div class="wine-tinder-match" data-tinder-match></div>
 
             <div class="wine-tinder-recommendations">
               <h4>Recomendaciones</h4>
@@ -114,6 +118,18 @@
               <a class="btn btn-secondary" href="club.html">Conocer club</a>
               <a class="btn btn-secondary" data-tinder-wa href="https://wa.me/543412762319?text=Hola%2C%20quiero%20una%20recomendaci%C3%B3n%20de%20Wine%20Tinder%20Lombardo." target="_blank" rel="noopener">Hablar por WhatsApp</a>
             </div>
+
+            <div class="wine-tinder-share" data-tinder-share hidden>
+              <h4>Compartí tu resultado</h4>
+              <p>Subilo a redes y etiquetanos para sumar más amantes del vino 🍷</p>
+              <div class="wine-tinder-share-actions">
+                <a class="btn btn-secondary" data-tinder-share-whatsapp target="_blank" rel="noopener">WhatsApp</a>
+                <a class="btn btn-secondary" data-tinder-share-x target="_blank" rel="noopener">X / Twitter</a>
+                <a class="btn btn-secondary" data-tinder-share-facebook target="_blank" rel="noopener">Facebook</a>
+                <button type="button" class="btn btn-secondary" data-tinder-copy>Copiar texto</button>
+              </div>
+              <p class="wine-tinder-copy-feedback" data-tinder-copy-feedback aria-live="polite"></p>
+            </div>
           </div>
         </div>
       </div>
@@ -123,6 +139,12 @@
       <div class="container">
         <div class="sommelier-local-context" data-local-context hidden>
           <p>Estás en Lombardo. Te ayudamos a elegir el vino perfecto para llevar hoy.</p>
+        </div>
+
+        <div class="sommelier-ia-intro reveal">
+          <p class="eyebrow">SOMMELIER IA</p>
+          <h2>Recomendación inteligente</h2>
+          <p>Este cuestionario usa inteligencia artificial para entender tu ocasión, presupuesto y estilo, y recomendarte vinos reales de Lombardo.</p>
         </div>
 
         <div id="sommelier-app" class="sommelier-app reveal" aria-live="polite">
@@ -138,7 +160,7 @@
 
           <div class="sommelier-loading" data-result-loading hidden>
             <p class="eyebrow">Sommelier IA</p>
-            <h2>Nuestro sommelier está eligiendo tus vinos</h2>
+            <h2>Sommelier IA está analizando tu perfil</h2>
             <p>Seleccionando tu recomendación personalizada…</p>
           </div>
 
@@ -251,7 +273,7 @@
     </div>
   </footer>
 
-  <div class="float-wa"><a class="btn btn-primary btn-whatsapp" data-wa="Hola Lombardo, quiero info sobre el Sommelier de Vinos." aria-label="Escribinos por WhatsApp"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.52 3.48A11.84 11.84 0 0 0 12.09 0C5.58 0 .24 5.34.24 11.84c0 2.08.54 4.12 1.57 5.92L0 24l6.42-1.68a11.8 11.8 0 0 0 5.67 1.45h.01c6.5 0 11.84-5.34 11.84-11.84 0-3.16-1.23-6.12-3.42-8.45Zm-8.43 18.3h-.01a9.86 9.86 0 0 1-5.03-1.38l-.36-.21-3.81 1 1.02-3.71-.23-.38a9.86 9.86 0 0 1-1.5-5.26c0-5.44 4.44-9.88 9.9-9.88 2.63 0 5.1 1.02 6.95 2.88a9.8 9.8 0 0 1 2.9 6.99c0 5.44-4.45 9.88-9.83 9.88Zm5.42-7.4c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.35.23-.64.08-.3-.15-1.26-.47-2.4-1.5a8.98 8.98 0 0 1-1.66-2.06c-.17-.3-.02-.45.13-.6.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.38-.03-.53-.08-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.57c-.2 0-.53.08-.8.38-.27.3-1.03 1.02-1.03 2.48s1.06 2.87 1.2 3.08c.15.2 2.07 3.16 5.03 4.43.7.3 1.25.48 1.67.61.7.22 1.35.19 1.86.12.57-.08 1.75-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.12-.27-.2-.57-.35Z"/></svg><span>WhatsApp</span></a></div>
+  <div class="float-wa"><a class="btn btn-primary btn-whatsapp" data-wa="Hola Lombardo, quiero info sobre Sommelier IA." aria-label="Escribinos por WhatsApp"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.52 3.48A11.84 11.84 0 0 0 12.09 0C5.58 0 .24 5.34.24 11.84c0 2.08.54 4.12 1.57 5.92L0 24l6.42-1.68a11.8 11.8 0 0 0 5.67 1.45h.01c6.5 0 11.84-5.34 11.84-11.84 0-3.16-1.23-6.12-3.42-8.45Zm-8.43 18.3h-.01a9.86 9.86 0 0 1-5.03-1.38l-.36-.21-3.81 1 1.02-3.71-.23-.38a9.86 9.86 0 0 1-1.5-5.26c0-5.44 4.44-9.88 9.9-9.88 2.63 0 5.1 1.02 6.95 2.88a9.8 9.8 0 0 1 2.9 6.99c0 5.44-4.45 9.88-9.83 9.88Zm5.42-7.4c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.35.23-.64.08-.3-.15-1.26-.47-2.4-1.5a8.98 8.98 0 0 1-1.66-2.06c-.17-.3-.02-.45.13-.6.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.38-.03-.53-.08-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.57c-.2 0-.53.08-.8.38-.27.3-1.03 1.02-1.03 2.48s1.06 2.87 1.2 3.08c.15.2 2.07 3.16 5.03 4.43.7.3 1.25.48 1.67.61.7.22 1.35.19 1.86.12.57-.08 1.75-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.12-.27-.2-.57-.35Z"/></svg><span>WhatsApp</span></a></div>
   <script src="js/script.js"></script>
 </body>
 </html>

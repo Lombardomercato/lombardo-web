@@ -3566,6 +3566,34 @@ main > .section:last-child::after,
   cursor: grab;
 }
 
+
+.wine-tinder-stamp {
+  position: absolute;
+  top: 20px;
+  padding: 6px 14px;
+  border: 3px solid currentColor;
+  border-radius: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  transform: rotate(-12deg);
+  opacity: 0;
+  transition: opacity 140ms ease;
+  pointer-events: none;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.wine-tinder-stamp-nope {
+  left: 16px;
+  color: #d12c48;
+}
+
+.wine-tinder-stamp-like {
+  right: 16px;
+  color: #2aa16d;
+  transform: rotate(12deg);
+}
+
 .wine-tinder-card img {
   width: 100%;
   height: clamp(220px, 44vw, 300px);
@@ -3574,6 +3602,24 @@ main > .section:last-child::after,
 
 .wine-tinder-card-content {
   padding: 18px;
+}
+
+.wine-tinder-chip-row {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wine-tinder-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(0, 58, 112, 0.18);
+  background: rgba(0, 58, 112, 0.06);
+  color: #003a70;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .wine-tinder-varietal {
@@ -3596,14 +3642,45 @@ main > .section:last-child::after,
   margin-top: 18px;
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 14px;
   flex-wrap: wrap;
+}
+
+.wine-tinder-actions .btn {
+  min-width: 130px;
+  border-radius: 999px;
+  padding: 12px 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.wine-tinder-actions [data-tinder-dislike] {
+  border-color: rgba(209, 44, 72, 0.4);
+  color: #b32642;
+}
+
+.wine-tinder-actions [data-tinder-like] {
+  box-shadow: 0 14px 28px rgba(171, 30, 58, 0.22);
 }
 
 .wine-tinder-recommendations,
 .wine-tinder-box {
   margin-top: 26px;
   text-align: left;
+}
+
+.wine-tinder-match {
+  margin: 14px auto 0;
+  max-width: 44ch;
+  border: 1px solid rgba(171, 30, 58, 0.24);
+  border-radius: var(--radius-md);
+  background: linear-gradient(120deg, rgba(171, 30, 58, 0.08), rgba(224, 60, 49, 0.04));
+  padding: 12px 14px;
+  font-weight: 600;
+  color: #8e1932;
 }
 
 .wine-tinder-list {
@@ -3636,4 +3713,54 @@ main > .section:last-child::after,
   gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.wine-tinder-share {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid rgba(0, 58, 112, 0.14);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.wine-tinder-share h4 {
+  margin-bottom: 6px;
+}
+
+.wine-tinder-share p {
+  margin: 0;
+}
+
+.wine-tinder-share-actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  justify-content: center;
+}
+
+.wine-tinder-share-actions .btn {
+  width: 100%;
+}
+
+.wine-tinder-copy-feedback {
+  margin-top: 10px;
+  min-height: 1.1em;
+  color: rgba(0, 58, 112, 0.82);
+  font-size: 0.88rem;
+}
+
+
+.sommelier-ia-intro {
+  margin: 0 auto 18px;
+  max-width: 70ch;
+  text-align: center;
+}
+
+.sommelier-ia-intro h2 {
+  margin-bottom: 10px;
+}
+
+.sommelier-ia-intro p {
+  color: rgba(0, 58, 112, 0.82);
 }
