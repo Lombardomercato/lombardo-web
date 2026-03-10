@@ -74,6 +74,7 @@ const SYSTEM_PROMPT = [
   'Podés responder consultas sobre maridajes, varietales, estilos, temperatura de servicio, copas, ocasiones de consumo, regalos, vinos para principiantes y lógica de cuerpo/acidez/dulzor/estructura.',
   'También respondé sobre regalos y cajas, mensualidades/club, experiencias y eventos, cafetería y dudas generales de Lombardo.',
   'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
+  'Cerrá cada respuesta con un siguiente paso útil y natural según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
 ].join('\n');
 
 const readWineCatalog = async () => {
@@ -327,7 +328,89 @@ const buildWhatsAppUrl = (message) => {
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(safeMessage)}`;
 };
 
-const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent }) => {
+const CLOSING_TYPES = {
+  EDUCATIONAL: 'educational',
+  LABELS: 'labels',
+  BOX: 'box',
+  SUBSCRIPTION: 'subscription',
+  WHATSAPP: 'whatsapp',
+};
+
+const buildConversationText = ({ message, history }) => {
+  const chunks = [sanitizeMessage(message), ...history.map((item) => sanitizeMessage(item.content))].filter(Boolean);
+  return normalizeText(chunks.join(' | '));
+};
+
+const detectClosingType = ({ message, history, pageContext }) => {
+  const conversationText = buildConversationText({ message, history });
+
+  const whatsappPatterns = [
+    /(avanzar|cerrar|confirmar|coordinar)/,
+    /(hablar|asesor|persona|humano|equipo)/,
+    /(whatsapp|contacto directo)/,
+    /(evento|corporativo|privado|reserva)/,
+  ];
+  if (containsKeyword(conversationText, whatsappPatterns) || shouldSuggestWhatsApp({ message, pageContext })) {
+    return CLOSING_TYPES.WHATSAPP;
+  }
+
+  const subscriptionPatterns = [/(mensualidad|suscrip|membres|club)/, /(todos los meses|cada mes|recurrente)/];
+  if (containsKeyword(conversationText, subscriptionPatterns)) return CLOSING_TYPES.SUBSCRIPTION;
+
+  const boxPatterns = [/(caja|box)/, /(regalo|regalar)/, /(armar|seleccion|seleccion)/, /(comprar|llevar|encargar)/];
+  if (containsKeyword(conversationText, boxPatterns)) return CLOSING_TYPES.BOX;
+
+  const labelsPatterns = [/(recomend|suger)/, /(que vino|vino para|maridaje)/, /(etiqueta|opcion|opcion)/];
+  if (containsKeyword(conversationText, labelsPatterns)) return CLOSING_TYPES.LABELS;
+
+  return CLOSING_TYPES.EDUCATIONAL;
+};
+
+const buildClosingSuggestion = ({ closingType, pageContext }) => {
+  if (closingType === CLOSING_TYPES.WHATSAPP) return buildWhatsAppSuggestion(pageContext);
+
+  const byType = {
+    [CLOSING_TYPES.EDUCATIONAL]:
+      'Si querés, también te puedo orientar sobre qué estilos van mejor con distintas comidas o momentos.',
+    [CLOSING_TYPES.LABELS]:
+      'Si querés, también te puedo sugerir algunas etiquetas de Lombardo en esa línea.',
+    [CLOSING_TYPES.BOX]: 'Si querés, también te puedo armar una caja de 3 vinos pensada para ese perfil.',
+    [CLOSING_TYPES.SUBSCRIPTION]:
+      'Si ese estilo es el que más disfrutás, también te puedo sugerir una mensualidad recomendada.',
+  };
+
+  return byType[closingType] || byType[CLOSING_TYPES.EDUCATIONAL];
+};
+
+const appendAdaptiveClosing = ({ answer, message, history, pageContext }) => {
+  const trimmed = sanitizeMessage(answer);
+  if (!trimmed) return { answer: '', closingType: CLOSING_TYPES.EDUCATIONAL };
+
+  const closingType = detectClosingType({ message, history, pageContext });
+  const suggestion = buildClosingSuggestion({ closingType, pageContext });
+
+  if (!suggestion) return { answer: trimmed, closingType };
+
+  const normalizedAnswer = normalizeText(trimmed);
+  const normalizedSuggestion = normalizeText(suggestion);
+  const keywordByType = {
+    [CLOSING_TYPES.WHATSAPP]: /whatsapp/,
+    [CLOSING_TYPES.SUBSCRIPTION]: /(mensualidad|club|suscrip)/,
+    [CLOSING_TYPES.BOX]: /(caja|box)/,
+    [CLOSING_TYPES.LABELS]: /(etiquetas?|opciones?|lombardo)/,
+    [CLOSING_TYPES.EDUCATIONAL]: /(estilos?|comidas?|momentos?)/,
+  };
+
+  if (normalizedAnswer.includes(normalizedSuggestion) || keywordByType[closingType].test(normalizedAnswer)) {
+    return { answer: trimmed, closingType };
+  }
+
+  return { answer: `${trimmed}
+
+${suggestion}`, closingType };
+};
+
+const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines }) => {
   const compactCatalog = wines.map((wine) => ({
     nombre: wine.nombre,
     precio: wine.precio,
@@ -359,6 +442,7 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     'Reglas por intención: comercial => priorizar cierre y derivar naturalmente a WhatsApp.',
     'Definí internamente si esta consulta cae en modo conocimiento general, modo catálogo Lombardo o modo mixto, y respondé en consecuencia.',
     'Si es modo mixto, explicá primero la lógica general y luego ofrecé o sugerí opciones de Lombardo alineadas.',
+    'Terminá con un cierre breve y útil según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
     '',
     `Base de vinos Lombardo (JSON): ${JSON.stringify(compactCatalog)}`,
     '',
@@ -611,10 +695,13 @@ module.exports = async (req, res) => {
       via: hasOpenAIKey ? 'openai' : 'fallback-local',
     });
 
-    const suggestWhatsApp = shouldSuggestWhatsApp({ message, pageContext, intent });
-    const answer = suggestWhatsApp
-      ? appendWhatsAppSuggestion({ answer: rawAnswer, pageContext })
-      : rawAnswer;
+    const { answer, closingType } = appendAdaptiveClosing({
+      answer: rawAnswer,
+      message,
+      history,
+      pageContext,
+    });
+    const suggestWhatsApp = closingType === CLOSING_TYPES.WHATSAPP;
 
     return res.status(200).json({
       answer,
