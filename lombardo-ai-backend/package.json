@@ -1,0 +1,13 @@
+{
+  "name": "lombardo-ai-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend externo para el Asistente IA Lombardo (Vercel)",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  }
+}

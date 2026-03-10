@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/sommelier-chat.js": {
+      "runtime": "nodejs22.x"
+    }
+  }
+}
