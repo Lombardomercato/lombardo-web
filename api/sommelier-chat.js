@@ -64,9 +64,14 @@ const SYSTEM_PROMPT = [
 
 const readWineCatalog = async () => {
   const filePath = path.join(process.cwd(), 'vinos_lombardo_base.json');
-  const raw = await fs.readFile(filePath, 'utf-8');
-  const data = JSON.parse(raw);
-  return Array.isArray(data) ? data.filter((wine) => wine && wine.activo !== false) : [];
+  try {
+    const raw = await fs.readFile(filePath, 'utf-8');
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data.filter((wine) => wine && wine.activo !== false) : [];
+  } catch (error) {
+    error.code = error.code === 'ENOENT' ? 'WINE_CATALOG_NOT_FOUND' : 'WINE_CATALOG_PARSE_ERROR';
+    throw error;
+  }
 };
 
 const sanitizeMessage = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -285,6 +290,10 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
   return [
     buildPageContextGuidance(pageContext),
     '',
+    `Mensaje actual del cliente: ${message}`,
+    '',
+    `Historial de conversación:\n${serializedHistory}`,
+    '',
     'Usá el historial de conversación para mantener continuidad en preguntas de seguimiento.',
     'Si el último mensaje depende del contexto previo, asumí continuidad temática salvo que el cliente cambie de tema explícitamente.',
     '',
@@ -308,36 +317,80 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    throw new Error('OPENAI_API_KEY no está configurada en el entorno.');
+    const configError = new Error('OPENAI_API_KEY no está configurada en el entorno.');
+    configError.code = 'OPENAI_CONFIG_ERROR';
+    throw configError;
   }
 
-  const response = await fetch(OPENAI_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      input: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines }),
-        },
-      ],
-      max_output_tokens: 350,
-      temperature: 0.4,
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        input: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines }),
+          },
+        ],
+        max_output_tokens: 350,
+        temperature: 0.4,
+      }),
+    });
+  } catch (error) {
+    error.code = 'OPENAI_NETWORK_ERROR';
+    throw error;
+  }
 
   if (!response.ok) {
     const details = await response.text();
-    throw new Error(`OpenAI error (${response.status}): ${details}`);
+    const openAIError = new Error(`OpenAI error (${response.status}): ${details}`);
+    openAIError.code = 'OPENAI_HTTP_ERROR';
+    throw openAIError;
   }
 
-  const data = await response.json();
+  const data = await response.json().catch((error) => {
+    error.code = 'OPENAI_PARSE_ERROR';
+    throw error;
+  });
   return (data.output_text || '').trim();
+};
+
+const buildServerErrorPayload = (error) => {
+  const code = error?.code || 'INTERNAL_SERVER_ERROR';
+  const statusMap = {
+    WINE_CATALOG_NOT_FOUND: 500,
+    WINE_CATALOG_PARSE_ERROR: 500,
+    OPENAI_NETWORK_ERROR: 502,
+    OPENAI_CONFIG_ERROR: 500,
+    OPENAI_HTTP_ERROR: 502,
+    OPENAI_PARSE_ERROR: 502,
+    INTERNAL_SERVER_ERROR: 500,
+  };
+
+  const publicMessageMap = {
+    WINE_CATALOG_NOT_FOUND: 'No pudimos cargar la base de vinos en este momento.',
+    WINE_CATALOG_PARSE_ERROR: 'No pudimos leer la base de vinos en este momento.',
+    OPENAI_NETWORK_ERROR: 'Se perdió la conexión con el servicio de IA.',
+    OPENAI_CONFIG_ERROR: 'La configuración del servicio de IA está incompleta en el servidor.',
+    OPENAI_HTTP_ERROR: 'El servicio de IA devolvió un error.',
+    OPENAI_PARSE_ERROR: 'No pudimos interpretar la respuesta del servicio de IA.',
+    INTERNAL_SERVER_ERROR: 'No pudimos generar la recomendación en este momento.',
+  };
+
+  return {
+    status: statusMap[code] || 500,
+    payload: {
+      error: publicMessageMap[code] || publicMessageMap.INTERNAL_SERVER_ERROR,
+      error_code: code,
+    },
+  };
 };
 
 const appendWhatsAppSuggestion = ({ answer, pageContext }) => {
@@ -390,7 +443,8 @@ module.exports = async (req, res) => {
       whatsapp_url: suggestWhatsApp ? buildWhatsAppUrl(message) : '',
     });
   } catch (error) {
-    console.error('Error en /api/sommelier-chat:', error);
-    return res.status(500).json({ error: 'No pudimos generar la recomendación en este momento.' });
+    const { status, payload } = buildServerErrorPayload(error);
+    console.error(`[sommelier-chat][${payload.error_code}]`, error);
+    return res.status(status).json(payload);
   }
 };
