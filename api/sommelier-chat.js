@@ -702,12 +702,23 @@ module.exports = async (req, res) => {
       pageContext,
     });
     const suggestWhatsApp = closingType === CLOSING_TYPES.WHATSAPP;
+    const canonicalResponse = {
+      reply: answer,
+      suggestions: suggestWhatsApp ? [buildWhatsAppSuggestion(pageContext)] : [],
+      whatsappUrl: suggestWhatsApp ? buildWhatsAppUrl(message) : '',
+      fallback: {
+        used: !hasOpenAIKey,
+        mode: hasOpenAIKey ? 'openai' : 'local',
+      },
+    };
 
     return res.status(200).json({
-      answer,
+      ...canonicalResponse,
+      // Compatibilidad transitoria para consumidores legacy.
+      answer: canonicalResponse.reply,
       suggest_whatsapp: suggestWhatsApp,
       whatsapp_label: suggestWhatsApp ? 'Seguir por WhatsApp' : '',
-      whatsapp_url: suggestWhatsApp ? buildWhatsAppUrl(message) : '',
+      whatsapp_url: canonicalResponse.whatsappUrl,
       intent,
     });
   } catch (error) {

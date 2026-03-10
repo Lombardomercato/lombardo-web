@@ -1,3 +1,16 @@
+# ⚠️ DEPRECATED
+
+Este backend quedó **fuera de uso oficial**.
+
+Backend canónico actual del Asistente IA Lombardo:
+- `POST /api/sommelier-chat`
+- archivo: `../api/sommelier-chat.js`
+- contrato: `../ai-backend-canonical.md`
+
+Se mantiene este código solo como referencia histórica y no debe usarse para nuevas integraciones.
+
+---
+
 # lombardo-ai-backend
 
 Backend externo y simple para el **Asistente IA Lombardo**, listo para deploy en **Vercel**.

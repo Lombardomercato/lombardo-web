@@ -384,8 +384,18 @@ if (sommelierApp) {
     chatSubmit.textContent = isLoading ? 'Enviando...' : 'Enviar';
   };
 
+  const resolveSommelierApiUrl = () => {
+    const explicit = document.querySelector('meta[name="assistant-api-url"]')?.content?.trim();
+    if (explicit) return explicit;
+
+    const base = document.querySelector('meta[name="assistant-api-base"]')?.content?.trim();
+    if (base) return `${base.replace(/\/$/, '')}/api/sommelier-chat`;
+
+    return '/api/sommelier-chat';
+  };
+
   const requestSommelierChat = async (message) => {
-    const response = await fetch('/api/sommelier-chat', {
+    const response = await fetch(resolveSommelierApiUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -403,7 +413,11 @@ if (sommelierApp) {
       throw new Error(data.error || 'No se pudo obtener una respuesta del Sommelier IA.');
     }
 
-    return typeof data.answer === 'string' ? data.answer.trim() : '';
+    return typeof data.reply === 'string'
+      ? data.reply.trim()
+      : typeof data.answer === 'string'
+      ? data.answer.trim()
+      : '';
   };
 
   const initSommelierChat = () => {
@@ -1810,10 +1824,23 @@ const initGlobalLombardoAssistant = () => {
     }
 
     return {
-      answer: typeof data.answer === 'string' ? data.answer.trim() : '',
-      suggestWhatsApp: Boolean(data.suggest_whatsapp),
-      whatsappLabel: typeof data.whatsapp_label === 'string' ? data.whatsapp_label.trim() : '',
-      whatsappUrl: typeof data.whatsapp_url === 'string' ? data.whatsapp_url.trim() : '',
+      answer:
+        typeof data.reply === 'string'
+          ? data.reply.trim()
+          : typeof data.answer === 'string'
+          ? data.answer.trim()
+          : '',
+      suggestWhatsApp:
+        typeof data.whatsappUrl === 'string' ? Boolean(data.whatsappUrl.trim()) : Boolean(data.suggest_whatsapp),
+      whatsappLabel: typeof data.whatsapp_label === 'string' ? data.whatsapp_label.trim() : 'Seguir por WhatsApp',
+      whatsappUrl:
+        typeof data.whatsappUrl === 'string'
+          ? data.whatsappUrl.trim()
+          : typeof data.whatsapp_url === 'string'
+          ? data.whatsapp_url.trim()
+          : '',
+      suggestions: Array.isArray(data.suggestions) ? data.suggestions : [],
+      fallbackUsed: Boolean(data?.fallback?.used),
     };
   };
 

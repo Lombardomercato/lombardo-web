@@ -1,3 +1,6 @@
+// DEPRECATED: implementación legacy, fuera de uso oficial.
+// Backend canónico: /api/sommelier-chat (raíz del repo).
+
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
