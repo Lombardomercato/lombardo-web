@@ -1309,8 +1309,18 @@ const initGlobalLombardoAssistant = () => {
     </button>
     <div id="assistant-panel" class="assistant-panel" hidden>
       <div class="assistant-head">
-        <p class="eyebrow">Asistente IA Lombardo</p>
-        <h3>Puedo ayudarte con vinos, regalos, cajas, club, café y experiencias.</h3>
+        <div>
+          <p class="eyebrow">Asistente IA Lombardo</p>
+          <h3>Puedo ayudarte con vinos, regalos, cajas, club, café y experiencias.</h3>
+        </div>
+        <button
+          class="assistant-close"
+          type="button"
+          aria-label="Minimizar chat"
+          data-assistant-close
+        >
+          ×
+        </button>
       </div>
       <div class="assistant-prompts" data-assistant-prompts>
         <button type="button">Quiero un vino para regalar</button>
@@ -1337,6 +1347,7 @@ const initGlobalLombardoAssistant = () => {
   const input = container.querySelector('#assistant-input');
   const submitBtn = form?.querySelector('button[type="submit"]');
   const promptButtons = container.querySelectorAll('[data-assistant-prompts] button');
+  const closeBtn = container.querySelector('[data-assistant-close]');
   const pageContext = getPageContext();
 
   const readHistory = () => {
@@ -1403,21 +1414,70 @@ const initGlobalLombardoAssistant = () => {
     submitBtn.textContent = loading ? 'Enviando...' : 'Enviar';
   };
 
+  const setOpenState = (open) => {
+    const animationDelay = prefersReducedMotion ? 0 : 180;
+
+    if (open) {
+      panel.hidden = false;
+      panel.classList.remove('is-closing');
+      trigger.setAttribute('aria-expanded', 'true');
+      container.classList.add('is-open');
+      window.setTimeout(() => {
+        input?.focus();
+      }, prefersReducedMotion ? 0 : 160);
+      return;
+    }
+
+    panel.classList.add('is-closing');
+    trigger.setAttribute('aria-expanded', 'false');
+    container.classList.remove('is-open');
+    window.setTimeout(() => {
+      panel.hidden = true;
+      panel.classList.remove('is-closing');
+    }, animationDelay);
+  };
+
+  const getFriendlyClientError = (error) => {
+    switch (error?.code) {
+      case 'NETWORK_ERROR':
+        return 'No pude conectarme en este momento. Revisá tu conexión y probá de nuevo.';
+      case 'OPENAI_NETWORK_ERROR':
+      case 'OPENAI_CONFIG_ERROR':
+      case 'OPENAI_HTTP_ERROR':
+      case 'OPENAI_PARSE_ERROR':
+      case 'WINE_CATALOG_NOT_FOUND':
+      case 'WINE_CATALOG_PARSE_ERROR':
+        return 'Tuve un problema para responder en este momento. Probá de nuevo en unos segundos o, si querés, seguí la consulta por WhatsApp.';
+      default:
+        return 'Tuve un problema para responder en este momento. Probá de nuevo en unos segundos o, si querés, seguí la consulta por WhatsApp.';
+    }
+  };
+
   const sendMessage = async (message) => {
-    const response = await fetch('/api/sommelier-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        pagina_actual: pageContext,
-        history,
-      }),
-    });
+    let response;
+    try {
+      response = await fetch('/api/sommelier-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          pagina_actual: pageContext,
+          history,
+        }),
+      });
+    } catch (error) {
+      const networkError = new Error('No se pudo conectar con el endpoint del asistente.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || 'No se pudo obtener respuesta del asistente.');
+      const endpointError = new Error(data.error || 'No se pudo obtener respuesta del asistente.');
+      endpointError.code = data.error_code || 'ENDPOINT_ERROR';
+      endpointError.status = response.status;
+      throw endpointError;
     }
 
     return {
@@ -1447,7 +1507,8 @@ const initGlobalLombardoAssistant = () => {
       history.push({ role: 'assistant', content: safeAnswer });
       writeHistory(history);
     } catch (error) {
-      appendMessage('assistant', 'Ahora mismo no pude responder. Probá de nuevo en unos segundos.');
+      console.error('[assistant-widget] Error al responder chat:', error);
+      appendMessage('assistant', getFriendlyClientError(error));
     } finally {
       setLoading(false);
       input.value = '';
@@ -1465,11 +1526,11 @@ const initGlobalLombardoAssistant = () => {
   }
 
   trigger?.addEventListener('click', () => {
-    const isOpen = !panel.hidden;
-    panel.hidden = isOpen;
-    trigger.setAttribute('aria-expanded', String(!isOpen));
-    container.classList.toggle('is-open', !isOpen);
-    if (!isOpen) input.focus();
+    setOpenState(panel.hidden);
+  });
+
+  closeBtn?.addEventListener('click', () => {
+    setOpenState(false);
   });
 
   form?.addEventListener('submit', (event) => {

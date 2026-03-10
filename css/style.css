@@ -2932,12 +2932,49 @@ main > .section:last-child::after,
   background: rgba(252, 249, 247, 0.98);
   box-shadow: 0 14px 32px rgba(0, 24, 46, 0.2);
   padding: 16px;
+  max-height: min(78vh, 620px);
+  overflow: hidden;
+  transform-origin: bottom right;
+  animation: assistantPanelEnter 0.24s ease;
+}
+
+.assistant-panel.is-closing {
+  animation: assistantPanelLeave 0.18s ease forwards;
+}
+
+.assistant-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .assistant-head h3 {
   margin: 4px 0 0;
   font-size: 1rem;
   line-height: 1.4;
+}
+
+.assistant-close {
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--azul);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.assistant-close:hover {
+  background: rgba(0, 58, 112, 0.08);
+  transform: translateY(-1px);
 }
 
 .assistant-prompts {
@@ -2995,6 +3032,10 @@ main > .section:last-child::after,
   margin-top: 10px;
 }
 
+.assistant-form .btn {
+  min-height: 42px;
+}
+
 .assistant-form input {
   min-height: 42px;
   border-radius: 12px;
@@ -3008,6 +3049,15 @@ main > .section:last-child::after,
     right: 10px;
     bottom: 74px;
     width: calc(100vw - 20px);
+  }
+
+  .assistant-panel {
+    max-height: min(72vh, 560px);
+    padding: 14px;
+  }
+
+  .assistant-messages {
+    max-height: min(40vh, 290px);
   }
 
   .assistant-form {
@@ -3039,4 +3089,28 @@ main > .section:last-child::after,
 .assistant-whatsapp-link:hover {
   background: rgba(0, 58, 112, 0.08);
   transform: translateY(-1px);
+}
+
+@keyframes assistantPanelEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes assistantPanelLeave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
 }
