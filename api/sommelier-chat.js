@@ -2,6 +2,13 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { recordInteraction, inferProfile, intentToCategory } = require('./lib/assistant-interactions');
 
+const {
+  detectConsultCategory,
+  detectProfile,
+  buildInteractionRecord,
+  logInteractionRecord,
+} = require('./ai-learning');
+
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_RECOMMENDATIONS = 3;
@@ -411,7 +418,7 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext }) => {
 ${suggestion}`, closingType };
 };
 
-const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines }) => {
+const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent }) => {
   const compactCatalog = wines.map((wine) => ({
     nombre: wine.nombre,
     precio: wine.precio,
@@ -732,6 +739,11 @@ module.exports = async (req, res) => {
       whatsapp_label: suggestWhatsApp ? 'Seguir por WhatsApp' : '',
       whatsapp_url: canonicalResponse.whatsappUrl,
       intent,
+      learning: {
+        categoria_consulta: category,
+        perfil_detectado: profile,
+        tipo_cierre: interactionRecord.tipo_cierre,
+      },
     });
   } catch (error) {
     const { status, payload } = buildServerErrorPayload(error);
