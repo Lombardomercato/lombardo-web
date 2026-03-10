@@ -125,10 +125,29 @@
               <a class="btn btn-primary" data-membership-wa href="https://wa.me/543412762319?text=Hola%2C%20us%C3%A9%20el%20Sommelier%20de%20Lombardo%20y%20quiero%20consultar%20por%20la%20mensualidad%20recomendada." target="_blank" rel="noopener">Consultar esta mensualidad</a>
             </div>
 
-            <div class="sommelier-future-ai" data-future-ai>
-              <p class="eyebrow">Próximamente</p>
-              <h3>Preguntale al Sommelier IA</h3>
-              <p>Estamos preparando una experiencia conversacional para que puedas pedir recomendaciones en tiempo real según etiqueta, comida, presupuesto o momento.</p>
+            <div class="sommelier-ai-chat" data-ai-chat>
+              <div class="sommelier-ai-chat-head">
+                <p class="eyebrow">Sommelier IA</p>
+                <h3>Preguntale al Sommelier IA</h3>
+                <p>Hacé una consulta rápida y te recomendamos opciones reales de Lombardo según comida, ocasión o estilo.</p>
+              </div>
+
+              <div class="sommelier-ai-chat-messages" data-chat-messages aria-live="polite"></div>
+
+              <form class="sommelier-ai-chat-form" data-chat-form>
+                <label class="sr-only" for="sommelier-ai-input">Escribí tu pregunta</label>
+                <input
+                  id="sommelier-ai-input"
+                  name="message"
+                  type="text"
+                  maxlength="280"
+                  placeholder="Ej: Quiero algo para sushi y que sea fresco"
+                  autocomplete="off"
+                  required
+                  data-chat-input
+                />
+                <button class="btn btn-primary" type="submit" data-chat-submit>Enviar</button>
+              </form>
             </div>
 
             <div class="sommelier-closing" data-sommelier-closing>

@@ -69,3 +69,12 @@ Páginas núcleo actuales:
 Legado archivado:
 - archive/empresas.html
 
+
+11) SOMMELIER IA (CHAT EN BACKEND)
+- Nuevo endpoint backend sugerido: `POST /api/sommelier-chat` (archivo `api/sommelier-chat.js`).
+- Variables de entorno necesarias:
+  - `OPENAI_API_KEY`
+  - `OPENAI_MODEL` (opcional, default `gpt-4o-mini`)
+- El front-end de `sommelier.html` llama a ese endpoint y NO expone la API key en cliente.
+- El endpoint usa `vinos_lombardo_base.json` como única base para recomendar.
+
