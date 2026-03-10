@@ -76,6 +76,12 @@ const sanitizePageContext = (value) => {
   return PAGE_CONTEXT_ROLES[normalized] ? normalized : 'general';
 };
 
+const normalizeText = (value) =>
+  sanitizeMessage(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 const sanitizeHistory = (history) => {
   if (!Array.isArray(history)) return [];
 
@@ -100,6 +106,116 @@ const buildPageContextGuidance = (pageContext) => {
 };
 
 const containsKeyword = (text, patterns) => patterns.some((pattern) => pattern.test(text));
+
+const RECOMMENDATION_INTENT_PATTERNS = [
+  /quiero un vino/,
+  /recomend(a|ame|ame un|ame algun|ame algo)/,
+  /algo para/,
+  /vino para/,
+  /vino suave/,
+  /vino intenso/,
+  /probar algo distinto/,
+  /(que|qué) me recomendas/,
+];
+
+const FIELD_SYNONYMS = {
+  tipo_vino: {
+    tinto: ['tinto', 'malbec', 'cabernet', 'syrah', 'blend tinto'],
+    blanco: ['blanco', 'chardonnay', 'sauvignon blanc', 'torrontes'],
+    rosado: ['rosado', 'rose'],
+    espumante: ['espumante', 'burbujas', 'sparkling'],
+  },
+  maridaje_principal: {
+    carne: ['asado', 'carne', 'parrilla', 'bife'],
+    pescado: ['sushi', 'pescado', 'mariscos'],
+    pasta: ['pasta', 'pastas'],
+    queso: ['queso', 'quesos', 'picada'],
+    postre: ['postre', 'dulce'],
+  },
+  ocasion: {
+    asado: ['asado', 'parrilla'],
+    regalo: ['regalo', 'regalar'],
+    celebracion: ['celebrar', 'festejo', 'brindis'],
+    cena: ['cena', 'comida'],
+  },
+  varietal: {
+    malbec: ['malbec'],
+    cabernet: ['cabernet'],
+    pinot: ['pinot'],
+    blend: ['blend', 'corte'],
+  },
+  estilo: {
+    suave: ['suave', 'ligero', 'facil de tomar', 'frutado'],
+    intenso: ['intenso', 'con cuerpo', 'potente', 'estructurado'],
+    distinto: ['distinto', 'diferente', 'nuevo'],
+  },
+};
+
+const hasRecommendationIntent = (message) => {
+  const normalized = normalizeText(message);
+  return containsKeyword(normalized, RECOMMENDATION_INTENT_PATTERNS);
+};
+
+const findRequestedValues = (normalizedMessage, dictionary) =>
+  Object.entries(dictionary)
+    .filter(([, aliases]) => aliases.some((alias) => normalizedMessage.includes(alias)))
+    .map(([key]) => key);
+
+const buildRecommendationSignals = (message) => {
+  const normalizedMessage = normalizeText(message);
+
+  return {
+    normalizedMessage,
+    tipo_vino: findRequestedValues(normalizedMessage, FIELD_SYNONYMS.tipo_vino),
+    maridaje_principal: findRequestedValues(normalizedMessage, FIELD_SYNONYMS.maridaje_principal),
+    ocasion: findRequestedValues(normalizedMessage, FIELD_SYNONYMS.ocasion),
+    varietal: findRequestedValues(normalizedMessage, FIELD_SYNONYMS.varietal),
+    estilo: findRequestedValues(normalizedMessage, FIELD_SYNONYMS.estilo),
+  };
+};
+
+const buildStyleHints = (wine) => {
+  const hints = [];
+  const varietal = normalizeText(wine.varietal);
+  const tipo = normalizeText(wine.tipo_vino);
+
+  if (tipo === 'blanco' || varietal.includes('pinot')) hints.push('suave');
+  if (tipo === 'tinto' || varietal.includes('cabernet') || varietal.includes('syrah')) hints.push('intenso');
+  if (varietal.includes('blend')) hints.push('distinto');
+
+  return hints;
+};
+
+const matchFieldScore = (wineValue, requestedValues, score) => {
+  if (!requestedValues.length) return 0;
+  const normalizedWineValue = normalizeText(String(wineValue || ''));
+  return requestedValues.some((value) => normalizedWineValue.includes(value)) ? score : 0;
+};
+
+const selectRecommendedWines = ({ wines, message }) => {
+  if (!hasRecommendationIntent(message)) return [];
+
+  const signals = buildRecommendationSignals(message);
+
+  const ranked = wines
+    .map((wine) => {
+      let score = 0;
+      score += matchFieldScore(wine.tipo_vino, signals.tipo_vino, 4);
+      score += matchFieldScore(wine.maridaje_principal, signals.maridaje_principal, 5);
+      score += matchFieldScore(wine.ocasion, signals.ocasion, 4);
+      score += matchFieldScore(wine.varietal, signals.varietal, 3);
+      score += matchFieldScore(buildStyleHints(wine).join(' '), signals.estilo, 3);
+
+      if (wine.prioridad_venta === 'alta') score += 1;
+
+      return { wine, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_RECOMMENDATIONS)
+    .map((entry) => entry.wine);
+
+  return ranked.filter(Boolean);
+};
 
 const shouldSuggestWhatsApp = ({ message, pageContext }) => {
   const normalized = sanitizeMessage(message).toLowerCase();
@@ -150,7 +266,7 @@ const buildWhatsAppUrl = (message) => {
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(safeMessage)}`;
 };
 
-const buildUserPrompt = ({ message, wines, pageContext, history }) => {
+const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines }) => {
   const compactCatalog = wines.map((wine) => ({
     nombre: wine.nombre,
     precio: wine.precio,
@@ -174,11 +290,21 @@ const buildUserPrompt = ({ message, wines, pageContext, history }) => {
     '',
     `Base de vinos Lombardo (JSON): ${JSON.stringify(compactCatalog)}`,
     '',
+    hasRecommendationIntent(message)
+      ? `Preselección sugerida para esta consulta (máximo ${MAX_RECOMMENDATIONS}): ${JSON.stringify(
+          recommendedWines
+        )}`
+      : 'No hay preselección forzada para esta consulta.',
+    '',
+    hasRecommendationIntent(message)
+      ? 'Cuando haya intención de recomendación, usá la preselección como base principal y no inventes etiquetas.'
+      : 'Si recomendás vinos de todos modos, usá solo etiquetas reales del catálogo.',
+    '',
     `Si hacés recomendaciones, máximo ${MAX_RECOMMENDATIONS} opciones.`,
   ].join('\n');
 };
 
-const createOpenAIResponse = async ({ message, wines, pageContext, history }) => {
+const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines }) => {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -195,7 +321,10 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history }) =>
       model: OPENAI_MODEL,
       input: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: buildUserPrompt({ message, wines, pageContext, history }) },
+        {
+          role: 'user',
+          content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines }),
+        },
       ],
       max_output_tokens: 350,
       temperature: 0.4,
@@ -236,7 +365,14 @@ module.exports = async (req, res) => {
     }
 
     const wines = await readWineCatalog();
-    const rawAnswer = await createOpenAIResponse({ message, wines, pageContext, history });
+    const recommendedWines = selectRecommendedWines({ wines, message });
+    const rawAnswer = await createOpenAIResponse({
+      message,
+      wines,
+      pageContext,
+      history,
+      recommendedWines,
+    });
 
     if (!rawAnswer) {
       return res.status(502).json({ error: 'No se obtuvo respuesta del modelo.' });
