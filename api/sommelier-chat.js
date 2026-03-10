@@ -162,6 +162,10 @@ const buildConversationContextPrompt = ({ wines, pageContext }) => {
     nivel_precio: wine.nivel_precio,
   }));
 
+  const serializedHistory = history.length
+    ? history.map((item) => `${item.role === 'assistant' ? 'Asistente' : 'Cliente'}: ${item.content}`).join('\n')
+    : 'Sin historial previo en esta sesión.';
+
   return [
     buildPageContextGuidance(pageContext),
     '',
