@@ -1437,23 +1437,7 @@ const initGlobalLombardoAssistant = () => {
     }, animationDelay);
   };
 
-  const getFriendlyClientError = (error) => {
-    switch (error?.code) {
-      case 'NETWORK_ERROR':
-        return 'No pude conectarme en este momento. Revisá tu conexión y probá de nuevo.';
-      case 'BACKEND_UNAVAILABLE':
-        return 'No encontramos el backend del asistente en este entorno. Configurá assistant-api-url (o assistant-api-base) para conectarlo.';
-      case 'OPENAI_NETWORK_ERROR':
-      case 'OPENAI_CONFIG_ERROR':
-      case 'OPENAI_HTTP_ERROR':
-      case 'OPENAI_PARSE_ERROR':
-      case 'WINE_CATALOG_NOT_FOUND':
-      case 'WINE_CATALOG_PARSE_ERROR':
-        return 'Tuve un problema para responder en este momento. Probá de nuevo en unos segundos o, si querés, seguí la consulta por WhatsApp.';
-      default:
-        return 'Tuve un problema para responder en este momento. Probá de nuevo en unos segundos o, si querés, seguí la consulta por WhatsApp.';
-    }
-  };
+  const getFriendlyClientError = () => 'Hoy estoy con mucha demanda y no pude responder como quería. Si querés, probá de nuevo en un rato o seguimos por WhatsApp.';
 
   const resolveAssistantApiUrl = () => {
     const explicit = document.querySelector('meta[name="assistant-api-url"]')?.content?.trim();
@@ -1467,23 +1451,220 @@ const initGlobalLombardoAssistant = () => {
     return '/api/sommelier-chat';
   };
 
-  const buildLocalAssistantFallback = async (message) => {
+  let localCatalogCache = null;
+
+  const normalizeText = (value) =>
+    String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '');
+
+  const chooseVariant = (message, variants) => {
+    if (!variants.length) return '';
+    const source = normalizeText(message);
+    const seed = [...source].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return variants[seed % variants.length];
+  };
+
+  const formatWineLine = (wine) => {
+    const price = Number(wine.precio);
+    const formattedPrice = Number.isFinite(price) ? `$${price.toLocaleString('es-AR')}` : null;
+    return [wine.nombre, wine.varietal, wine.tipo_vino, formattedPrice].filter(Boolean).join(' · ');
+  };
+
+  const readLocalCatalog = async () => {
+    if (Array.isArray(localCatalogCache)) return localCatalogCache;
     const response = await fetch('vinos_lombardo_base.json', { cache: 'no-store' });
-    const wines = (await response.json().catch(() => [])).slice(0, 3);
-    if (!Array.isArray(wines) || !wines.length) {
-      return 'Gracias por tu consulta. Si querés, contame ocasión, presupuesto y estilo para ayudarte mejor.';
+    const data = await response.json().catch(() => []);
+    localCatalogCache = Array.isArray(data) ? data.filter((wine) => wine?.activo !== false) : [];
+    return localCatalogCache;
+  };
+
+  const detectLocalIntent = (message) => {
+    const text = normalizeText(message);
+    const checks = {
+      gift: /(regalo|regalar|obsequio)/,
+      picada: /(picada|queso|fiambre|tapeo)/,
+      meat: /(carne|asado|parrilla|vac(o|a)|bife)/,
+      soft: /(suave|liviano|ligero|facil de tomar|amable)/,
+      intense: /(intenso|potente|con cuerpo|robusto|estructurado)/,
+      discover: /(distinto|descubrir|nuevo|sorprender|fuera de lo comun|explorar)/,
+      box: /(armame una caja|arma(me)? una caja|caja de vinos|seleccion para llevar)/,
+      membership: /(mensualidad|membresia|suscripcion|club mensual|todos los meses)/,
+      clubInfo: /(que incluye el club|beneficios del club|como funciona el club|club lombardo)/,
+      experiences: /(que experiencias|experiencias tienen|catas|after office|balcon|eventos)/,
+    };
+
+    if (checks.membership.test(text)) return 'membership';
+    if (checks.box.test(text)) return 'box';
+    if (checks.clubInfo.test(text)) return 'club';
+    if (checks.experiences.test(text)) return 'experiences';
+    if (checks.gift.test(text)) return 'wine_gift';
+    if (checks.picada.test(text)) return 'wine_picada';
+    if (checks.meat.test(text)) return 'wine_meat';
+    if (checks.soft.test(text)) return 'wine_soft';
+    if (checks.intense.test(text)) return 'wine_intense';
+    if (checks.discover.test(text)) return 'wine_discover';
+    if (/(vino|malbec|cabernet|blend|blanco|rosado|espumoso|recomenda|recomendame)/.test(text)) return 'wine_generic';
+    return 'general';
+  };
+
+  const pickWinesForIntent = (wines, intent) => {
+    const scoreWine = (wine) => {
+      let score = 0;
+      if (wine.prioridad_venta === 'alta') score += 1.5;
+      if (wine.nivel_precio === 'medio') score += 0.2;
+
+      switch (intent) {
+        case 'wine_gift':
+          if (wine.ocasion === 'regalo') score += 4;
+          if (wine.nivel_precio === 'alto') score += 1;
+          break;
+        case 'wine_picada':
+          if (wine.maridaje_principal === 'picada') score += 4;
+          if (wine.tipo_vino === 'rosado' || wine.tipo_vino === 'blanco') score += 1;
+          break;
+        case 'wine_meat':
+          if (wine.maridaje_principal === 'carne' || wine.ocasion === 'asado') score += 4;
+          if (wine.tipo_vino === 'tinto') score += 1;
+          break;
+        case 'wine_soft':
+          if (wine.tipo_vino === 'rosado' || wine.tipo_vino === 'blanco') score += 3;
+          if (wine.varietal === 'Pinot Noir') score += 2;
+          break;
+        case 'wine_intense':
+          if (wine.tipo_vino === 'tinto') score += 2;
+          if (/cabernet|malbec|blend/i.test(wine.varietal || '')) score += 2;
+          if (wine.nivel_precio === 'alto') score += 1;
+          break;
+        case 'wine_discover':
+          if (wine.ocasion === 'descubrir') score += 4;
+          if (wine.tipo_vino === 'espumoso' || wine.tipo_vino === 'rosado') score += 1;
+          break;
+        default:
+          if (wine.prioridad_venta === 'alta') score += 1;
+      }
+
+      return score;
+    };
+
+    return [...wines]
+      .sort((a, b) => scoreWine(b) - scoreWine(a))
+      .slice(0, 3);
+  };
+
+  const buildWineResponse = (message, wines, introKey) => {
+    const intro = chooseVariant(message, {
+      regalo: [
+        '¡Qué lindo plan para regalar! Te dejo tres etiquetas que suelen funcionar muy bien.',
+        'Si es para regalar, esta selección queda elegante y con perfiles bien distintos.',
+      ],
+      picada: [
+        'Para una picada, buscaría vinos frescos y gastronómicos como estos:',
+        'Con picada van perfecto opciones versátiles y fáciles de compartir. Mirá esta idea:',
+      ],
+      carne: [
+        'Si hay carne o asado de por medio, te recomendaría ir por esta línea:',
+        'Para parrilla y cortes con sabor, estas tres etiquetas rinden excelente:',
+      ],
+      suave: [
+        'Si buscás algo más suave y amable al paladar, arrancaría por acá:',
+        'Para un estilo liviano y fácil de tomar, estas opciones encajan muy bien:',
+      ],
+      intenso: [
+        'Si preferís vinos intensos y con carácter, probá esta selección:',
+        'Para un perfil más potente, te propongo estas etiquetas:',
+      ],
+      descubrir: [
+        '¡Me encanta cuando buscan algo distinto! Te propongo esta mini ruta para descubrir:',
+        'Si querés salir de lo de siempre, estas tres opciones te pueden sorprender:',
+      ],
+      generic: [
+        '¡Vamos con una selección bien Lombardo para arrancar!',
+        'Te comparto tres opciones equilibradas para empezar a elegir mejor:',
+      ],
+    }[introKey] || []);
+
+    const bullets = wines.map((wine) => `• ${formatWineLine(wine)}`).join('\n');
+    const closing = chooseVariant(message, [
+      'Si querés, te la ajusto por presupuesto o por ocasión puntual.',
+      'Si me decís presupuesto y ocasión exacta, la afinamos todavía más.',
+      'Si querés, en el próximo mensaje la cierro según estilo y rango de precio.',
+    ]);
+
+    return [intro, bullets, closing].join('\n\n');
+  };
+
+  const buildStructuredSelection = (message, wines, title, labels) => {
+    const [safeWine, specialWine, discoverWine] = wines;
+    const lines = [title];
+    if (safeWine) lines.push(`• ${labels[0]}: ${formatWineLine(safeWine)}`);
+    if (specialWine) lines.push(`• ${labels[1]}: ${formatWineLine(specialWine)}`);
+    if (discoverWine) lines.push(`• ${labels[2]}: ${formatWineLine(discoverWine)}`);
+    lines.push(chooseVariant(message, [
+      'Si querés, te dejo esta propuesta lista para reservar por WhatsApp.',
+      'Si te gusta, te ayudo a dejarla cerrada para retirar o enviar.',
+    ]));
+    return lines.join('\n\n');
+  };
+
+  const buildLocalAssistantFallback = async (message) => {
+    const intent = detectLocalIntent(message);
+    const wines = await readLocalCatalog().catch(() => []);
+
+    if (intent === 'club') {
+      return 'Club Lombardo incluye descuentos especiales en barra y tienda, cupos preferenciales en catas, invitaciones a noches privadas y novedades/preventas por WhatsApp. Si querés, te oriento según si preferís vino, café o ambos mundos.';
     }
 
-    const listed = wines
-      .map((wine) => [wine.nombre, wine.varietal, wine.tipo_vino, wine.precio].filter(Boolean).join(' · '))
-      .map((line) => `• ${line}`)
-      .join('\n');
+    if (intent === 'experiences') {
+      return 'En Lombardo tenemos experiencias como catas de vino, after office, encuentros en balcón y momentos compartidos. Si me decís qué plan te interesa (pareja, amigos o regalo), te sugiero la mejor opción para vos.';
+    }
 
-    return [
-      'Estoy en modo local (sin backend activo), pero igual puedo recomendarte opciones reales de Lombardo:',
-      listed,
-      `Si querés, afino estas opciones según tu consulta: "${message.slice(0, 120)}".`,
-    ].join('\n');
+    if (!wines.length) {
+      return 'Gracias por escribirnos 💙 Si me contás ocasión, presupuesto y estilo, te orientamos ahora mismo. Y si querés cerrar rápido, te paso contacto por WhatsApp.';
+    }
+
+    if (intent === 'box') {
+      const selected = pickWinesForIntent(wines, 'wine_generic');
+      return buildStructuredSelection(
+        message,
+        selected,
+        '¡Vamos con esa caja! Te propongo una combinación equilibrada:',
+        ['Opción segura', 'Opción más especial', 'Opción para descubrir']
+      );
+    }
+
+    if (intent === 'membership') {
+      const aligned = pickWinesForIntent(wines, 'wine_generic').slice(0, 2);
+      const explore = pickWinesForIntent(wines, 'wine_discover')[0];
+      return buildStructuredSelection(
+        message,
+        [...aligned, explore].filter(Boolean),
+        'Para una mensualidad estilo Club, esta combinación funciona muy bien:',
+        ['Alineado a tu gusto #1', 'Alineado a tu gusto #2', 'Para explorar este mes']
+      );
+    }
+
+    const wineIntentMap = {
+      wine_gift: { intent: 'wine_gift', intro: 'regalo' },
+      wine_picada: { intent: 'wine_picada', intro: 'picada' },
+      wine_meat: { intent: 'wine_meat', intro: 'carne' },
+      wine_soft: { intent: 'wine_soft', intro: 'suave' },
+      wine_intense: { intent: 'wine_intense', intro: 'intenso' },
+      wine_discover: { intent: 'wine_discover', intro: 'descubrir' },
+      wine_generic: { intent: 'wine_generic', intro: 'generic' },
+    };
+
+    if (wineIntentMap[intent]) {
+      const selection = pickWinesForIntent(wines, wineIntentMap[intent].intent);
+      return buildWineResponse(message, selection, wineIntentMap[intent].intro);
+    }
+
+    return chooseVariant(message, [
+      'Estoy para ayudarte con vinos, regalos, cajas, mensualidad del club y experiencias. Si querés, empezamos por ocasión + presupuesto y te hago una propuesta concreta.',
+      'Podemos armar juntos una recomendación de vinos, una caja o una mensualidad. Contame qué ocasión tenés y cuánto querés invertir, y te propongo algo bien a medida.',
+      'Si tu consulta es general, te puedo orientar acá mismo. Y si querés cerrar una reserva o compra, lo derivamos por WhatsApp en un segundo.',
+    ]);
   };
 
   const sendMessage = async (message) => {
@@ -1567,7 +1748,7 @@ const initGlobalLombardoAssistant = () => {
     } catch (error) {
       console.error('[assistant-widget] Error al responder chat:', error);
 
-      if (error?.code === 'BACKEND_UNAVAILABLE') {
+      if (['BACKEND_UNAVAILABLE', 'NETWORK_ERROR', 'ENDPOINT_ERROR'].includes(error?.code)) {
         const localAnswer = await buildLocalAssistantFallback(trimmed).catch(() => '');
         if (localAnswer) {
           appendMessage('assistant', localAnswer);

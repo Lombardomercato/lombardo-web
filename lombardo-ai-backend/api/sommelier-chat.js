@@ -1,0 +1,208 @@
+const fs = require('node:fs/promises');
+const path = require('node:path');
+
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const WHATSAPP_URL =
+  process.env.WHATSAPP_URL ||
+  'https://wa.me/543412762319?text=Hola%20Lombardo%2C%20quiero%20asesoramiento%20personalizado%20de%20vinos.';
+
+let catalogCache = null;
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Content-Type': 'application/json; charset=utf-8',
+};
+
+const sendJson = (res, status, payload) => {
+  res.status(status).setHeader('Content-Type', CORS_HEADERS['Content-Type']);
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => res.setHeader(key, value));
+  res.end(JSON.stringify(payload));
+};
+
+const normalizeRole = (role) => {
+  if (role === 'assistant' || role === 'user' || role === 'system') return role;
+  return 'user';
+};
+
+const sanitizeHistory = (history) => {
+  if (!Array.isArray(history)) return [];
+  return history
+    .map((item) => ({
+      role: normalizeRole(item?.role),
+      content: typeof item?.content === 'string' ? item.content.trim().slice(0, 500) : '',
+    }))
+    .filter((item) => item.content)
+    .slice(-14);
+};
+
+const loadWineCatalog = async () => {
+  if (Array.isArray(catalogCache)) return catalogCache;
+
+  const catalogPath = path.join(process.cwd(), 'vinos_lombardo_base.json');
+  const raw = await fs.readFile(catalogPath, 'utf8');
+  const parsed = JSON.parse(raw);
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('Formato de catálogo inválido.');
+  }
+
+  catalogCache = parsed.filter((wine) => wine && wine.activo !== false);
+  return catalogCache;
+};
+
+const formatCatalogContext = (wines) =>
+  wines
+    .slice(0, 30)
+    .map((wine) => {
+      const parts = [
+        wine.nombre,
+        wine.varietal,
+        wine.tipo_vino,
+        wine.maridaje_principal,
+        wine.ocasion,
+        typeof wine.precio === 'number' ? `$${wine.precio}` : null,
+        wine.nivel_precio ? `nivel:${wine.nivel_precio}` : null,
+      ].filter(Boolean);
+      return `- ${parts.join(' | ')}`;
+    })
+    .join('\n');
+
+const buildSystemPrompt = ({ paginaActual, catalogContext }) => `
+Sos el Asistente IA Lombardo de una marca premium de café y vinos.
+
+Tono y estilo:
+- cálido, claro, útil, premium y cercano.
+- respuestas en español rioplatense.
+- evitá sonar robótico o técnico.
+
+Alcance:
+- podés responder sobre vinos, regalos, cajas, club, café y experiencias.
+- página actual del usuario: ${paginaActual || 'sin contexto'}.
+
+Reglas críticas:
+- Si la consulta es de vinos, apoyate SOLO en esta base local (no inventes etiquetas, precios, ni stock).
+- Si faltan datos, decilo con honestidad.
+- Si tiene sentido comercial, sugerí continuar por WhatsApp de forma natural.
+- Mantené respuestas concretas (ideal 4 a 10 líneas).
+
+Base de vinos Lombardo:
+${catalogContext}
+`.trim();
+
+const callOpenAI = async ({ message, history, systemPrompt }) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    const error = new Error('Falta OPENAI_API_KEY');
+    error.code = 'OPENAI_CONFIG_ERROR';
+    throw error;
+  }
+
+  const payload = {
+    model: OPENAI_MODEL,
+    temperature: 0.7,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...history,
+      { role: 'user', content: message },
+    ],
+  };
+
+  const response = await fetch(OPENAI_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (error) {
+    const parseError = new Error('Respuesta inválida de OpenAI');
+    parseError.code = 'OPENAI_PARSE_ERROR';
+    throw parseError;
+  }
+
+  if (!response.ok) {
+    const apiError = new Error(data?.error?.message || 'Error HTTP de OpenAI');
+    apiError.code = 'OPENAI_HTTP_ERROR';
+    apiError.status = response.status;
+    throw apiError;
+  }
+
+  const answer = data?.choices?.[0]?.message?.content;
+  if (typeof answer !== 'string' || !answer.trim()) {
+    const emptyError = new Error('OpenAI devolvió respuesta vacía');
+    emptyError.code = 'OPENAI_EMPTY_RESPONSE';
+    throw emptyError;
+  }
+
+  return answer.trim();
+};
+
+module.exports = async (req, res) => {
+  if (req.method === 'OPTIONS') {
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => res.setHeader(key, value));
+    res.status(204).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    sendJson(res, 405, {
+      ok: false,
+      error: 'Method Not Allowed',
+      error_code: 'METHOD_NOT_ALLOWED',
+    });
+    return;
+  }
+
+  try {
+    const body = typeof req.body === 'object' && req.body ? req.body : {};
+    const message = typeof body.message === 'string' ? body.message.trim() : '';
+    const history = sanitizeHistory(body.history);
+    const paginaActual = typeof body.pagina_actual === 'string' ? body.pagina_actual.trim() : '';
+
+    if (!message) {
+      sendJson(res, 400, {
+        ok: false,
+        error: 'El campo message es obligatorio.',
+        error_code: 'INVALID_MESSAGE',
+      });
+      return;
+    }
+
+    const wines = await loadWineCatalog();
+    const catalogContext = formatCatalogContext(wines);
+    const systemPrompt = buildSystemPrompt({ paginaActual, catalogContext });
+
+    const answer = await callOpenAI({ message, history, systemPrompt });
+
+    sendJson(res, 200, {
+      ok: true,
+      answer,
+      suggest_whatsapp: /whatsapp|hablar con asesor|contacto directo/i.test(answer),
+      whatsapp_label: 'Continuar por WhatsApp',
+      whatsapp_url: WHATSAPP_URL,
+      source: 'openai',
+    });
+  } catch (error) {
+    console.error('[sommelier-chat] error:', {
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+    });
+
+    const status = error?.code === 'OPENAI_CONFIG_ERROR' ? 500 : 502;
+    sendJson(res, status, {
+      ok: false,
+      error: 'No se pudo generar la respuesta del asistente en este momento.',
+      error_code: error?.code || 'SOMMELIER_CHAT_ERROR',
+    });
+  }
+};
