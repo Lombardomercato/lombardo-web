@@ -261,7 +261,11 @@ if (sommelierApp) {
   const membershipNote = sommelierApp.querySelector('[data-membership-note]');
   const membershipWaLink = sommelierApp.querySelector('[data-membership-wa]');
   const sommelierQuote = sommelierApp.querySelector('[data-sommelier-quote]');
-  const futureAiBlock = sommelierApp.querySelector('[data-future-ai]');
+  const aiChatBlock = sommelierApp.querySelector('[data-ai-chat]');
+  const chatMessages = sommelierApp.querySelector('[data-chat-messages]');
+  const chatForm = sommelierApp.querySelector('[data-chat-form]');
+  const chatInput = sommelierApp.querySelector('[data-chat-input]');
+  const chatSubmit = sommelierApp.querySelector('[data-chat-submit]');
   const closingBlock = sommelierApp.querySelector('[data-sommelier-closing]');
   const resultActions = sommelierApp.querySelector('.sommelier-result-actions');
   const waLink = sommelierApp.querySelector('[data-wa-link]');
@@ -285,6 +289,94 @@ if (sommelierApp) {
 
   const hideLocalContext = () => {
     if (localContextBanner) localContextBanner.hidden = true;
+  };
+
+  const chatHistory = [];
+
+  const appendChatMessage = (role, content, options = {}) => {
+    if (!chatMessages || !content) return null;
+
+    const item = document.createElement('article');
+    item.className = `sommelier-chat-message is-${role}`;
+    if (options.typing) item.classList.add('is-typing');
+
+    const label = document.createElement('p');
+    label.className = 'sommelier-chat-role';
+    label.textContent = role === 'assistant' ? 'Sommelier IA' : 'Vos';
+
+    const body = document.createElement('p');
+    body.className = 'sommelier-chat-content';
+    body.textContent = content;
+
+    item.appendChild(label);
+    item.appendChild(body);
+    chatMessages.appendChild(item);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    return item;
+  };
+
+  const setChatLoading = (isLoading) => {
+    if (!chatInput || !chatSubmit) return;
+    chatInput.disabled = isLoading;
+    chatSubmit.disabled = isLoading;
+    chatSubmit.textContent = isLoading ? 'Enviando...' : 'Enviar';
+  };
+
+  const requestSommelierChat = async (message) => {
+    const response = await fetch('/api/sommelier-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo obtener una respuesta del Sommelier IA.');
+    }
+
+    return typeof data.answer === 'string' ? data.answer.trim() : '';
+  };
+
+  const initSommelierChat = () => {
+    if (!aiChatBlock || !chatForm || !chatInput) return;
+
+    appendChatMessage(
+      'assistant',
+      '¡Hola! Soy el Sommelier IA de Lombardo. Contame qué estás buscando y te recomiendo opciones reales de nuestra base.'
+    );
+
+    chatForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = chatInput.value.trim();
+
+      if (!message) return;
+
+      chatHistory.push({ role: 'user', content: message });
+      appendChatMessage('user', message);
+      chatInput.value = '';
+      setChatLoading(true);
+
+      const typingNode = appendChatMessage('assistant', 'Escribiendo…', { typing: true });
+
+      try {
+        const answer = await requestSommelierChat(message);
+        chatHistory.push({ role: 'assistant', content: answer });
+
+        if (typingNode) typingNode.remove();
+        appendChatMessage('assistant', answer || 'No encontré una sugerencia clara. Si querés, probá reformulando con comida, ocasión o estilo.');
+      } catch (error) {
+        if (typingNode) typingNode.remove();
+        appendChatMessage('assistant', 'Ahora mismo no pude responder. Probá de nuevo en unos segundos.');
+        console.error(error);
+      } finally {
+        setChatLoading(false);
+        chatInput.focus();
+      }
+    });
   };
 
   const renderQuestion = () => {
@@ -1048,7 +1140,7 @@ if (sommelierApp) {
       profileBlock,
       boxBlock,
       membershipBlock,
-      futureAiBlock,
+      aiChatBlock,
       closingBlock,
       resultActions,
     ].filter((element) => element && !element.hidden);
@@ -1181,4 +1273,5 @@ if (sommelierApp) {
 
   showLocalContextIfNeeded();
   renderQuestion();
+  initSommelierChat();
 }
