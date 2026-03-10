@@ -1,0 +1,29 @@
+[
+  {
+    "id_producto": "FUDO-12345",
+    "nombre": "Malbec Reserva",
+    "bodega": "Bodega Ejemplo",
+    "categoria": "vino",
+    "subcategoria": "reserva",
+    "varietal": "malbec",
+    "pais": "Argentina",
+    "region": "Mendoza",
+    "tipo_vino": "tinto",
+    "cuerpo": "medio",
+    "intensidad": "media",
+    "perfil": "frutado con especias",
+    "acidez": "media",
+    "taninos": "medios",
+    "estilo": "equilibrado",
+    "maridaje_principal": "carne",
+    "maridaje_secundario": "quesos",
+    "precio_venta": 18500,
+    "stock_actual": 12,
+    "disponible": true,
+    "recomendado_para_regalo": true,
+    "recomendado_para_caja": true,
+    "recomendado_para_club": false,
+    "nivel": "reserva",
+    "descripcion_corta": "Malbec elegante, ideal para asado y regalos."
+  }
+]
