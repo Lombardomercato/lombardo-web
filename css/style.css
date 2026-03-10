@@ -1063,6 +1063,51 @@ p {
   border-bottom: 0;
 }
 
+.menu-shell {
+  background: linear-gradient(180deg, rgba(255, 179, 171, 0.62), rgba(228, 213, 211, 0.82));
+}
+
+.menu-pillars {
+  background: rgba(247, 242, 241, 0.85);
+}
+
+.menu-pillars-grid {
+  align-items: stretch;
+}
+
+.menu-pillar {
+  border-top-color: var(--rojo);
+  background: rgba(228, 213, 211, 0.72);
+}
+
+.menu-pillar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-pillar li {
+  padding: 9px 0;
+  border-bottom: 1px dashed rgba(0, 58, 112, 0.24);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.menu-pillar li:last-child {
+  border-bottom: 0;
+}
+
+.menu-highlight {
+  gap: 28px;
+}
+
+.menu-highlight p {
+  max-width: 52ch;
+  margin: 0;
+}
+
 @media (max-width: 760px) {
   .hero {
     min-height: 86vh;
