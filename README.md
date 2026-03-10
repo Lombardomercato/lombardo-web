@@ -83,3 +83,10 @@ Legado archivado:
     - o `<meta name="assistant-api-base" content="https://tu-backend.com" />`
 - Para debug del chat, revisar logs en consola del navegador con prefijo `[assistant-widget][debug]` y en servidor con `[sommelier-chat][debug]`.
 
+
+
+12) CANONICAL BACKEND IA (ANTI-DRIFT)
+- Backend oficial único: `api/sommelier-chat.js` (`POST /api/sommelier-chat`).
+- Contrato canónico documentado en `ai-backend-canonical.md`.
+- `lombardo-ai-backend/` queda explícitamente deprecado para evitar drift arquitectónico.
+- El frontend (widget global + chat embebido Sommelier) quedó alineado al mismo endpoint y acepta el shape canónico (`reply`, `suggestions`, `whatsappUrl`, `fallback`) con compatibilidad legacy.
