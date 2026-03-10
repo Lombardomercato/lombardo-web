@@ -1,6 +1,13 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
+const {
+  detectConsultCategory,
+  detectProfile,
+  buildInteractionRecord,
+  logInteractionRecord,
+} = require('./ai-learning');
+
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_RECOMMENDATIONS = 3;
@@ -410,7 +417,7 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext }) => {
 ${suggestion}`, closingType };
 };
 
-const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines }) => {
+const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent }) => {
   const compactCatalog = wines.map((wine) => ({
     nombre: wine.nombre,
     precio: wine.precio,
@@ -712,6 +719,23 @@ module.exports = async (req, res) => {
       },
     };
 
+    const category = detectConsultCategory({ message, intent, pageContext });
+    const profile = detectProfile({ message, category });
+    const interactionRecord = buildInteractionRecord({
+      message,
+      pageContext,
+      intent,
+      profile,
+      category,
+      suggestedProducts: recommendedWines.map((wine) => wine?.nombre).filter(Boolean),
+      closingType,
+      derivoWhatsapp: suggestWhatsApp,
+    });
+
+    logInteractionRecord(interactionRecord).catch((recordError) => {
+      console.error('[sommelier-chat][interaction-log-error]', recordError);
+    });
+
     return res.status(200).json({
       ...canonicalResponse,
       // Compatibilidad transitoria para consumidores legacy.
@@ -720,6 +744,11 @@ module.exports = async (req, res) => {
       whatsapp_label: suggestWhatsApp ? 'Seguir por WhatsApp' : '',
       whatsapp_url: canonicalResponse.whatsappUrl,
       intent,
+      learning: {
+        categoria_consulta: category,
+        perfil_detectado: profile,
+        tipo_cierre: interactionRecord.tipo_cierre,
+      },
     });
   } catch (error) {
     const { status, payload } = buildServerErrorPayload(error);
