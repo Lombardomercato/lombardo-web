@@ -182,6 +182,11 @@ Temas generales habilitados:
 - temperatura de servicio, copas, ocasiones de consumo, regalos, vinos para principiantes.
 - lógica de cuerpo, acidez, dulzor, frescura y estructura.
 
+Temas generales habilitados:
+- maridajes, varietales, estilos de vino, diferencias entre tintos/blancos/rosados/espumantes.
+- temperatura de servicio, copas, ocasiones de consumo, regalos, vinos para principiantes.
+- lógica de cuerpo, acidez, dulzor, frescura y estructura.
+
 Base de vinos Lombardo:
 ${catalogContext}
 `.trim();

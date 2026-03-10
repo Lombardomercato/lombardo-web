@@ -1341,7 +1341,7 @@ const initGlobalLombardoAssistant = () => {
           aria-label="Minimizar chat"
           data-assistant-close
         >
-          ×
+          −
         </button>
       </div>
       <div class="assistant-prompts" data-assistant-prompts>
