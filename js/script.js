@@ -1278,6 +1278,28 @@ if (sommelierApp) {
 
 const ASSISTANT_STORAGE_KEY = 'lombardo_assistant_history';
 
+const ARS_CHAT_CURRENCY_FORMATTER = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS',
+  maximumFractionDigits: 0,
+});
+
+const formatAssistantCurrencyDisplay = (content) => {
+  if (typeof content !== 'string' || !content.includes('$')) return content;
+
+  return content.replace(/\$\s*(\d{1,3}(?:[.\s]\d{3})+|\d+)/g, (_match, rawAmount) => {
+    const normalized = rawAmount.replace(/[.\s]/g, '');
+    const amount = Number(normalized);
+
+    if (!Number.isFinite(amount)) return _match;
+
+    return ARS_CHAT_CURRENCY_FORMATTER
+      .format(amount)
+      .replace(/\u00A0/g, '')
+      .replace(/\s+/g, '');
+  });
+};
+
 const getPageContext = () => {
   const customContext = document.body?.dataset?.pageContext;
   if (customContext) return customContext;
@@ -1388,7 +1410,7 @@ const initGlobalLombardoAssistant = () => {
     roleLabel.textContent = role === 'assistant' ? 'Asistente' : 'Vos';
 
     const body = document.createElement('p');
-    body.textContent = content;
+    body.textContent = role === 'assistant' ? formatAssistantCurrencyDisplay(content) : content;
 
     item.appendChild(roleLabel);
     item.appendChild(body);
