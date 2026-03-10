@@ -3711,3 +3711,64 @@ main > .section:last-child::after,
   flex-wrap: wrap;
   justify-content: center;
 }
+
+/* Cafe landing refresh */
+.cafe-hero::before {
+  background: linear-gradient(112deg, rgba(12, 26, 40, 0.84), rgba(12, 26, 40, 0.56) 52%, rgba(12, 26, 40, 0.78));
+}
+
+.cafe-hero .hero-video {
+  filter: saturate(0.8) contrast(1.08);
+}
+
+.cafe-menu {
+  background:
+    radial-gradient(circle at 10% 15%, rgba(255, 179, 171, 0.32), transparent 35%),
+    radial-gradient(circle at 88% 12%, rgba(212, 235, 142, 0.38), transparent 42%),
+    linear-gradient(180deg, rgba(246, 238, 236, 0.94), rgba(246, 238, 236, 0.82));
+}
+
+.cafe-menu-grid {
+  align-items: stretch;
+}
+
+.cafe-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  box-shadow: 0 14px 34px rgba(0, 58, 112, 0.09);
+}
+
+.cafe-card h3 {
+  margin-bottom: 14px;
+  font-size: clamp(1.02rem, 1.8vw, 1.28rem);
+}
+
+.cafe-card ul {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.cafe-story {
+  background: linear-gradient(180deg, rgba(212, 235, 142, 0.72), rgba(212, 235, 142, 0.9));
+}
+
+.cafe-story .section-card {
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(0, 58, 112, 0.2);
+}
+
+@media (max-width: 760px) {
+  .cafe-hero {
+    min-height: 100svh;
+  }
+
+  .cafe-hero .hero-video {
+    object-position: center top;
+  }
+
+  .cafe-menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
