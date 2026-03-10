@@ -1935,6 +1935,11 @@ const initGlobalLombardoAssistant = () => {
   const promptButtons = container.querySelectorAll('[data-assistant-prompts] button');
   const closeBtn = container.querySelector('[data-assistant-close]');
   const pageContext = getPageContext();
+  const widgetState = {
+    isOpen: false,
+    isMinimized: true,
+    isClosed: true,
+  };
 
   const readHistory = () => {
     try {
@@ -2004,9 +2009,13 @@ const initGlobalLombardoAssistant = () => {
     const animationDelay = prefersReducedMotion ? 0 : 180;
 
     if (open) {
+      widgetState.isOpen = true;
+      widgetState.isMinimized = false;
+      widgetState.isClosed = false;
       panel.hidden = false;
       panel.classList.remove('is-closing');
       trigger.setAttribute('aria-expanded', 'true');
+      trigger.setAttribute('aria-label', 'Minimizar chat');
       container.classList.add('is-open');
       window.setTimeout(() => {
         input?.focus();
@@ -2014,8 +2023,12 @@ const initGlobalLombardoAssistant = () => {
       return;
     }
 
+    widgetState.isOpen = false;
+    widgetState.isMinimized = true;
+    widgetState.isClosed = false;
     panel.classList.add('is-closing');
     trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-label', 'Abrir chat');
     container.classList.remove('is-open');
     window.setTimeout(() => {
       panel.hidden = true;
@@ -2069,6 +2082,8 @@ const initGlobalLombardoAssistant = () => {
   const detectLocalIntent = (message) => {
     const text = normalizeText(message);
     const checks = {
+      educational: /(maridar|maridaje|temperatura|decantar|acidez|taninos|varietal|diferencia entre|como servir)/,
+      contact: /(whatsapp|asesor|humano|persona|vendedor|contacto|hablar con)/,
       gift: /(regalo|regalar|obsequio)/,
       picada: /(picada|queso|fiambre|tapeo)/,
       meat: /(carne|asado|parrilla|vac(o|a)|bife)/,
@@ -2078,13 +2093,15 @@ const initGlobalLombardoAssistant = () => {
       box: /(armame una caja|arma(me)? una caja|caja de vinos|seleccion para llevar)/,
       membership: /(mensualidad|membresia|suscripcion|club mensual|todos los meses)/,
       clubInfo: /(que incluye el club|beneficios del club|como funciona el club|club lombardo|membresia|membresía|tienda)/,
-      experiences: /(que experiencias|experiencias tienen|catas|after office|balcon|balc[oó]n|eventos|cafe|caf[eé]|galeria|galer[ií]a|vino)/,
+      experiences: /(que experiencias|experiencias tienen|catas|after office|balcon|balc[oó]n|eventos|cafe|caf[eé]|galeria|galer[ií]a)/,
     };
 
+    if (checks.contact.test(text)) return 'contact';
     if (checks.membership.test(text)) return 'membership';
     if (checks.box.test(text)) return 'box';
     if (checks.clubInfo.test(text)) return 'club';
     if (checks.experiences.test(text)) return 'experiences';
+    if (checks.educational.test(text)) return 'educational';
     if (checks.gift.test(text)) return 'wine_gift';
     if (checks.picada.test(text)) return 'wine_picada';
     if (checks.meat.test(text)) return 'wine_meat';
@@ -2197,6 +2214,14 @@ const initGlobalLombardoAssistant = () => {
   const buildLocalAssistantFallback = async (message) => {
     const intent = detectLocalIntent(message);
     const wines = await readLocalCatalog().catch(() => []);
+
+    if (intent === 'contact') {
+      return '¡Claro! Si querés te derivo con una persona del equipo por WhatsApp para resolverlo rápido y en detalle.';
+    }
+
+    if (intent === 'educational') {
+      return '¡Excelente pregunta! Te respondo desde lo educativo y, si querés después, te puedo sugerir opciones de Lombardo en esa línea.';
+    }
 
     if (intent === 'club') {
       return 'Club Lombardo incluye descuentos especiales en barra y tienda, cupos preferenciales en catas, invitaciones a noches privadas y novedades/preventas por WhatsApp. Si querés, te oriento según si preferís vino, café o ambos mundos.';
