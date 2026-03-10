@@ -74,6 +74,10 @@ const SYSTEM_PROMPT = [
   'Sos el asistente digital de una vinería boutique con propuesta de vinos, café, regalos, experiencias y club.',
   'Respondé con tono cálido, claro, premium y útil en español rioplatense.',
   'Evitá sonar enciclopédico o pedante: explicá como asesor experto, simple y cercano.',
+  'Respondé primero a la pregunta del cliente, sin introducciones automáticas o repetitivas.',
+  'Evitá frases prefabricadas repetidas (por ejemplo: “excelente pregunta”, “te comparto tres opciones”, “te respondo desde…”), salvo uso puntual.',
+  'Variá largo y formato: no todas las respuestas deben tener la misma estructura, cantidad de bullets o cierre.',
+  'Cuando corresponda, cerrá con una sola pregunta de seguimiento breve y útil.',
   'Primero ayudá dentro del chat y no empujes a WhatsApp demasiado rápido.',
   'Sugerí WhatsApp solo cuando tenga sentido comercial o de cierre, de forma opcional y natural.',
   'Manejá tres modos: conocimiento general, catálogo Lombardo y modo mixto.',
@@ -98,7 +102,7 @@ const SYSTEM_PROMPT = [
   'Si la intención es consulta_contacto: derivá a WhatsApp o contacto humano.',
   'No sugieras navegar a páginas independientes de vino, café, eventos, catas, galería o tienda.',
   'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
-  'Cerrá cada respuesta con un siguiente paso útil y natural según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
+  'Si aporta valor, cerrá con un siguiente paso útil y natural según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
 ].join('\n');
 
 const parseNumericStock = (value, fallback = 0) => {
@@ -510,6 +514,14 @@ const buildClosingSuggestion = ({ closingType, pageContext }) => {
   return byType[closingType] || byType[CLOSING_TYPES.EDUCATIONAL];
 };
 
+const hasNaturalFollowUp = (answer) => {
+  const trimmed = sanitizeMessage(answer);
+  if (!trimmed) return false;
+
+  const tail = trimmed.slice(-180);
+  return /\?/.test(tail) || /(preferis|preferís|buscas|buscás|queres|querés|te sirve|te va)/i.test(tail);
+};
+
 const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }) => {
   const trimmed = sanitizeMessage(answer);
   if (!trimmed) return { answer: '', closingType: CLOSING_TYPES.EDUCATIONAL };
@@ -518,6 +530,10 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }
   const suggestion = buildClosingSuggestion({ closingType, pageContext });
 
   if (!suggestion) return { answer: trimmed, closingType };
+
+  if (hasNaturalFollowUp(trimmed)) {
+    return { answer: trimmed, closingType };
+  }
 
   const normalizedAnswer = normalizeText(trimmed);
   const normalizedSuggestion = normalizeText(suggestion);
@@ -530,6 +546,10 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }
   };
 
   if (normalizedAnswer.includes(normalizedSuggestion) || keywordByType[closingType].test(normalizedAnswer)) {
+    return { answer: trimmed, closingType };
+  }
+
+  if (closingType !== CLOSING_TYPES.WHATSAPP && trimmed.length > 320) {
     return { answer: trimmed, closingType };
   }
 
@@ -563,16 +583,22 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     'Usá el historial de conversación para mantener continuidad en preguntas de seguimiento.',
     'Si el último mensaje depende del contexto previo, asumí continuidad temática salvo que el cliente cambie de tema explícitamente.',
     `Intención detectada (detectIntent): ${intent}.`,
-    'Reglas por intención: consulta_educativa_vino => responder conocimiento general de vino y NO recomendar productos directo; opcional cerrar con “Si querés, también te puedo sugerir algunas opciones de Lombardo en esa línea.”.',
-    `Reglas por intención: consulta_producto => sugerir hasta ${MAX_RECOMMENDATIONS} vinos reales de la base Lombardo sin mezclar experiencias ni club.`,
+    'Reglas por intención: consulta_educativa_vino => responder directo y claro en modo educativo, sin prefacios rígidos; opcionalmente ofrecer bajar a opciones de Lombardo.',
+    `Reglas por intención: consulta_producto => actuar como asesor de vinoteca real, sugerir de 1 a ${MAX_RECOMMENDATIONS} vinos reales y explicar cada opción con lenguaje natural (sin mezclar experiencias ni club).`,
     'Reglas por intención: consulta_caja => proponer exactamente 3 vinos con lógica: opción segura, opción más especial, opción para descubrir.',
     'Reglas por intención: consulta_mensualidad => explicar lógica de club/selección mensual y sugerir selección mensual.',
-    'Reglas por intención: consulta_experiencias => responder únicamente sobre experiencias/catas/eventos.',
+    'Reglas por intención: consulta_experiencias => responder como anfitrión de experiencias (catas/eventos), evitando bloque comercial rígido.',
     'Reglas por intención: consulta_club => responder únicamente sobre club/membresía/beneficios.',
     'Reglas por intención: consulta_contacto => priorizar cierre y derivar naturalmente a WhatsApp.',
     'Definí internamente si esta consulta cae en modo conocimiento general, modo catálogo Lombardo o modo mixto, y respondé en consecuencia.',
     'Si es modo mixto, explicá primero la lógica general y luego ofrecé o sugerí opciones de Lombardo alineadas.',
-    'Terminá con un cierre breve y útil según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
+    'No uses siempre el mismo formato de respuesta. Variá entre párrafo corto, párrafo + bullets o respuesta breve según lo que pida el cliente.',
+    'Evitá repetir fórmulas automáticas de apertura/cierre entre respuestas consecutivas.',
+    'Cerrá con una pregunta breve y útil solo cuando ayude a avanzar.',
+    '',
+    'Ejemplo deseado (consulta_producto): “Si querés moverte cerca de los $20.000, hay varias opciones que pueden ir bien. Trumpeter Malbec suele ser una alternativa muy rendidora en ese rango, fácil de recomendar y bastante versátil. También podrías mirar Zuccardi Serie A Malbec si querés algo con un perfil un poco más gastronómico. Y si te interesa algo apenas más arriba, Rutini Cabernet Malbec también puede entrar en juego. ¿Lo buscás para comida, regalo o para tomar solo?”.',
+    'Ejemplo deseado (consulta_educativa_vino): “El Malbec suele ir muy bien con carnes rojas, asado, empanadas, pastas con salsa intensa y quesos semiduros. En general funciona mejor con platos que tengan cierta intensidad, porque si la comida es muy liviana el vino puede taparla. Si querés, también te puedo sugerir opciones de Lombardo que vayan bien para ese tipo de comida.”.',
+    'Ejemplo deseado (consulta_experiencias): “Depende del formato, pero en general una cata suele estar pensada para probar distintas etiquetas, comparar estilos y entender un poco mejor qué hace diferente a cada vino. También puede haber algo de maridaje o una guía más relajada para disfrutar la experiencia sin que se vuelva técnica. Si querés, te cuento qué tipo de experiencia te puede ir mejor.”.',
     '',
     `Base de vinos Lombardo (JSON): ${JSON.stringify(compactCatalog)}`,
     '',
@@ -688,18 +714,18 @@ const appendWhatsAppSuggestion = ({ answer, pageContext }) => {
 const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext, intent }) => {
   if (intent === INTENTS.CONSULTA_EDUCATIVA_VINO) {
     return [
-      '¡Muy buena pregunta! En esta consulta conviene enfocarnos primero en la lógica general del vino antes de bajar a etiquetas concretas.',
-      'Si querés, también te puedo sugerir algunas opciones de Lombardo en esa línea.',
+      'En este caso conviene mirar primero la lógica general del vino y después, si querés, lo bajamos a etiquetas concretas.',
+      'Si te sirve, también te puedo recomendar opciones de Lombardo en esa línea.',
     ].join(' ');
   }
 
   if (intent === INTENTS.CONSULTA_MENSUALIDAD) {
     const selection = wines.slice(0, MAX_RECOMMENDATIONS).map((wine) => wine.nombre).filter(Boolean);
     return [
-      '¡Excelente! La lógica de mensualidad/club suele combinar variedad, equilibrio de estilos y una etiqueta sorpresa para descubrir algo nuevo.',
+      'La mensualidad del club está pensada para darte variedad, equilibrio de estilos y alguna etiqueta para descubrir algo nuevo.',
       selection.length
         ? `Una selección mensual sugerida podría ser: ${selection.join(', ')}.`
-        : 'Si querés, te propongo una selección mensual personalizada según tus gustos.',
+        : 'Si te gusta, te armo una selección mensual personalizada según tus gustos.',
     ].join(' ');
   }
 
@@ -715,7 +741,7 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
         : `• ${label}: te la personalizo según comida, ocasión y presupuesto.`;
 
     return [
-      '¡Genial! Te propongo una caja de 3 vinos con esta lógica:',
+      'Te propongo una caja de 3 vinos con esta lógica:',
       pick('Opción segura', segura),
       pick('Opción más especial', especial),
       pick('Opción para descubrir', descubrir),
@@ -723,15 +749,15 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
   }
 
   if (intent === INTENTS.CONSULTA_CONTACTO) {
-    return '¡Perfecto! Te ayudo a avanzar con eso. Si querés, seguimos por WhatsApp y lo cerramos rápido.';
+    return 'Perfecto, te ayudo a resolverlo. Si te queda cómodo, lo seguimos por WhatsApp.';
   }
 
   if (intent === INTENTS.CONSULTA_EXPERIENCIAS) {
-    return 'Tenemos catas, encuentros y experiencias en torno al vino y al café. Si querés, te recomiendo la experiencia más adecuada según ocasión y cantidad de personas.';
+    return 'Tenemos catas, encuentros y experiencias de vino y café. Si me contás ocasión y cantidad de personas, te sugiero la que mejor encaja.';
   }
 
   if (intent === INTENTS.CONSULTA_CLUB) {
-    return 'El Club Lombardo está pensado para recibir selecciones curadas y beneficios exclusivos. Si querés, te explico cómo funciona la mensualidad y qué incluye.';
+    return 'El Club Lombardo está pensado para recibir selecciones curadas con beneficios exclusivos. Si querés, te explico fácil cómo funciona la mensualidad y qué incluye.';
   }
 
   const options = (recommendedWines.length ? recommendedWines : wines.slice(0, MAX_RECOMMENDATIONS)).slice(
@@ -741,8 +767,8 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
 
   if (!options.length) {
     return [
-      '¡Gracias por tu consulta! En este momento no pude cargar recomendaciones específicas.',
-      'Si querés, contame ocasión, presupuesto aproximado y estilo de vino para ayudarte mejor.',
+      'Gracias por la consulta. Ahora no pude cargar recomendaciones específicas.',
+      'Si me compartís ocasión, presupuesto aproximado y estilo de vino, te ayudo mejor.',
     ].join(' ');
   }
 
@@ -752,7 +778,7 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
     experiencias: '¡Excelente! Dentro de experiencias, te recomiendo estas opciones de Lombardo:',
   };
 
-  const intro = introByContext[pageContext] || '¡Perfecto! Acá van algunas opciones que te pueden encajar:';
+  const intro = introByContext[pageContext] || 'Con lo que me contás, estas opciones pueden encajar bien:';
 
   const listed = options
     .map((wine) => {
@@ -764,8 +790,8 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
     .join('\n');
 
   const closing = hasRecommendationIntent(message)
-    ? 'Si querés, te ajusto la selección por comida, ocasión o presupuesto.'
-    : 'Si me compartís la ocasión o comida principal, te afino la recomendación.';
+    ? '¿Lo buscás para comida, regalo o para tomar solo?'
+    : '¿Preferís algo más suave o con más cuerpo?';
 
   return [intro, listed, closing].join('\n');
 };
