@@ -2761,6 +2761,15 @@ main > .section:last-child::after,
   z-index: 50;
 }
 
+.nav-submenu::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 14px;
+}
+
 .has-submenu:hover .nav-submenu,
 .has-submenu:focus-within .nav-submenu,
 .has-submenu.submenu-open .nav-submenu {
