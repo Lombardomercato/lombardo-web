@@ -1275,3 +1275,178 @@ if (sommelierApp) {
   renderQuestion();
   initSommelierChat();
 }
+
+const ASSISTANT_STORAGE_KEY = 'lombardo_assistant_history';
+
+const getPageContext = () => {
+  const customContext = document.body?.dataset?.pageContext;
+  if (customContext) return customContext;
+
+  const fileName = window.location.pathname.split('/').pop() || 'index.html';
+  const contextMap = {
+    'index.html': 'home',
+    'vinos.html': 'vinos',
+    'sommelier.html': 'sommelier',
+    'club.html': 'club',
+    'cafe.html': 'cafe',
+    'experiencias.html': 'experiencias',
+    'eventos.html': 'eventos',
+    'contacto.html': 'contacto',
+  };
+
+  return contextMap[fileName] || 'general';
+};
+
+const initGlobalLombardoAssistant = () => {
+  const container = document.createElement('section');
+  container.className = 'assistant-widget';
+  container.setAttribute('data-assistant-widget', '');
+
+  container.innerHTML = `
+    <button class="assistant-trigger" type="button" aria-expanded="false" aria-controls="assistant-panel">
+      <span class="assistant-trigger-dot" aria-hidden="true"></span>
+      Asistente IA Lombardo
+    </button>
+    <div id="assistant-panel" class="assistant-panel" hidden>
+      <div class="assistant-head">
+        <p class="eyebrow">Asistente IA Lombardo</p>
+        <h3>Puedo ayudarte con vinos, regalos, cajas, club, café y experiencias.</h3>
+      </div>
+      <div class="assistant-prompts" data-assistant-prompts>
+        <button type="button">Quiero un vino para regalar</button>
+        <button type="button">¿Qué incluye el club?</button>
+        <button type="button">Busco algo para una picada</button>
+        <button type="button">¿Puedo armar una caja?</button>
+        <button type="button">¿Qué experiencias tienen?</button>
+      </div>
+      <div class="assistant-messages" data-assistant-messages aria-live="polite"></div>
+      <form class="assistant-form" data-assistant-form>
+        <label class="sr-only" for="assistant-input">Escribí tu consulta</label>
+        <input id="assistant-input" type="text" placeholder="Ej: Quiero algo para regalar este fin de semana" required />
+        <button class="btn btn-primary" type="submit">Enviar</button>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  const trigger = container.querySelector('.assistant-trigger');
+  const panel = container.querySelector('.assistant-panel');
+  const messages = container.querySelector('[data-assistant-messages]');
+  const form = container.querySelector('[data-assistant-form]');
+  const input = container.querySelector('#assistant-input');
+  const submitBtn = form?.querySelector('button[type="submit"]');
+  const promptButtons = container.querySelectorAll('[data-assistant-prompts] button');
+  const pageContext = getPageContext();
+
+  const readHistory = () => {
+    try {
+      const raw = sessionStorage.getItem(ASSISTANT_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const writeHistory = (history) => {
+    try {
+      sessionStorage.setItem(ASSISTANT_STORAGE_KEY, JSON.stringify(history.slice(-12)));
+    } catch (error) {
+      // ignore
+    }
+  };
+
+  let history = readHistory();
+
+  const appendMessage = (role, content) => {
+    if (!messages || !content) return;
+    const item = document.createElement('article');
+    item.className = `assistant-message is-${role}`;
+    item.innerHTML = `<p class="assistant-role">${role === 'assistant' ? 'Asistente' : 'Vos'}</p><p>${content}</p>`;
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
+  };
+
+  const setLoading = (loading) => {
+    if (!input || !submitBtn) return;
+    input.disabled = loading;
+    submitBtn.disabled = loading;
+    submitBtn.textContent = loading ? 'Enviando...' : 'Enviar';
+  };
+
+  const sendMessage = async (message) => {
+    const response = await fetch('/api/sommelier-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        pagina_actual: pageContext,
+        history,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo obtener respuesta del asistente.');
+    }
+
+    return typeof data.answer === 'string' ? data.answer.trim() : '';
+  };
+
+  const handleSubmit = async (message) => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    appendMessage('user', trimmed);
+    history.push({ role: 'user', content: trimmed });
+    writeHistory(history);
+
+    setLoading(true);
+    try {
+      const answer = await sendMessage(trimmed);
+      const safeAnswer = answer || 'Gracias por tu consulta. Si querés, podés consultarlo directo por WhatsApp.';
+      appendMessage('assistant', safeAnswer);
+      history.push({ role: 'assistant', content: safeAnswer });
+      writeHistory(history);
+    } catch (error) {
+      appendMessage('assistant', 'Ahora mismo no pude responder. Si querés, podés consultarlo directo por WhatsApp.');
+    } finally {
+      setLoading(false);
+      input.value = '';
+      input.focus();
+    }
+  };
+
+  if (history.length) {
+    history.forEach((item) => appendMessage(item.role, item.content));
+  } else {
+    const welcome = '¡Hola! Soy el Asistente IA Lombardo. Estoy para ayudarte con vinos, regalos, cajas, club, café y experiencias.';
+    appendMessage('assistant', welcome);
+    history.push({ role: 'assistant', content: welcome });
+    writeHistory(history);
+  }
+
+  trigger?.addEventListener('click', () => {
+    const isOpen = !panel.hidden;
+    panel.hidden = isOpen;
+    trigger.setAttribute('aria-expanded', String(!isOpen));
+    container.classList.toggle('is-open', !isOpen);
+    if (!isOpen) input.focus();
+  });
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void handleSubmit(input.value);
+  });
+
+  promptButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      input.value = button.textContent || '';
+      void handleSubmit(input.value);
+    });
+  });
+};
+
+initGlobalLombardoAssistant();
