@@ -2639,9 +2639,7 @@ main > .section:last-child::after,
 
 .main-nav a[href="carta.html"],
 .main-nav a[href="contacto.html"] {
-  border-bottom: 1px solid transparent;
-  border-radius: 0;
-  padding: 7px 2px;
+  padding: 6px 0;
 }
 
 @media (max-width: 1024px) {
