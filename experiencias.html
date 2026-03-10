@@ -14,15 +14,33 @@
       <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">MENU</button>
       <nav class="main-nav" aria-label="Principal">
         <div class="nav-primary">
-          <a href="index.html">INICIO</a>
-          <a href="nosotros.html">SOBRE NOSOTROS</a>
-          <a href="carta.html">CARTA</a>
-          <a href="experiencias.html">EXPERIENCIAS</a>
-        </div>
-        <a class="nav-cta" href="sommelier.html">SOMMELIER IA</a>
-        <div class="nav-secondary">
-          <a href="club.html">CLUB</a>
+          <a href="index.html">HOME</a>
+          <a href="sommelier.html">SOMMELIER</a>
+          <div class="nav-item has-submenu">
+            <a href="experiencias.html">EXPERIENCIAS</a>
+            <button class="submenu-toggle" type="button" data-submenu-trigger aria-label="Abrir submenú de experiencias" aria-expanded="false"></button>
+            <div class="nav-submenu" aria-label="Submenú experiencias">
+              <a href="vinos.html">Universo del vino</a>
+              <a href="cafe.html">Café</a>
+              <a href="experiencias.html#catas">Catas y degustaciones</a>
+              <a href="eventos.html">Eventos</a>
+              <a href="galeria.html">Galería</a>
+            </div>
+          </div>
+          <div class="nav-item has-submenu">
+            <a href="club.html">CLUB</a>
+            <button class="submenu-toggle" type="button" data-submenu-trigger aria-label="Abrir submenú de club" aria-expanded="false"></button>
+            <div class="nav-submenu" aria-label="Submenú club">
+              <a href="club.html">Club Lombardo</a>
+              <a href="club.html#seleccion-mensual">Selección mensual</a>
+              <a href="club.html#cajas-lombardo">Cajas Lombardo</a>
+              <a href="tienda.html">Tienda</a>
+            </div>
+          </div>
           <a href="contacto.html">CONTACTO</a>
+        </div>
+        <div class="nav-secondary">
+          <a class="nav-cta" href="sommelier.html"><span class="nav-cta-text">Descubrí tu vino</span></a>
         </div>
       </nav>
     </div>
@@ -110,39 +128,11 @@
         <h2>Encuentros privados y experiencias a medida</h2>
       </div>
       <div class="container shell-grid">
-        <article class="card section-card reveal">
-          <p>Diseñamos eventos corporativos, celebraciones íntimas y lanzamientos en un entorno cuidado al detalle.</p>
-          <p>La propuesta integra ambientación, carta curada y acompañamiento del equipo para crear momentos auténticos y memorables.</p>
-          <div class="actions">
-            <a class="btn btn-secondary" href="eventos.html">Ver eventos</a>
-          </div>
-        </article>
-        <figure class="section-media reveal" data-parallax="7">
-          <img src="assets/fotos/local.jpg" alt="Salón de Lombardo preparado para eventos" />
-        </figure>
-      </div>
-    </section>
-
-    <section class="section section-shell reveal" id="galeria">
-      <div class="container shell-head">
-        <p class="section-kicker">Galería</p>
-        <h2>Momentos Lombardo</h2>
-      </div>
-      <div class="container gallery premium-gallery experiencias-gallery">
-        <div class="g1 reveal"><img src="assets/fotos/rrss_lombardo_post_2.jpg" alt="Brindis en experiencia Lombardo" /></div>
-        <div class="g2 reveal"><img src="assets/fotos/cafe.jpg" alt="Detalle de café en barra Lombardo" /></div>
-        <div class="g3 reveal"><img src="assets/fotos/vino.jpg" alt="Servicio de vino en copa" /></div>
-        <div class="g4 reveal"><img src="assets/fotos/local.jpg" alt="Interior de Lombardo durante un encuentro" /></div>
-        <div class="g5 reveal"><img src="assets/fotos/rrss_lombardo_post_3.jpg" alt="Selección de botellas de vino" /></div>
-      </div>
-    </section>
-
-    <section class="section section-shell bg-coral experiencias-cta reveal">
-      <div class="container shell-head">
-        <p class="section-kicker">Sommelier IA</p>
-        <h2>Descubrí tu vino ideal</h2>
-        <div class="actions">
-          <a class="btn btn-primary" href="sommelier.html">Probar Sommelier IA</a>
+        <div class="cards-grid reveal">
+          <article id="catas" class="card section-card"><h2>Catas de vino</h2></article>
+          <article class="card section-card"><h2>After office</h2></article>
+          <article class="card section-card"><h2>Encuentros en balcón</h2></article>
+          <article class="card section-card"><h2>Momentos compartidos</h2></article>
         </div>
       </div>
     </section>
