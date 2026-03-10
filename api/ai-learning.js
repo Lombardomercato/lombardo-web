@@ -11,8 +11,6 @@ const CONSULT_CATEGORIES = [
   'varietales',
   'temperatura_servicio',
   'experiencias',
-  'cafe',
-  'evento',
   'contacto',
 ];
 
@@ -33,9 +31,7 @@ const CATEGORY_PATTERNS = {
   club: [/(club|membresia|membresía|socios)/],
   varietales: [/(varietal|malbec|cabernet|pinot|syrah|blend|torrontes|chardonnay)/],
   temperatura_servicio: [/(temperatura|servicio|servir|decantar|copa)/],
-  experiencias: [/(experiencia|cata|degustacion|degustación|momento especial)/],
-  cafe: [/(cafe|caf[eé]|desayuno|merienda)/],
-  evento: [/(evento|corporativo|cumple|casamiento|reserva|privado)/],
+  experiencias: [/(experiencia|cata|degustacion|degustación|momento especial|cafe|caf[eé]|evento|galeria|galer[ií]a|vino)/],
   contacto: [/(contacto|telefono|tel[eé]fono|mail|email|whatsapp)/],
 };
 
@@ -45,8 +41,26 @@ const PROFILE_PATTERNS = [
   { profile: 'Foodie / Maridaje', patterns: [/(maridaje|asado|carne|pasta|queso|sushi|comida)/] },
   { profile: 'Interesado en Caja', patterns: [/(caja|box|armame|seleccion de 3)/] },
   { profile: 'Interesado en Club/Mensualidad', patterns: [/(club|mensualidad|suscrip|cada mes|membres)/] },
-  { profile: 'Café y Experiencias', patterns: [/(cafe|caf[eé]|experiencia|cata|evento)/] },
+  { profile: 'Café y Experiencias', patterns: [/(cafe|caf[eé]|experiencia|cata|evento|galeria|galer[ií]a|vino)/] },
 ];
+
+const PAGE_CONTEXT_ALIASES = {
+  vinos: 'experiencias',
+  vino: 'experiencias',
+  cafe: 'experiencias',
+  eventos: 'experiencias',
+  catas: 'experiencias',
+  galeria: 'experiencias',
+  tienda: 'club',
+  membresia: 'club',
+  cajas: 'club',
+  seleccion_mensual: 'club',
+};
+
+const canonicalPageContext = (pageContext) => {
+  const normalized = normalizeText(pageContext);
+  return PAGE_CONTEXT_ALIASES[normalized] || normalized;
+};
 
 const normalizeText = (value) =>
   (typeof value === 'string' ? value.trim() : '')
@@ -70,6 +84,7 @@ const topEntries = (counter, limit = 5) =>
 
 const detectConsultCategory = ({ message, intent, pageContext }) => {
   const normalized = normalizeText(message);
+  const canonicalContext = canonicalPageContext(pageContext);
 
   if (intent === 'mensualidad') return 'mensualidad';
   if (intent === 'caja') return 'caja';
@@ -79,10 +94,9 @@ const detectConsultCategory = ({ message, intent, pageContext }) => {
   );
   if (fromPatterns) return fromPatterns[0];
 
-  if (pageContext === 'club') return 'club';
-  if (pageContext === 'cafe') return 'cafe';
-  if (pageContext === 'eventos') return 'evento';
-  if (pageContext === 'contacto') return 'contacto';
+  if (canonicalContext === 'club') return 'club';
+  if (canonicalContext === 'experiencias') return 'experiencias';
+  if (canonicalContext === 'contacto') return 'contacto';
 
   return 'recomendacion_producto';
 };
@@ -99,9 +113,7 @@ const detectProfile = ({ message, category }) => {
     caja: 'Interesado en Caja',
     mensualidad: 'Interesado en Club/Mensualidad',
     club: 'Interesado en Club/Mensualidad',
-    cafe: 'Café y Experiencias',
     experiencias: 'Café y Experiencias',
-    evento: 'Cliente Eventos',
   };
 
   return fallbackByCategory[category] || 'Consulta General';

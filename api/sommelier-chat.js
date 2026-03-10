@@ -27,10 +27,6 @@ const PAGE_CONTEXT_ROLES = {
     rol: 'Anfitrión general de Lombardo',
     foco: 'Orientar al cliente, explicar qué ofrece la marca y sugerir próximos pasos claros.',
   },
-  vinos: {
-    rol: 'Asesor de vinos',
-    foco: 'Priorizar recomendaciones, maridajes, perfiles y selección de etiquetas reales.',
-  },
   sommelier: {
     rol: 'Asistente del recomendador',
     foco: 'Profundizar recomendaciones, refinar gustos y sugerir caja/mensualidad cuando aplique.',
@@ -39,17 +35,10 @@ const PAGE_CONTEXT_ROLES = {
     rol: 'Asesor del Club Lombardo',
     foco: 'Explicar mensualidades, lógica de selecciones, beneficios y encuadre del club.',
   },
-  cafe: {
-    rol: 'Anfitrión del café',
-    foco: 'Responder sobre propuesta de cafetería, desayunos, meriendas y experiencia general.',
-  },
   experiencias: {
     rol: 'Curador de experiencias',
-    foco: 'Guiar sobre propuestas diferenciales, regalos, catas y momentos especiales.',
-  },
-  eventos: {
-    rol: 'Asesor comercial inicial',
-    foco: 'Orientar sobre eventos/encuentros y derivar a WhatsApp cuando haga falta confirmar.',
+    foco:
+      'Guiar sobre vino, café, catas, eventos y galería como subtemas de experiencias, con propuestas concretas.',
   },
   contacto: {
     rol: 'Asistente de cierre',
@@ -59,6 +48,19 @@ const PAGE_CONTEXT_ROLES = {
     rol: 'Anfitrión comercial de Lombardo',
     foco: 'Resolver dudas generales y orientar al área correcta con tono cálido.',
   },
+};
+
+const PAGE_CONTEXT_ALIASES = {
+  vinos: 'experiencias',
+  vino: 'experiencias',
+  cafe: 'experiencias',
+  eventos: 'experiencias',
+  catas: 'experiencias',
+  galeria: 'experiencias',
+  tienda: 'club',
+  membresia: 'club',
+  cajas: 'club',
+  seleccion_mensual: 'club',
 };
 
 const SYSTEM_PROMPT = [
@@ -80,6 +82,11 @@ const SYSTEM_PROMPT = [
   'Si la consulta depende de información no confirmada, aclaralo y sugerí consulta por WhatsApp.',
   'Podés responder consultas sobre maridajes, varietales, estilos, temperatura de servicio, copas, ocasiones de consumo, regalos, vinos para principiantes y lógica de cuerpo/acidez/dulzor/estructura.',
   'También respondé sobre regalos y cajas, mensualidades/club, experiencias y eventos, cafetería y dudas generales de Lombardo.',
+  'Estructura vigente del sitio: contextos principales = home, sommelier, experiencias, club y contacto.',
+  'Dentro de experiencias tratá vino, café, eventos, catas y galería como subtemas, no como páginas independientes.',
+  'Dentro de club tratá membresía, cajas, selección mensual y tienda como subtemas, no como páginas independientes.',
+  'Si preguntan por compra de vinos o productos, orientá conceptualmente al universo Club.',
+  'No sugieras navegar a páginas independientes de vino, café, eventos, catas, galería o tienda.',
   'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
   'Cerrá cada respuesta con un siguiente paso útil y natural según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
 ].join('\n');
@@ -101,7 +108,8 @@ const sanitizeMessage = (value) => (typeof value === 'string' ? value.trim() : '
 const sanitizePageContext = (value) => {
   const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
   if (!normalized) return 'general';
-  return PAGE_CONTEXT_ROLES[normalized] ? normalized : 'general';
+  const canonical = PAGE_CONTEXT_ALIASES[normalized] || normalized;
+  return PAGE_CONTEXT_ROLES[canonical] ? canonical : 'general';
 };
 
 const normalizeText = (value) =>
@@ -315,15 +323,14 @@ const shouldSuggestWhatsApp = ({ message, pageContext, intent }) => {
   if (isExploratoryOnly) return false;
   if (hasCommercialIntent) return true;
 
-  return ['eventos', 'contacto', 'club'].includes(pageContext) && normalized.length > 40;
+  return ['experiencias', 'contacto', 'club'].includes(pageContext) && normalized.length > 40;
 };
 
 const buildWhatsAppSuggestion = (pageContext) => {
   const byContext = {
-    vinos: 'Si querés, también podés consultarlo directo por WhatsApp y te ayudamos a seguir con la elección.',
     sommelier: 'Si querés avanzar con esta selección, te dejamos el acceso directo a WhatsApp.',
     club: 'Para una consulta más puntual del club, también podemos seguir por WhatsApp.',
-    eventos: 'Si querés avanzar con la propuesta del evento, podemos seguir por WhatsApp.',
+    experiencias: 'Si querés avanzar con una experiencia puntual, también podemos seguir por WhatsApp.',
     contacto: 'Si preferís, también podemos seguir esta consulta por WhatsApp.',
   };
 
@@ -618,7 +625,7 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
   const introByContext = {
     club: '¡Buenísimo! Para el club, te propongo esta selección inicial:',
     sommelier: '¡Genial! Con lo que me contaste, te recomiendo estas opciones:',
-    vinos: '¡Excelente elección! Te recomiendo estas etiquetas de Lombardo:',
+    experiencias: '¡Excelente! Dentro de experiencias, te recomiendo estas opciones de Lombardo:',
   };
 
   const intro = introByContext[pageContext] || '¡Perfecto! Acá van algunas opciones que te pueden encajar:';
