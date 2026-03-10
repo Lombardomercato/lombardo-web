@@ -324,6 +324,7 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
 
   let response;
   try {
+    console.log('[sommelier-chat][debug] llamando OpenAI', { model: OPENAI_MODEL, endpoint: OPENAI_URL });
     response = await fetch(OPENAI_URL, {
       method: 'POST',
       headers: {
@@ -359,6 +360,11 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
     error.code = 'OPENAI_PARSE_ERROR';
     throw error;
   });
+
+  console.log('[sommelier-chat][debug] OpenAI response ok', {
+    hasOutputText: Boolean(data.output_text),
+  });
+
   return (data.output_text || '').trim();
 };
 
@@ -446,17 +452,34 @@ module.exports = async (req, res) => {
   }
 
   try {
+    console.log('[sommelier-chat][debug] request recibido', {
+      method: req.method,
+      contentType: req.headers?.['content-type'] || '',
+      hasBody: Boolean(req.body),
+    });
+
     const message = sanitizeMessage(req.body?.message);
     const pageContext = sanitizePageContext(req.body?.pagina_actual);
     const history = sanitizeHistory(req.body?.history);
+
+    console.log('[sommelier-chat][debug] payload recibido', {
+      messageLength: message.length,
+      pageContext,
+      historyItems: history.length,
+    });
 
     if (!message) {
       return res.status(400).json({ error: 'El campo "message" es obligatorio.' });
     }
 
     const wines = await readWineCatalog();
+    console.log('[sommelier-chat][debug] catálogo cargado', { wines: wines.length });
+
     const recommendedWines = selectRecommendedWines({ wines, message });
+    console.log('[sommelier-chat][debug] preselección', { recommended: recommendedWines.length });
     const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
+    console.log('[sommelier-chat][debug] OpenAI key disponible:', hasOpenAIKey);
+
     const rawAnswer = hasOpenAIKey
       ? await createOpenAIResponse({
           message,
@@ -475,6 +498,11 @@ module.exports = async (req, res) => {
     if (!rawAnswer) {
       return res.status(502).json({ error: 'No se obtuvo respuesta del modelo.' });
     }
+
+    console.log('[sommelier-chat][debug] respuesta generada', {
+      answerLength: rawAnswer.length,
+      via: hasOpenAIKey ? 'openai' : 'fallback-local',
+    });
 
     const suggestWhatsApp = shouldSuggestWhatsApp({ message, pageContext });
     const answer = suggestWhatsApp

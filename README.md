@@ -77,4 +77,9 @@ Legado archivado:
   - `OPENAI_MODEL` (opcional, default `gpt-4o-mini`)
 - El front-end de `sommelier.html` llama a ese endpoint y NO expone la API key en cliente.
 - El endpoint usa `vinos_lombardo_base.json` como única base para recomendar.
+- Si deployás en hosting estático puro (ej: GitHub Pages), la ruta `/api/sommelier-chat` no existe por defecto.
+  - Configurá un backend externo agregando en el `<head>`:
+    - `<meta name="assistant-api-url" content="https://tu-backend.com/api/sommelier-chat" />`
+    - o `<meta name="assistant-api-base" content="https://tu-backend.com" />`
+- Para debug del chat, revisar logs en consola del navegador con prefijo `[assistant-widget][debug]` y en servidor con `[sommelier-chat][debug]`.
 
