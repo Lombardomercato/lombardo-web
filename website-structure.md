@@ -12,6 +12,11 @@
 - `pages/tienda/index.html`
 - `pages/contacto/index.html`
 
+### Frontend code
+
+- `src/styles/`
+- `src/scripts/`
+
 ### Features
 
 - `features/sommelier/`
