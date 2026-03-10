@@ -3262,3 +3262,45 @@ main > .section:last-child::after,
     transform: translateY(8px) scale(0.98);
   }
 }
+
+/* Experiencias landing */
+.experiencias-hero::before {
+  background: linear-gradient(112deg, rgba(8, 23, 36, 0.82), rgba(8, 23, 36, 0.54) 52%, rgba(8, 23, 36, 0.78));
+}
+
+.experiencias-hero .hero-video {
+  filter: saturate(0.86) contrast(1.08);
+}
+
+.experiencias-intro {
+  background: linear-gradient(180deg, rgba(244, 236, 234, 0.92), rgba(244, 236, 234, 0.7));
+}
+
+.experiencias-gallery img {
+  min-height: clamp(190px, 26vw, 340px);
+}
+
+.experiencias-cta .shell-head {
+  text-align: center;
+  justify-items: center;
+}
+
+.experiencias-cta .section-lead,
+.experiencias-cta p {
+  margin-inline: auto;
+}
+
+@media (max-width: 760px) {
+  .experiencias-hero .hero-layout {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .experiencias-hero .hero-note {
+    padding-left: 14px;
+  }
+
+  .experiencias-gallery {
+    grid-template-columns: 1fr;
+  }
+}

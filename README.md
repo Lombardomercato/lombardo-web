@@ -77,7 +77,11 @@ Legado archivado:
   - `OPENAI_MODEL` (opcional, default `gpt-4o-mini`)
   - `AI_INTERACTIONS_FILE` (opcional, default `data/ai-interactions.jsonl`)
 - El front-end de `sommelier.html` llama a ese endpoint y NO expone la API key en cliente.
-- El endpoint usa `vinos_lombardo_base.json` como única base para recomendar.
+- El endpoint usa una base local JSON para recomendar (prioriza stock real cuando está disponible).
+- El endpoint ahora prioriza `lombardo_stock_ai.json` (si existe) para recomendaciones con stock real y evita sugerir productos sin stock.
+- Si `lombardo_stock_ai.json` no existe, mantiene fallback compatible a `vinos_lombardo_base.json`.
+- Plantilla de referencia: `lombardo_stock_ai.template.json`.
+- Script de transformación desde export Fudo: `node scripts/transform-fudo-export.js <input.(csv|json)> [output.json]` (output por defecto: `lombardo_stock_ai.json`).
 - Además registra interacciones comerciales estructuradas para aprendizaje de negocio (sin autoentrenamiento) y expone resumen en `GET /api/sommelier-learning-summary`.
 - Si deployás en hosting estático puro (ej: GitHub Pages), la ruta `/api/sommelier-chat` no existe por defecto.
   - Configurá un backend externo agregando en el `<head>`:
@@ -92,3 +96,12 @@ Legado archivado:
 - Contrato canónico documentado en `ai-backend-canonical.md`.
 - `lombardo-ai-backend/` queda explícitamente deprecado para evitar drift arquitectónico.
 - El frontend (widget global + chat embebido Sommelier) quedó alineado al mismo endpoint y acepta el shape canónico (`reply`, `suggestions`, `whatsappUrl`, `fallback`) con compatibilidad legacy.
+
+
+13) PANEL ADMIN INSIGHTS
+- Nueva vista de analytics: `admin/insights/` (ruta pública esperada: `/admin/insights`).
+- API de insights: `GET /api/admin-insights`.
+- Autenticación simple opcional por token bearer:
+  - Variable de entorno: `ADMIN_INSIGHTS_KEY`
+  - Si no está definida, el endpoint permite acceso sin token.
+- El endpoint de chat `POST /api/sommelier-chat` ahora registra interacciones en `.data/assistant-interactions.json` para alimentar el dashboard.
