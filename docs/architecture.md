@@ -24,3 +24,8 @@ Las rutas legacy (`/sommelier.html`, `/wine-tinder.html`, etc.) se mantienen só
 - `ai/`: criterios IA, prompts e intención
 - `assets/`: imágenes/video
 - `fonts/`: fuentes de marca
+
+
+## Legacy retirado
+- `src/scripts/tinder-wine.js` fue retirado para evitar reutilización accidental.
+- Wine Tinder canónico queda únicamente en `src/scripts/script.js` + `/pages/wine-tinder/`.

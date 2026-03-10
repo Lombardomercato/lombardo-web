@@ -17,3 +17,8 @@
 - Rutas legacy permanecen como redirect.
 - Catálogo de vinos queda como fuente única para recomendaciones.
 - Documentación centralizada y trazable.
+
+
+## Cierre de riesgo residual
+- `src/scripts/tinder-wine.js` (runtime legado) fue retirado del repositorio para eliminar regresiones por reutilización accidental.
+- La implementación de Wine Tinder queda canónicamente en `src/scripts/script.js`.
