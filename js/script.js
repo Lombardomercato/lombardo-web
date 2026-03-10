@@ -2068,3 +2068,190 @@ const initGlobalLombardoAssistant = () => {
 };
 
 initGlobalLombardoAssistant();
+
+const wineShopApp = document.querySelector('#wine-shop-app');
+
+if (wineShopApp) {
+  const searchInput = wineShopApp.querySelector('#wine-search');
+  const recommendedGrid = wineShopApp.querySelector('[data-recommended-grid]');
+  const catalogGrid = wineShopApp.querySelector('[data-catalog-grid]');
+  const filterSelects = wineShopApp.querySelectorAll('[data-filter]');
+  const boxCount = wineShopApp.querySelector('[data-box-count]');
+  const boxTotal = wineShopApp.querySelector('[data-box-total]');
+  const boxWa = wineShopApp.querySelector('[data-box-wa]');
+
+  const bodegaByWine = {
+    Trumpeter: 'Rutini Wines',
+    Saint: 'Catena Zapata',
+    Rutini: 'Rutini Wines',
+    Luigi: 'Luigi Bosca',
+    Salentein: 'Bodegas Salentein',
+    Chandon: 'Chandon Argentina',
+    Portillo: 'Salentein',
+    Zuccardi: 'Familia Zuccardi',
+    Catena: 'Catena Zapata',
+    Norton: 'Bodega Norton',
+  };
+
+  const profileLabels = {
+    carne: 'Intenso',
+    pasta: 'Elegante',
+    picada: 'Frutado',
+    pescado_sushi: 'Fresco',
+    sin_comida: 'Celebración',
+  };
+
+  const occasionLabels = {
+    asado: 'Asado',
+    cena_amigos: 'Cena con amigos',
+    regalo: 'Regalo',
+    diario: 'Todos los días',
+    descubrir: 'Descubrir',
+  };
+
+  const selectedWines = new Map();
+  const activeFilters = { tipo_vino: '', varietal: '', perfil: '', ocasion: '' };
+  let wines = [];
+
+  const formatPrice = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
+
+  const describeWine = (wine) => {
+    const occasion = occasionLabels[wine.ocasion] || 'ocasión especial';
+    return `${wine.tipo_vino} ${wine.varietal.toLowerCase()} ideal para ${occasion.toLowerCase()}.`;
+  };
+
+  const normalize = (text) => String(text || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+
+  const scoreWine = (wine, query, profile) => {
+    let score = 0;
+    if (query) {
+      const target = normalize(`${wine.nombre} ${wine.varietal} ${wine.ocasion} ${wine.perfil} ${describeWine(wine)}`);
+      if (target.includes(query)) score += 4;
+    }
+    if (profile?.answers?.tipo_vino && profile.answers.tipo_vino === wine.tipo_vino) score += 3;
+    if (profile?.answers?.ocasion && profile.answers.ocasion === wine.ocasion) score += 2;
+    if (wine.prioridad_venta === 'alta') score += 1;
+    return score;
+  };
+
+  const createWineCard = (wine) => {
+    const card = document.createElement('article');
+    card.className = 'wine-card reveal is-visible';
+    card.innerHTML = `
+      <h3>${wine.nombre}</h3>
+      <p class="wine-bodega">${wine.bodega}</p>
+      <p class="wine-price">${formatPrice(wine.precio)}</p>
+      <p>${wine.descripcion}</p>
+      <div class="actions">
+        <a class="btn btn-secondary" href="vinos.html">Ver vino</a>
+        <button class="btn btn-primary" type="button" data-add-box="${wine.nombre}">Agregar a caja</button>
+      </div>
+    `;
+    return card;
+  };
+
+  const updateBoxSummary = () => {
+    const items = [...selectedWines.values()];
+    const total = items.reduce((acc, wine) => acc + wine.precio, 0);
+    boxCount.textContent = String(items.length);
+    boxTotal.textContent = formatPrice(total);
+  };
+
+  const renderCatalog = () => {
+    const query = normalize(searchInput.value.trim());
+    const filtered = wines.filter((wine) => {
+      const passFilters = (!activeFilters.tipo_vino || wine.tipo_vino === activeFilters.tipo_vino)
+        && (!activeFilters.varietal || wine.varietal === activeFilters.varietal)
+        && (!activeFilters.perfil || wine.perfil === activeFilters.perfil)
+        && (!activeFilters.ocasion || wine.ocasion === activeFilters.ocasion);
+      if (!passFilters) return false;
+      if (!query) return true;
+      return normalize(`${wine.nombre} ${wine.varietal} ${wine.ocasion} ${wine.perfil} ${wine.descripcion}`).includes(query);
+    });
+
+    catalogGrid.innerHTML = '';
+    filtered.forEach((wine) => catalogGrid.append(createWineCard(wine)));
+  };
+
+  const renderRecommended = () => {
+    const query = normalize(searchInput.value.trim());
+    const profile = readStoredWineProfile();
+    const recommended = [...wines]
+      .sort((a, b) => scoreWine(b, query, profile) - scoreWine(a, query, profile))
+      .slice(0, 3);
+
+    recommendedGrid.innerHTML = '';
+    recommended.forEach((wine) => recommendedGrid.append(createWineCard(wine)));
+  };
+
+  const hydrateFilters = () => {
+    const unique = (key) => [...new Set(wines.map((wine) => wine[key]))].sort((a, b) => a.localeCompare(b));
+
+    filterSelects.forEach((select) => {
+      const key = select.getAttribute('data-filter');
+      unique(key).forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = key === 'ocasion' ? (occasionLabels[item] || item) : item;
+        select.append(option);
+      });
+    });
+  };
+
+  const bindEvents = () => {
+    filterSelects.forEach((select) => {
+      select.addEventListener('change', () => {
+        activeFilters[select.getAttribute('data-filter')] = select.value;
+        renderCatalog();
+      });
+    });
+
+    searchInput.addEventListener('input', () => {
+      renderCatalog();
+      renderRecommended();
+    });
+
+    wineShopApp.addEventListener('click', (event) => {
+      const addBtn = event.target.closest('[data-add-box]');
+      if (!addBtn) return;
+      const wineName = addBtn.getAttribute('data-add-box');
+      const wine = wines.find((item) => item.nombre === wineName);
+      if (!wine) return;
+      selectedWines.set(wineName, wine);
+      updateBoxSummary();
+      addBtn.textContent = 'Agregado';
+    });
+
+    boxWa.addEventListener('click', () => {
+      const selected = [...selectedWines.values()];
+      const list = selected.length
+        ? selected.map((wine) => `${wine.nombre} (${formatPrice(wine.precio)})`).join(', ')
+        : 'Necesito ayuda para armar una caja personalizada';
+      const msg = encodeURIComponent(`Hola Lombardo, quiero cerrar mi caja con estos vinos: ${list}.`);
+      window.open(`https://wa.me/543412762319?text=${msg}`, '_blank', 'noopener');
+    });
+  };
+
+  fetch('vinos_lombardo_base.json')
+    .then((response) => response.json())
+    .then((items) => {
+      wines = items
+        .filter((wine) => wine.activo)
+        .map((wine) => ({
+          ...wine,
+          bodega: bodegaByWine[wine.nombre.split(' ')[0]] || 'Selección Lombardo',
+          perfil: profileLabels[wine.maridaje_principal] || 'Versátil',
+          descripcion: describeWine(wine),
+        }));
+
+      hydrateFilters();
+      renderRecommended();
+      renderCatalog();
+      bindEvents();
+      updateBoxSummary();
+    })
+    .catch(() => {
+      recommendedGrid.innerHTML = '<p>No pudimos cargar recomendaciones en este momento.</p>';
+      catalogGrid.innerHTML = '<p>No pudimos cargar el catálogo en este momento.</p>';
+    });
+}

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-    <header class="site-header">
+  <header class="site-header">
     <div class="container nav-wrap">
       <a class="brand" href="index.html">LOMBARDO<sup class="tm">TM</sup></a>
       <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">MENU</button>
@@ -45,20 +45,98 @@
     </div>
   </header>
 
-  <main>
-    <section class="section section-shell bg-verde reveal">
-      <div class="container shell-head">
-        <p class="section-kicker">Muy pronto</p>
-        <h1>TIENDA</h1>
-        <p class="section-lead">Una selección de productos para prolongar la experiencia Lombardo en casa: objetos, sabores y regalos con curaduría de barra.</p>
+  <main id="wine-shop-app" class="wine-shop-page">
+    <section class="section wine-shop-hero reveal">
+      <div class="container wine-shop-hero-content">
+        <p class="section-kicker">TIENDA / VINOS</p>
+        <h1>EXPLORÁ LA SELECCIÓN LOMBARDO</h1>
+        <p class="section-lead">Una curaduría de vinos pensada para descubrir, regalar o compartir.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#explorar-vinos">Explorar vinos</a>
+          <a class="btn btn-secondary" href="sommelier.html">Descubrí tu vino</a>
+        </div>
       </div>
-      <div class="container cards-grid tienda-grid-ux reveal" aria-label="Categorías de la tienda">
-        <article class="card section-card"><h2>Vinos</h2><p>Botellas elegidas por el equipo.</p></article>
-        <article class="card section-card"><h2>Delicatessen</h2><p>Sabores para picar y compartir.</p></article>
-        <article class="card section-card"><h2>Conservas</h2><p>Selección gourmet de despensa.</p></article>
-        <article class="card section-card"><h2>Fiambres</h2><p>Cortes curados y quesos de autor.</p></article>
-        <article class="card section-card"><h2>Carnes envasadas</h2><p>Listas para cocinar en casa.</p></article>
-        <article class="card section-card"><h2>Regalos</h2><p>Kits para celebrar y sorprender.</p></article>
+    </section>
+
+    <section class="section reveal">
+      <div class="container">
+        <div class="wine-search-wrap" id="buscador-inteligente">
+          <label for="wine-search">BUSCADOR INTELIGENTE</label>
+          <input id="wine-search" type="search" placeholder="Ej: vino para asado, regalo elegante o perfil frutado" autocomplete="off" />
+          <p class="wine-search-helper">Buscá por ocasión, estilo o varietal para descubrir etiquetas recomendadas por Sommelier IA.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="recomendados-ia">
+      <div class="container">
+        <h2>RECOMENDADOS PARA VOS</h2>
+        <p>Selección dinámica según tu perfil y señales del Sommelier IA.</p>
+        <div class="wine-grid" data-recommended-grid></div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="filtros-inteligentes">
+      <div class="container">
+        <h2>FILTROS INTELIGENTES</h2>
+        <div class="wine-filters">
+          <label>Tipo
+            <select data-filter="tipo_vino"><option value="">Todos</option></select>
+          </label>
+          <label>Varietal
+            <select data-filter="varietal"><option value="">Todos</option></select>
+          </label>
+          <label>Perfil
+            <select data-filter="perfil"><option value="">Todos</option></select>
+          </label>
+          <label>Ocasión
+            <select data-filter="ocasion"><option value="">Todas</option></select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="explorar-vinos">
+      <div class="container">
+        <h2>EXPLORAR VINOS</h2>
+        <p>Elegí por gusto, descubrí por recomendación y sumá tus favoritos a una caja personalizada.</p>
+        <div class="wine-grid" data-catalog-grid></div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="colecciones-lombardo">
+      <div class="container">
+        <h2>COLECCIONES LOMBARDO</h2>
+        <div class="collections-grid">
+          <article class="card section-card"><h3>PARA REGALAR</h3><p>Selección elegante para sorprender en ocasiones especiales.</p></article>
+          <article class="card section-card"><h3>PARA COMPARTIR</h3><p>Etiquetas versátiles para mesas largas y encuentros espontáneos.</p></article>
+          <article class="card section-card"><h3>PARA DESCUBRIR</h3><p>Varietales y estilos para quienes buscan nuevas experiencias.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="armar-caja">
+      <div class="container box-builder">
+        <h2>ARMAR CAJA</h2>
+        <p>Seleccioná vinos desde la grilla para crear tu caja ideal.</p>
+        <div class="box-builder-panel">
+          <p><strong data-box-count>0</strong> vinos seleccionados</p>
+          <p>Total estimado: <strong data-box-total>$0</strong></p>
+          <div class="actions">
+            <a class="btn btn-primary" href="contacto.html">Avanzar a compra</a>
+            <button class="btn btn-secondary" type="button" data-box-wa>Finalizar por WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal wine-shop-final-cta" id="cta-sommelier">
+      <div class="container">
+        <h2>NO SABÉS QUÉ ELEGIR</h2>
+        <div class="actions">
+          <a class="btn btn-primary" href="sommelier.html">Probar Sommelier IA</a>
+          <button class="btn btn-secondary" data-wa="Hola Lombardo, necesito recomendación para elegir vinos de la tienda.">Hablar por WhatsApp</button>
+        </div>
       </div>
     </section>
   </main>
