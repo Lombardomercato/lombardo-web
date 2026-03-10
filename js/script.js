@@ -1343,7 +1343,15 @@ const initGlobalLombardoAssistant = () => {
     try {
       const raw = sessionStorage.getItem(ASSISTANT_STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((item) => item && (item.role === 'user' || item.role === 'assistant'))
+        .map((item) => ({
+          role: item.role,
+          content: typeof item.content === 'string' ? item.content.trim().slice(0, 500) : '',
+        }))
+        .filter((item) => item.content)
+        .slice(-14);
     } catch (error) {
       return [];
     }
@@ -1351,7 +1359,7 @@ const initGlobalLombardoAssistant = () => {
 
   const writeHistory = (history) => {
     try {
-      sessionStorage.setItem(ASSISTANT_STORAGE_KEY, JSON.stringify(history.slice(-12)));
+      sessionStorage.setItem(ASSISTANT_STORAGE_KEY, JSON.stringify(history.slice(-14)));
     } catch (error) {
       // ignore
     }

@@ -4,7 +4,7 @@ const path = require('node:path');
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_RECOMMENDATIONS = 3;
-const MAX_HISTORY_ITEMS = 8;
+const MAX_HISTORY_ITEMS = 14;
 const WHATSAPP_PHONE = '543412762319';
 const WHATSAPP_BASE_MESSAGE = 'Hola Lombardo, quiero continuar esta consulta.';
 
@@ -59,6 +59,7 @@ const SYSTEM_PROMPT = [
   `Si recomendás vinos, mencioná hasta ${MAX_RECOMMENDATIONS} opciones y explicá brevemente por qué podrían encajar.`,
   'Si la consulta depende de información no confirmada, aclaralo y sugerí consulta por WhatsApp.',
   'Podés responder consultas sobre vinos y maridajes, regalos y cajas, mensualidades/club, experiencias y eventos, cafetería y dudas generales de Lombardo.',
+  'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
 ].join('\n');
 
 const readWineCatalog = async () => {
@@ -150,7 +151,7 @@ const buildWhatsAppUrl = (message) => {
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(safeMessage)}`;
 };
 
-const buildUserPrompt = ({ message, wines, pageContext, history }) => {
+const buildConversationContextPrompt = ({ wines, pageContext }) => {
   const compactCatalog = wines.map((wine) => ({
     nombre: wine.nombre,
     precio: wine.precio,
@@ -168,14 +169,38 @@ const buildUserPrompt = ({ message, wines, pageContext, history }) => {
   return [
     buildPageContextGuidance(pageContext),
     '',
-    `Historial reciente:\n${serializedHistory}`,
-    '',
-    `Pregunta del cliente: "${message}"`,
+    'Usá el historial de conversación para mantener continuidad en preguntas de seguimiento.',
+    'Si el último mensaje depende del contexto previo, asumí continuidad temática salvo que el cliente cambie de tema explícitamente.',
     '',
     `Base de vinos Lombardo (JSON): ${JSON.stringify(compactCatalog)}`,
     '',
     `Si hacés recomendaciones, máximo ${MAX_RECOMMENDATIONS} opciones.`,
   ].join('\n');
+};
+
+const normalizeConversationHistory = (history, currentMessage) => {
+  if (!history.length) return [];
+
+  const normalizedCurrent = sanitizeMessage(currentMessage).toLowerCase();
+  const trimmed = [...history];
+  const lastItem = trimmed.at(-1);
+
+  if (lastItem?.role === 'user' && sanitizeMessage(lastItem.content).toLowerCase() === normalizedCurrent) {
+    trimmed.pop();
+  }
+
+  return trimmed;
+};
+
+const buildConversationInput = ({ message, pageContext, wines, history }) => {
+  const priorHistory = normalizeConversationHistory(history, message);
+
+  return [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: buildConversationContextPrompt({ wines, pageContext }) },
+    ...priorHistory.map((item) => ({ role: item.role, content: item.content })),
+    { role: 'user', content: message },
+  ];
 };
 
 const createOpenAIResponse = async ({ message, wines, pageContext, history }) => {
@@ -193,10 +218,7 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history }) =>
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      input: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: buildUserPrompt({ message, wines, pageContext, history }) },
-      ],
+      input: buildConversationInput({ message, wines, pageContext, history }),
       max_output_tokens: 350,
       temperature: 0.4,
     }),
