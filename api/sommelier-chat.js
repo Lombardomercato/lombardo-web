@@ -1,5 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { recordInteraction, inferProfile, intentToCategory } = require('./lib/assistant-interactions');
 
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -711,6 +712,17 @@ module.exports = async (req, res) => {
         mode: hasOpenAIKey ? 'openai' : 'local',
       },
     };
+
+    await recordInteraction({
+      mensaje_usuario: message,
+      pagina_actual: pageContext,
+      intencion_detectada: intent,
+      perfil_detectado: inferProfile(message),
+      categoria_consulta: intentToCategory(intent),
+      productos_sugeridos: recommendedWines.map((wine) => wine.nombre).filter(Boolean),
+      tipo_cierre: closingType,
+      derivo_whatsapp: suggestWhatsApp,
+    });
 
     return res.status(200).json({
       ...canonicalResponse,
