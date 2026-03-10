@@ -6,6 +6,15 @@ if (navToggle && mainNav) {
   const navBackdrop = document.createElement('div');
   navBackdrop.className = 'nav-backdrop';
   document.body.appendChild(navBackdrop);
+  const submenuTriggers = mainNav.querySelectorAll('[data-submenu-trigger]');
+
+  const closeSubmenus = () => {
+    submenuTriggers.forEach((trigger) => {
+      const item = trigger.closest('.has-submenu');
+      item?.classList.remove('submenu-open');
+      trigger.setAttribute('aria-expanded', 'false');
+    });
+  };
 
   const syncMenuState = (open) => {
     const isMobile = window.matchMedia('(max-width: 1024px)').matches;
@@ -17,6 +26,8 @@ if (navToggle && mainNav) {
     navToggle.setAttribute('aria-label', shouldOpen ? 'Cerrar menú' : 'Abrir menú');
     document.body.classList.toggle('nav-open', shouldOpen);
     navBackdrop.classList.toggle('is-visible', shouldOpen);
+
+    if (!shouldOpen) closeSubmenus();
   };
 
   const closeMenu = () => {
@@ -33,16 +44,41 @@ if (navToggle && mainNav) {
     });
   });
 
+  submenuTriggers.forEach((trigger) => {
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      const currentItem = trigger.closest('.has-submenu');
+      if (!currentItem) return;
+
+      const willOpen = !currentItem.classList.contains('submenu-open');
+
+      submenuTriggers.forEach((otherTrigger) => {
+        const otherItem = otherTrigger.closest('.has-submenu');
+        if (otherItem === currentItem) return;
+        otherItem?.classList.remove('submenu-open');
+        otherTrigger.setAttribute('aria-expanded', 'false');
+      });
+
+      currentItem.classList.toggle('submenu-open', willOpen);
+      trigger.setAttribute('aria-expanded', String(willOpen));
+    });
+  });
+
   document.addEventListener('click', (event) => {
     if (!mainNav.classList.contains('open')) return;
     if (navWrap && event.target.closest('.nav-wrap')) return;
     closeMenu();
   });
 
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.has-submenu')) closeSubmenus();
+  });
+
   navBackdrop.addEventListener('click', closeMenu);
 
   window.addEventListener('resize', () => {
     if (!window.matchMedia('(max-width: 1024px)').matches) closeMenu();
+    closeSubmenus();
   });
 
   document.addEventListener('keydown', (event) => {

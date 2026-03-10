@@ -16,15 +16,33 @@
       <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">MENU</button>
       <nav class="main-nav" aria-label="Principal">
         <div class="nav-primary">
-          <a href="index.html">INICIO</a>
-          <a href="nosotros.html">SOBRE NOSOTROS</a>
-          <a href="carta.html">CARTA</a>
-          <a href="experiencias.html">EXPERIENCIAS</a>
-        </div>
-        <a class="nav-cta" href="sommelier.html">SOMMELIER IA</a>
-        <div class="nav-secondary">
-          <a href="club.html">CLUB</a>
+          <a href="index.html">HOME</a>
+          <a href="sommelier.html">SOMMELIER</a>
+          <div class="nav-item has-submenu">
+            <a href="experiencias.html">EXPERIENCIAS</a>
+            <button class="submenu-toggle" type="button" data-submenu-trigger aria-label="Abrir submenú de experiencias" aria-expanded="false"></button>
+            <div class="nav-submenu" aria-label="Submenú experiencias">
+              <a href="vinos.html">Universo del vino</a>
+              <a href="cafe.html">Café</a>
+              <a href="experiencias.html#catas">Catas y degustaciones</a>
+              <a href="eventos.html">Eventos</a>
+              <a href="galeria.html">Galería</a>
+            </div>
+          </div>
+          <div class="nav-item has-submenu">
+            <a href="club.html">CLUB</a>
+            <button class="submenu-toggle" type="button" data-submenu-trigger aria-label="Abrir submenú de club" aria-expanded="false"></button>
+            <div class="nav-submenu" aria-label="Submenú club">
+              <a href="club.html">Club Lombardo</a>
+              <a href="club.html#seleccion-mensual">Selección mensual</a>
+              <a href="club.html#cajas-lombardo">Cajas Lombardo</a>
+              <a href="tienda.html">Tienda</a>
+            </div>
+          </div>
           <a href="contacto.html">CONTACTO</a>
+        </div>
+        <div class="nav-secondary">
+          <a class="nav-cta" href="sommelier.html"><span class="nav-cta-text">Descubrí tu vino</span></a>
         </div>
       </nav>
     </div>
