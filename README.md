@@ -14,14 +14,14 @@ Por derechos/licencias, este ZIP deja la carpeta /fonts lista, pero vos tenés q
 - articulat-regular.otf
 - articulat-bold.otf
 
-Las rutas ya están configuradas en css/styles.css.
+Las rutas ya están configuradas en `src/styles/styles.css`.
 
 4) CARTA (PDF)
 assets/pdf/menu-lombardo.pdf (ya incluido).
 Si lo cambiás, mantené el mismo nombre o actualizá carta.html.
 
 5) WHATSAPP
-El número y mensajes están en js/script.js.
+El número y mensajes están en `src/scripts/script.js`.
 Buscá:
 const phone = "5493412762319";
 
@@ -105,3 +105,10 @@ Legado archivado:
   - Variable de entorno: `ADMIN_INSIGHTS_KEY`
   - Si no está definida, el endpoint permite acceso sin token.
 - El endpoint de chat `POST /api/sommelier-chat` ahora registra interacciones en `.data/assistant-interactions.json` para alimentar el dashboard.
+
+
+14) REORGANIZACIÓN DEL FRONTEND (CÓDIGO)
+- CSS movido de `css/` a `src/styles/`.
+- JS movido de `js/` a `src/scripts/`.
+- Se actualizaron referencias en HTML para usar las nuevas rutas.
+- Los assets binarios quedan fuera de este patch de reorganización.
