@@ -6,6 +6,15 @@ if (navToggle && mainNav) {
   const navBackdrop = document.createElement('div');
   navBackdrop.className = 'nav-backdrop';
   document.body.appendChild(navBackdrop);
+  const submenuTriggers = mainNav.querySelectorAll('[data-submenu-trigger]');
+
+  const closeSubmenus = () => {
+    submenuTriggers.forEach((trigger) => {
+      const item = trigger.closest('.has-submenu');
+      item?.classList.remove('submenu-open');
+      trigger.setAttribute('aria-expanded', 'false');
+    });
+  };
 
   const syncMenuState = (open) => {
     const isMobile = window.matchMedia('(max-width: 1024px)').matches;
@@ -17,6 +26,8 @@ if (navToggle && mainNav) {
     navToggle.setAttribute('aria-label', shouldOpen ? 'Cerrar menú' : 'Abrir menú');
     document.body.classList.toggle('nav-open', shouldOpen);
     navBackdrop.classList.toggle('is-visible', shouldOpen);
+
+    if (!shouldOpen) closeSubmenus();
   };
 
   const closeMenu = () => {
@@ -33,16 +44,41 @@ if (navToggle && mainNav) {
     });
   });
 
+  submenuTriggers.forEach((trigger) => {
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      const currentItem = trigger.closest('.has-submenu');
+      if (!currentItem) return;
+
+      const willOpen = !currentItem.classList.contains('submenu-open');
+
+      submenuTriggers.forEach((otherTrigger) => {
+        const otherItem = otherTrigger.closest('.has-submenu');
+        if (otherItem === currentItem) return;
+        otherItem?.classList.remove('submenu-open');
+        otherTrigger.setAttribute('aria-expanded', 'false');
+      });
+
+      currentItem.classList.toggle('submenu-open', willOpen);
+      trigger.setAttribute('aria-expanded', String(willOpen));
+    });
+  });
+
   document.addEventListener('click', (event) => {
     if (!mainNav.classList.contains('open')) return;
     if (navWrap && event.target.closest('.nav-wrap')) return;
     closeMenu();
   });
 
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.has-submenu')) closeSubmenus();
+  });
+
   navBackdrop.addEventListener('click', closeMenu);
 
   window.addEventListener('resize', () => {
     if (!window.matchMedia('(max-width: 1024px)').matches) closeMenu();
+    closeSubmenus();
   });
 
   document.addEventListener('keydown', (event) => {
@@ -318,12 +354,14 @@ if (sommelierApp) {
     const fileName = window.location.pathname.split('/').pop() || 'sommelier.html';
     const map = {
       'index.html': 'home',
-      'vinos.html': 'vinos',
+      'vinos.html': 'experiencias',
       'sommelier.html': 'sommelier',
       'club.html': 'club',
-      'cafe.html': 'cafe',
+      'cafe.html': 'experiencias',
       'experiencias.html': 'experiencias',
-      'eventos.html': 'eventos',
+      'eventos.html': 'experiencias',
+      'galeria.html': 'experiencias',
+      'tienda.html': 'club',
       'contacto.html': 'contacto',
     };
 
@@ -1483,17 +1521,32 @@ const formatAssistantCurrencyDisplay = (content) => {
 
 const getPageContext = () => {
   const customContext = document.body?.dataset?.pageContext;
-  if (customContext) return customContext;
+  const contextAliases = {
+    vinos: 'experiencias',
+    vino: 'experiencias',
+    cafe: 'experiencias',
+    eventos: 'experiencias',
+    catas: 'experiencias',
+    galeria: 'experiencias',
+    tienda: 'club',
+    membresia: 'club',
+    cajas: 'club',
+    seleccion_mensual: 'club',
+  };
+
+  if (customContext) return contextAliases[customContext] || customContext;
 
   const fileName = window.location.pathname.split('/').pop() || 'index.html';
   const contextMap = {
     'index.html': 'home',
-    'vinos.html': 'vinos',
+    'vinos.html': 'experiencias',
     'sommelier.html': 'sommelier',
     'club.html': 'club',
-    'cafe.html': 'cafe',
+    'cafe.html': 'experiencias',
     'experiencias.html': 'experiencias',
-    'eventos.html': 'eventos',
+    'eventos.html': 'experiencias',
+    'galeria.html': 'experiencias',
+    'tienda.html': 'club',
     'contacto.html': 'contacto',
   };
 
@@ -1694,8 +1747,8 @@ const initGlobalLombardoAssistant = () => {
       discover: /(distinto|descubrir|nuevo|sorprender|fuera de lo comun|explorar)/,
       box: /(armame una caja|arma(me)? una caja|caja de vinos|seleccion para llevar)/,
       membership: /(mensualidad|membresia|suscripcion|club mensual|todos los meses)/,
-      clubInfo: /(que incluye el club|beneficios del club|como funciona el club|club lombardo)/,
-      experiences: /(que experiencias|experiencias tienen|catas|after office|balcon|eventos)/,
+      clubInfo: /(que incluye el club|beneficios del club|como funciona el club|club lombardo|membresia|membresía|tienda)/,
+      experiences: /(que experiencias|experiencias tienen|catas|after office|balcon|balc[oó]n|eventos|cafe|caf[eé]|galeria|galer[ií]a|vino)/,
     };
 
     if (checks.membership.test(text)) return 'membership';

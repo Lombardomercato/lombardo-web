@@ -2651,7 +2651,7 @@ main > .section:last-child::after,
 
 .main-nav {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: clamp(18px, 2.2vw, 36px);
 }
@@ -2665,6 +2665,81 @@ main > .section:last-child::after,
 
 .nav-primary {
   justify-self: center;
+}
+
+.nav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.submenu-toggle {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 4px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.86;
+}
+
+.submenu-toggle::after {
+  content: '▾';
+  font-size: 0.54rem;
+  display: inline-block;
+  transition: transform 0.24s ease;
+}
+
+.has-submenu.submenu-open .submenu-toggle::after,
+.has-submenu:hover .submenu-toggle::after {
+  transform: rotate(180deg);
+}
+
+.nav-submenu {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 0;
+  min-width: 250px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0, 58, 112, 0.98);
+  border: 1px solid rgba(228, 213, 211, 0.24);
+  box-shadow: 0 14px 32px rgba(0, 25, 49, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.24s ease, visibility 0.2s ease;
+  z-index: 50;
+}
+
+.has-submenu:hover .nav-submenu,
+.has-submenu:focus-within .nav-submenu,
+.has-submenu.submenu-open .nav-submenu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.nav-submenu a {
+  display: block;
+  width: 100%;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 10px;
+  opacity: 0.92;
+}
+
+.nav-submenu a:hover {
+  background: rgba(255, 179, 171, 0.08);
+  border-color: rgba(255, 179, 171, 0.36);
 }
 
 .nav-secondary {
@@ -2701,6 +2776,10 @@ main > .section:last-child::after,
   background: rgba(255, 179, 171, 0.14);
   color: var(--gris);
   opacity: 1;
+}
+
+.main-nav .nav-cta-text {
+  text-transform: none;
 }
 
 .main-nav .nav-cta::after {
@@ -2797,6 +2876,56 @@ main > .section:last-child::after,
     transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   }
 
+  .nav-item {
+    display: grid;
+    gap: 8px;
+  }
+
+  .nav-item > a {
+    margin-right: 0;
+  }
+
+  .submenu-toggle {
+    justify-self: end;
+    margin-top: -44px;
+    margin-right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(228, 213, 211, 0.28);
+    background: rgba(0, 58, 112, 0.3);
+  }
+
+  .nav-submenu {
+    position: static;
+    min-width: 0;
+    display: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    border-radius: 12px;
+    padding: 8px;
+    margin-top: -2px;
+    background: rgba(0, 58, 112, 0.34);
+    box-shadow: none;
+  }
+
+  .has-submenu:hover .nav-submenu,
+  .has-submenu:focus-within .nav-submenu {
+    display: none;
+  }
+
+  .has-submenu.submenu-open .nav-submenu {
+    display: grid;
+  }
+
+  .nav-submenu a {
+    font-size: 0.69rem;
+    letter-spacing: 0.08em;
+    padding: 10px;
+  }
+
   .main-nav a[href="carta.html"],
   .main-nav a[href="contacto.html"] {
     border: 1px solid rgba(228, 213, 211, 0.18);
@@ -2826,6 +2955,10 @@ main > .section:last-child::after,
     letter-spacing: 0.12em;
     font-size: 0.72rem;
     font-weight: 700;
+  }
+
+  .main-nav .nav-cta-text {
+    text-transform: none;
   }
 
   .nav-secondary {
