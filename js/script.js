@@ -1490,9 +1490,260 @@ if (sommelierApp) {
     sommelierApp.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
   });
 
+
+  const initWineTinder = () => {
+    const tinderRoot = document.querySelector('[data-wine-tinder]');
+    if (!tinderRoot) return;
+
+    const startPanel = tinderRoot.querySelector('[data-tinder-start]');
+    const swipePanel = tinderRoot.querySelector('[data-tinder-swipe]');
+    const resultPanelTinder = tinderRoot.querySelector('[data-tinder-result]');
+    const startBtn = tinderRoot.querySelector('[data-tinder-start-btn]');
+    const likeBtn = tinderRoot.querySelector('[data-tinder-like]');
+    const dislikeBtn = tinderRoot.querySelector('[data-tinder-dislike]');
+    const card = tinderRoot.querySelector('[data-tinder-card]');
+    const cardImage = tinderRoot.querySelector('[data-tinder-image]');
+    const cardName = tinderRoot.querySelector('[data-tinder-name]');
+    const cardVarietal = tinderRoot.querySelector('[data-tinder-varietal]');
+    const cardDescription = tinderRoot.querySelector('[data-tinder-description]');
+    const stepCurrentNode = tinderRoot.querySelector('[data-tinder-step-current]');
+    const stepTotalNode = tinderRoot.querySelector('[data-tinder-step-total]');
+    const progressFillNode = tinderRoot.querySelector('[data-tinder-progress-fill]');
+    const profileNameNode = tinderRoot.querySelector('[data-tinder-profile-name]');
+    const profileDescriptionNode = tinderRoot.querySelector('[data-tinder-profile-description]');
+    const recommendationsNode = tinderRoot.querySelector('[data-tinder-recommendations]');
+    const boxNode = tinderRoot.querySelector('[data-tinder-box]');
+    const waNode = tinderRoot.querySelector('[data-tinder-wa]');
+    const progressBar = tinderRoot.querySelector('.wine-tinder-progress');
+
+    const getTinderDescription = (wine) => {
+      const parts = [];
+      if (wine?.tipo_vino) parts.push(`Vino ${wine.tipo_vino}`);
+      if (wine?.maridaje_principal) parts.push(`ideal para ${wine.maridaje_principal.replace('_', ' ')}`);
+      if (wine?.ocasion) parts.push(`pensado para ${wine.ocasion.replace('_', ' ')}`);
+      return `${parts.join(', ')}.`;
+    };
+
+    const tinderState = {
+      pool: [],
+      index: 0,
+      likes: [],
+      dislikes: [],
+      threshold: 92,
+    };
+
+    if (stepTotalNode) stepTotalNode.textContent = '6';
+
+    const buildPool = () => {
+      const catalog = (winesCatalog || []).filter((wine) => wine?.activo === true);
+      const sorted = [...catalog].sort(sortByPriorityAndPrice);
+      tinderState.pool = sorted.slice(0, 6);
+    };
+
+    const updateProgress = () => {
+      const total = tinderState.pool.length || 1;
+      const current = Math.min(tinderState.index + 1, total);
+      const pct = Math.min(100, (tinderState.index / total) * 100);
+      if (stepCurrentNode) stepCurrentNode.textContent = String(current);
+      if (progressFillNode) progressFillNode.style.width = `${pct}%`;
+      if (progressBar) progressBar.setAttribute('aria-valuenow', String(current));
+      if (progressBar) progressBar.setAttribute('aria-valuemax', String(total));
+    };
+
+    const renderCard = () => {
+      const wine = tinderState.pool[tinderState.index];
+      if (!wine) {
+        finishTinder();
+        return;
+      }
+
+      updateProgress();
+      if (cardName) cardName.textContent = wine.nombre || 'Etiqueta Lombardo';
+      if (cardVarietal) cardVarietal.textContent = wine.varietal || 'Selección especial';
+      if (cardDescription) cardDescription.textContent = getTinderDescription(wine);
+      if (cardImage) cardImage.src = 'assets/fotos/vino.jpg';
+      card.style.transform = 'translateX(0) rotate(0deg)';
+      card.style.opacity = '1';
+      card.dataset.dragging = 'false';
+    };
+
+    const scoreByLikes = (wine) => {
+      let score = 0;
+      tinderState.likes.forEach((liked) => {
+        if (wine.tipo_vino && wine.tipo_vino === liked.tipo_vino) score += 7;
+        if (wine.varietal && wine.varietal === liked.varietal) score += 6;
+        if (wine.maridaje_principal && wine.maridaje_principal === liked.maridaje_principal) score += 5;
+        if (wine.ocasion && wine.ocasion === liked.ocasion) score += 4;
+      });
+      tinderState.dislikes.forEach((disliked) => {
+        if (wine.tipo_vino && wine.tipo_vino === disliked.tipo_vino) score -= 5;
+        if (wine.varietal && wine.varietal === disliked.varietal) score -= 3;
+      });
+      if ((wine.prioridad_venta || '').toLowerCase() === 'alta') score += 1;
+      return score;
+    };
+
+    const detectSwipeProfile = () => {
+      const likes = tinderState.likes;
+      const typeCount = likes.reduce((acc, wine) => {
+        const key = (wine.tipo_vino || 'otro').toLowerCase();
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+      const varietalCount = likes.reduce((acc, wine) => {
+        const key = (wine.varietal || 'otro').toLowerCase();
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+      const topType = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+      const topVarietal = Object.entries(varietalCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+
+      if (topType === 'tinto' && /malbec|blend|cabernet/.test(topVarietal)) {
+        return {
+          name: 'Clásico Malbec',
+          description: 'Te gustan vinos con cuerpo, gastronómicos y fáciles de compartir.',
+        };
+      }
+
+      if (topType === 'blanco' || topType === 'rosado' || topType === 'espumoso') {
+        return {
+          name: 'Fresco Social',
+          description: 'Preferís vinos livianos, vibrantes y perfectos para encuentros relajados.',
+        };
+      }
+
+      return {
+        name: 'Explorador Lombardo',
+        description: 'Te gusta descubrir etiquetas distintas, equilibrando seguridad con novedad.',
+      };
+    };
+
+    const renderList = (container, wines) => {
+      if (!container) return;
+      container.innerHTML = '';
+      wines.forEach((wine) => {
+        const item = document.createElement('article');
+        item.className = 'wine-tinder-mini-card';
+        item.innerHTML = `<h5>${wine.nombre}</h5><p>${wine.varietal || 'Varietal'} · ${formatPrice(wine.precio)}</p>`;
+        container.appendChild(item);
+      });
+    };
+
+    const finishTinder = () => {
+      const profile = detectSwipeProfile();
+      const catalog = (winesCatalog || []).filter((wine) => wine?.activo === true);
+      const ranked = [...catalog]
+        .map((wine) => ({ ...wine, tinderScore: scoreByLikes(wine) }))
+        .sort((a, b) => b.tinderScore - a.tinderScore || sortByPriorityAndPrice(a, b));
+
+      const recommendations = ranked.slice(0, 3);
+      const box = ranked.slice(0, 3);
+
+      if (profileNameNode) profileNameNode.textContent = `Perfil: ${profile.name}`;
+      if (profileDescriptionNode) profileDescriptionNode.textContent = profile.description;
+      renderList(recommendationsNode, recommendations);
+      renderList(boxNode, box);
+
+      if (waNode) {
+        const text = [
+          'Hola, usé Wine Tinder en Lombardo y quiero armar mi selección.',
+          `Perfil detectado: ${profile.name}`,
+          ...recommendations.map((wine) => `- ${wine.nombre}`),
+        ].join('\n');
+        waNode.href = `https://wa.me/543412762319?text=${encodeURIComponent(text)}`;
+      }
+
+      persistWineProfile({
+        perfil: profile.name,
+        descripcion: profile.description,
+        origen: 'wine_tinder',
+      });
+
+      swipePanel.hidden = true;
+      resultPanelTinder.hidden = false;
+    };
+
+    const commitSwipe = (liked) => {
+      const wine = tinderState.pool[tinderState.index];
+      if (!wine) return;
+
+      if (liked) tinderState.likes.push(wine);
+      else tinderState.dislikes.push(wine);
+
+      tinderState.index += 1;
+      renderCard();
+    };
+
+    const animateAndCommit = (liked) => {
+      card.style.transition = 'transform 220ms ease, opacity 220ms ease';
+      card.style.transform = `translateX(${liked ? 180 : -180}px) rotate(${liked ? 14 : -14}deg)`;
+      card.style.opacity = '0';
+      window.setTimeout(() => {
+        card.style.transition = 'transform 240ms ease, opacity 240ms ease';
+        commitSwipe(liked);
+      }, 210);
+    };
+
+    let dragStartX = 0;
+    let dragCurrentX = 0;
+    let dragging = false;
+
+    card.addEventListener('pointerdown', (event) => {
+      dragging = true;
+      dragStartX = event.clientX;
+      dragCurrentX = event.clientX;
+      card.setPointerCapture(event.pointerId);
+      card.style.transition = 'none';
+    });
+
+    card.addEventListener('pointermove', (event) => {
+      if (!dragging) return;
+      dragCurrentX = event.clientX;
+      const delta = dragCurrentX - dragStartX;
+      const tilt = Math.max(-12, Math.min(12, delta / 18));
+      card.style.transform = `translateX(${delta}px) rotate(${tilt}deg)`;
+    });
+
+    card.addEventListener('pointerup', () => {
+      if (!dragging) return;
+      dragging = false;
+      const delta = dragCurrentX - dragStartX;
+      if (Math.abs(delta) >= tinderState.threshold) {
+        animateAndCommit(delta > 0);
+      } else {
+        card.style.transition = 'transform 200ms ease';
+        card.style.transform = 'translateX(0) rotate(0deg)';
+      }
+    });
+
+    likeBtn?.addEventListener('click', () => animateAndCommit(true));
+    dislikeBtn?.addEventListener('click', () => animateAndCommit(false));
+
+    startBtn?.addEventListener('click', async () => {
+      if (!winesCatalog.length) {
+        try {
+          await loadWineCatalog();
+        } catch (_error) {
+          return;
+        }
+      }
+
+      buildPool();
+      tinderState.index = 0;
+      tinderState.likes = [];
+      tinderState.dislikes = [];
+      startPanel.hidden = true;
+      resultPanelTinder.hidden = true;
+      swipePanel.hidden = false;
+      renderCard();
+    });
+  };
+
   showLocalContextIfNeeded();
   renderQuestion();
   initSommelierChat();
+  initWineTinder();
 }
 
 const ASSISTANT_STORAGE_KEY = 'lombardo_assistant_history';

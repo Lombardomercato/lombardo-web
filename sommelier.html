@@ -59,6 +59,67 @@
       </div>
     </section>
 
+    <section class="section wine-tinder-section">
+      <div class="container">
+        <div class="wine-tinder reveal" data-wine-tinder aria-live="polite">
+          <div class="wine-tinder-start" data-tinder-start>
+            <p class="eyebrow">Wine Tinder</p>
+            <h2>Descubrí tu perfil de vino</h2>
+            <p>Deslizá vinos según lo que te guste y descubrí qué estilo va mejor con vos.</p>
+            <button type="button" class="btn btn-primary" data-tinder-start-btn>Empezar</button>
+          </div>
+
+          <div class="wine-tinder-swipe" data-tinder-swipe hidden>
+            <div class="wine-tinder-progress-meta">
+              <p>Swipe de vinos</p>
+              <p><span data-tinder-step-current>1</span>/<span data-tinder-step-total>6</span></p>
+            </div>
+            <div class="wine-tinder-progress" role="progressbar" aria-label="Progreso de Wine Tinder" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1">
+              <span data-tinder-progress-fill></span>
+            </div>
+
+            <div class="wine-tinder-card-wrap">
+              <article class="wine-tinder-card" data-tinder-card>
+                <img src="assets/fotos/vino.jpg" alt="Vino recomendado" data-tinder-image />
+                <div class="wine-tinder-card-content">
+                  <p class="wine-tinder-varietal" data-tinder-varietal></p>
+                  <h3 data-tinder-name></h3>
+                  <p data-tinder-description></p>
+                </div>
+              </article>
+            </div>
+
+            <div class="wine-tinder-actions">
+              <button type="button" class="btn btn-secondary" data-tinder-dislike>No me gusta</button>
+              <button type="button" class="btn btn-primary" data-tinder-like>Me gusta</button>
+            </div>
+          </div>
+
+          <div class="wine-tinder-result" data-tinder-result hidden>
+            <p class="eyebrow">Resultado perfil</p>
+            <h3 data-tinder-profile-name></h3>
+            <p data-tinder-profile-description></p>
+
+            <div class="wine-tinder-recommendations">
+              <h4>Recomendaciones</h4>
+              <div class="wine-tinder-list" data-tinder-recommendations></div>
+            </div>
+
+            <div class="wine-tinder-box">
+              <h4>Caja sugerida</h4>
+              <div class="wine-tinder-list" data-tinder-box></div>
+            </div>
+
+            <div class="wine-tinder-ctas">
+              <a class="btn btn-primary" href="tienda.html">Armar caja</a>
+              <a class="btn btn-secondary" href="club.html">Conocer club</a>
+              <a class="btn btn-secondary" data-tinder-wa href="https://wa.me/543412762319?text=Hola%2C%20quiero%20una%20recomendaci%C3%B3n%20de%20Wine%20Tinder%20Lombardo." target="_blank" rel="noopener">Hablar por WhatsApp</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="section sommelier-section">
       <div class="container">
         <div class="sommelier-local-context" data-local-context hidden>
