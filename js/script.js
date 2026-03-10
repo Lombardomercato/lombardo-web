@@ -143,6 +143,26 @@ if (!prefersReducedMotion) {
   document.querySelectorAll('.reveal').forEach((node) => node.classList.add('is-visible'));
 }
 
+const WINE_PROFILE_STORAGE_KEY = 'lombardo_wine_profile';
+
+const readStoredWineProfile = () => {
+  try {
+    const raw = window.localStorage.getItem(WINE_PROFILE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_error) {
+    return null;
+  }
+};
+
+const persistWineProfile = (profileResult) => {
+  if (!profileResult) return;
+  try {
+    window.localStorage.setItem(WINE_PROFILE_STORAGE_KEY, JSON.stringify(profileResult));
+  } catch (_error) {
+    // noop
+  }
+};
+
 const sommelierApp = document.querySelector('#sommelier-app');
 
 if (sommelierApp) {
@@ -292,6 +312,7 @@ if (sommelierApp) {
   };
 
   const chatHistory = [];
+  let currentWineProfile = readStoredWineProfile();
 
   const getSommelierPageContext = () => {
     const fileName = window.location.pathname.split('/').pop() || 'sommelier.html';
@@ -404,6 +425,7 @@ if (sommelierApp) {
         message,
         history: chatHistory.slice(-14),
         pagina_actual: getSommelierPageContext(),
+        wine_profile: currentWineProfile,
       }),
     });
 
@@ -906,50 +928,116 @@ if (sommelierApp) {
   };
 
   const getWineProfile = () => {
+    const detectWineProfile = (userData, conversationHistory = []) => {
+      const emptyScores = {
+        clasico_malbec: 0,
+        explorador: 0,
+        suaves: 0,
+        gastronomico: 0,
+        regalo: 0,
+        premium: 0,
+      };
+
+      const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+      const score = { ...emptyScores };
+      const normalized = {
+        tipo_vino: normalize(userData?.tipo_vino),
+        ocasion: normalize(userData?.ocasion),
+        comida: normalize(userData?.comida),
+        estilo: normalize(userData?.estilo),
+        presupuesto: normalize(userData?.presupuesto),
+      };
+      const conversationText = conversationHistory.map((entry) => normalize(entry?.content)).join(' ');
+
+      if (normalized.tipo_vino === 'tinto') score.clasico_malbec += 2;
+      if (normalized.comida === 'carne') score.clasico_malbec += 2;
+      if (normalized.estilo === 'intenso') score.clasico_malbec += 2;
+      if (normalized.ocasion === 'asado') score.clasico_malbec += 2;
+
+      if (normalized.ocasion === 'descubrir') score.explorador += 2;
+      if (/algo distinto|quiero descubrir|probar algo nuevo|rareza|explorar|fuera de lo tradicional/.test(conversationText)) score.explorador += 3;
+
+      if (normalized.estilo === 'suave') score.suaves += 3;
+      if (/suave|no muy pesado|liviano|ligero|delicado/.test(conversationText)) score.suaves += 3;
+
+      if (normalized.comida && normalized.comida !== 'sin_comida') score.gastronomico += 2;
+      if (/maridaje|maridar|con que lo acompano|con que acompanar|que vino va con|plato|comida/.test(conversationText)) score.gastronomico += 2;
+      if (/carne|pasta|sushi|pescado|queso|picada|parrilla/.test(conversationText)) score.gastronomico += 2;
+
+      if (normalized.ocasion === 'regalo') score.regalo += 3;
+      if (/regalar|regalo|quedar bien|ocasion especial/.test(conversationText)) score.regalo += 2;
+
+      if (normalized.presupuesto === 'premium' || normalized.presupuesto === 'alto') score.premium += 2;
+      if (/premium|alta gama|elegante|especial|de mayor nivel|reserva/.test(conversationText)) score.premium += 2;
+
+      const profileMap = {
+        clasico_malbec: {
+          name: 'Clásico Malbec',
+          description: 'Te inclinás por vinos con cuerpo, perfil clásico y muy buenos para comida.',
+          nextSuggestion: 'caja_parrillera',
+        },
+        explorador: {
+          name: 'Explorador de Vinos',
+          description: 'Te gusta descubrir etiquetas nuevas, estilos poco obvios y salir de lo tradicional.',
+          nextSuggestion: 'descubrimiento_del_mes',
+        },
+        suaves: {
+          name: 'Amante de Vinos Suaves',
+          description: 'Preferís vinos livianos, amables y fáciles de disfrutar.',
+          nextSuggestion: 'seleccion_liviana',
+        },
+        gastronomico: {
+          name: 'Gastronómico',
+          description: 'Elegís pensando en la mesa: te importa el maridaje y cómo acompaña cada plato.',
+          nextSuggestion: 'maridaje_de_autor',
+        },
+        regalo: {
+          name: 'Regalo / Ocasión Especial',
+          description: 'Buscás opciones elegantes, seguras y con buena presencia para quedar bien.',
+          nextSuggestion: 'caja_regalo',
+        },
+        premium: {
+          name: 'Wine Lover Premium',
+          description: 'Te interesan etiquetas de mayor nivel, con carácter especial y perfil sofisticado.',
+          nextSuggestion: 'mensualidad_reserva',
+        },
+      };
+
+      const sortedProfiles = Object.entries(score).sort((a, b) => b[1] - a[1]);
+      const [topKey, topScore] = sortedProfiles[0] || ['clasico_malbec', 0];
+      const fallbackProfile = {
+        name: 'Paladar Lombardo',
+        description: 'Tenés un perfil versátil y abierto para disfrutar distintas etiquetas según el momento.',
+        nextSuggestion: 'seleccion_descubrimiento',
+      };
+
+      const topProfile = topScore > 0 ? profileMap[topKey] : fallbackProfile;
+
+      return {
+        perfil: topProfile.name,
+        score,
+        descripcion: topProfile.description,
+        sugerencia_siguiente: topProfile.nextSuggestion,
+      };
+    };
+
     const normalizedResponses = getNormalizedAnswers();
+    const profileResult = detectWineProfile(
+      normalizedResponses,
+      [
+        { role: 'user', content: responses.texto_libre || '' },
+        ...chatHistory.slice(-10),
+      ],
+    );
 
-    if (
-      normalizedResponses.tipo_vino === 'tinto'
-      && normalizedResponses.comida === 'carne'
-      && normalizedResponses.estilo === 'intenso'
-    ) {
-      return {
-        name: 'Clásico Malbec',
-        description: 'Te gustan vinos intensos y gastronómicos, ideales para carnes y comidas importantes.',
-      };
-    }
-
-    if (normalizedResponses.ocasion === 'descubrir') {
-      return {
-        name: 'Explorador de Vinos',
-        description: 'Te gusta probar cosas nuevas y salir de lo tradicional.',
-      };
-    }
-
-    if (normalizedResponses.estilo === 'suave') {
-      return {
-        name: 'Amante de Vinos Suaves',
-        description: 'Preferís vinos más ligeros, fáciles de tomar y elegantes.',
-      };
-    }
-
-    if (normalizedResponses.ocasion === 'cena_amigos') {
-      return {
-        name: 'Wine Lover Social',
-        description: 'Disfrutás el vino como parte del encuentro y de compartir.',
-      };
-    }
-
-    if (normalizedResponses.presupuesto === 'premium') {
-      return {
-        name: 'Buscador de Joyitas',
-        description: 'Te gusta subir un poco el nivel y descubrir vinos especiales.',
-      };
-    }
+    currentWineProfile = profileResult;
+    persistWineProfile(profileResult);
 
     return {
-      name: 'Paladar Lombardo',
-      description: 'Tenés un perfil versátil y abierto para disfrutar distintas etiquetas según el momento.',
+      name: profileResult.perfil,
+      description: profileResult.descripcion,
+      score: profileResult.score,
+      nextSuggestion: profileResult.sugerencia_siguiente,
     };
   };
 
@@ -1052,16 +1140,17 @@ if (sommelierApp) {
 
   const getBoxClosingMessage = (profile) => {
     const normalizedOccasion = answerMappings.ocasion[responses.ocasion] || '';
+    const suggestionHint = profile?.nextSuggestion ? ` Próximo paso sugerido: ${profile.nextSuggestion}.` : '';
 
     if (normalizedOccasion === 'regalo') {
-      return 'Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Ideal para regalar con criterio y buena presencia.';
+      return `Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Ideal para regalar con criterio y buena presencia.${suggestionHint}`;
     }
 
     if (normalizedOccasion === 'asado' || normalizedOccasion === 'cena_amigos') {
-      return 'Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Funciona muy bien para compartir en mesa.';
+      return `Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Funciona muy bien para compartir en mesa.${suggestionHint}`;
     }
 
-    return `Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Queda alineada con tu perfil ${profile.name} y con la forma en la que disfrutás el vino.`;
+    return `Armamos esta caja para que tengas una opción segura, una botella con un poco más de nivel y otra para descubrir algo distinto sin salirte de tu estilo. Queda alineada con tu perfil ${profile.name} y con la forma en la que disfrutás el vino.${suggestionHint}`;
   };
 
   const buildMonthlySelection = (excludeNames = new Set()) => {
@@ -1084,7 +1173,10 @@ if (sommelierApp) {
       frutado: 'prefiere vinos expresivos y frutados',
     }[normalized.estilo] || 'disfruta vinos con personalidad';
 
-    return `Una selección pensada para alguien que ${styleTone}, pero también quiere abrir espacio a nuevas etiquetas. Queda alineada con tu perfil ${profile.name} y con la forma en la que vivís el vino mes a mes.`;
+    const isPremiumPath = profile?.nextSuggestion === 'mensualidad_reserva';
+    const premiumHint = isPremiumPath ? ' Te recomendamos priorizar una mensualidad de línea reserva.' : '';
+
+    return `Una selección pensada para alguien que ${styleTone}, pero también quiere abrir espacio a nuevas etiquetas. Queda alineada con tu perfil ${profile.name} y con la forma en la que vivís el vino mes a mes.${premiumHint}`;
   };
 
   const updateSommelierWhatsAppLink = (recommendations, profile, monthlySelection) => {
@@ -1180,7 +1272,14 @@ if (sommelierApp) {
 
     if (profileBlock && profileName && profileDescription) {
       profileName.textContent = profile.name;
-      profileDescription.textContent = profile.description;
+      const scoreSummary = Object.entries(profile.score || {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([label, value]) => `${label.replace('_', ' ')}: ${value}`)
+        .join(' · ');
+      profileDescription.textContent = scoreSummary
+        ? `${profile.description} Señales detectadas (${scoreSummary}).`
+        : profile.description;
       profileBlock.hidden = false;
     }
 
@@ -1776,6 +1875,7 @@ const initGlobalLombardoAssistant = () => {
       message,
       pagina_actual: pageContext,
       history,
+      wine_profile: readStoredWineProfile(),
     };
     const endpoint = resolveAssistantApiUrl();
     console.log('[assistant-widget][debug] payload enviado:', payload);
