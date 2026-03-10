@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOMMELIER IA | LOMBARDO</title>
+  <meta name="description" content="Sommelier IA de Lombardo: quiz inteligente, recomendaciones personalizadas y chat asistido para elegir vinos." />
+  <meta name="openai-api-key" content="" />
+  <meta name="google-sheets-endpoint" content="" />
+  <link rel="icon" type="image/jpeg" href="/assets/favicon/favicom.jpg" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="/index.html">LOMBARDO<sup class="tm">TM</sup></a>
+      <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">MENU</button>
+      <nav class="main-nav" aria-label="Principal">
+        <div class="nav-primary">
+          <a href="/sommelier.html">SOMMELIER IA</a>
+          <div class="nav-item has-submenu">
+            <a href="/experiencias.html">EXPERIENCIAS</a>
+            <button class="submenu-toggle" type="button" data-submenu-trigger aria-label="ABRIR SUBMENÚ DE EXPERIENCIAS" aria-expanded="false"></button>
+            <div class="nav-submenu" aria-label="SUBMENÚ EXPERIENCIAS">
+              <a href="/vinos.html">UNIVERSO DEL VINO</a>
+              <a href="/cafe.html">CAFÉ</a>
+              <a href="/experiencias.html#catas">CATAS Y DEGUSTACIONES</a>
+              <a href="/eventos.html">EVENTOS</a>
+              <a href="/galeria.html">GALERÍA</a>
+            </div>
+          </div>
+          <div class="nav-item has-submenu">
+            <a href="/club.html">CLUB</a>
+            <button class="submenu-toggle" type="button" data-submenu-trigger aria-label="ABRIR SUBMENÚ DE CLUB" aria-expanded="false"></button>
+            <div class="nav-submenu" aria-label="SUBMENÚ CLUB">
+              <a href="/club.html">CLUB LOMBARDO</a>
+              <a href="/club.html#seleccion-mensual">SELECCIÓN MENSUAL</a>
+              <a href="/club.html#cajas-lombardo">CAJAS LOMBARDO</a>
+              <a href="/tienda.html">TIENDA</a>
+            </div>
+          </div>
+          <a href="/contacto.html">CONTACTO</a>
+        </div>
+        <div class="nav-secondary">
+          <a class="nav-cta" href="#sommelier-app">INICIAR QUIZ</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section sommelier-hero">
+      <div class="container sommelier-intro reveal">
+        <div class="sommelier-hero-copy">
+          <p class="eyebrow">SOMMELIER IA LOMBARDO</p>
+          <h1>Tu asesor de vinos inteligente, en una sola pestaña.</h1>
+          <p class="sommelier-lead">Completá un quiz guiado, recibí recomendaciones con lógica enológica y ajustá tu selección en tiempo real con IA.</p>
+          <p class="sommelier-note">Diseñado con la estética editorial de Lombardo: limpio, preciso y humano.</p>
+          <div class="sommelier-hero-actions">
+            <a class="btn btn-primary" href="#sommelier-app">Empezar ahora</a>
+            <a class="btn btn-secondary" href="https://wa.me/543412762319?text=Hola%2C%20quiero%20asesoramiento%20con%20Sommelier%20IA%20Lombardo" target="_blank" rel="noopener">WhatsApp Sommelier</a>
+          </div>
+        </div>
+        <div class="sommelier-hero-stats">
+          <article class="sommelier-stat-card">
+            <p class="sommelier-stat-value">QUIZ INTELIGENTE</p>
+            <p class="sommelier-stat-label">5 pasos para detectar perfil, ocasión, maridaje y presupuesto.</p>
+          </article>
+          <article class="sommelier-stat-card">
+            <p class="sommelier-stat-value">RECOMENDACIÓN + CAJA</p>
+            <p class="sommelier-stat-label">Sugerencias priorizadas para consumo inmediato, regalo o selección mensual.</p>
+          </article>
+          <article class="sommelier-stat-card">
+            <p class="sommelier-stat-value">CHAT ASISTIDO IA</p>
+            <p class="sommelier-stat-label">Ajustá gustos finos, dudas de etiqueta o alternativas por precio.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section sommelier-section" id="wine-tinder">
+      <div class="container">
+        <div class="sommelier-local-context" data-local-context hidden>
+          <p>Modo atención local activado: respuestas adaptadas para operación en salón y recomendaciones rápidas para el equipo.</p>
+        </div>
+
+        <div class="sommelier-app reveal" id="sommelier-app" data-google-sheets-endpoint="">
+          <div class="sommelier-progress-wrap">
+            <div class="sommelier-progress-meta">
+              <p class="sommelier-step">Paso <span data-step-current>1</span>/<span data-step-total>5</span></p>
+              <p class="sommelier-step-title" data-step-title>¿Qué tipo de vino preferís?</p>
+            </div>
+            <div class="sommelier-progress-track" role="progressbar" aria-label="Progreso del quiz Sommelier IA" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+              <span data-progress-fill></span>
+            </div>
+          </div>
+
+          <section class="sommelier-panel" data-quiz-panel>
+            <p class="eyebrow">Quiz inteligente</p>
+            <h2 data-question-title>¿Qué tipo de vino preferís?</h2>
+            <p data-question-helper>Elegí la opción que mejor represente tu preferencia.</p>
+            <div class="sommelier-options" data-options></div>
+
+            <div class="sommelier-textarea-wrap" data-free-text-wrap hidden>
+              <label class="sommelier-textarea-label" for="sommelier-extra">¿Querés sumar algo más?</label>
+              <p class="sommelier-textarea-helper">Ejemplo: “prefiero vinos con poca madera” o “quiero algo para regalar”.</p>
+              <textarea class="sommelier-textarea" id="sommelier-extra" data-free-text rows="4" placeholder="Contanos tu gusto, estilo o contexto."></textarea>
+            </div>
+
+            <div class="sommelier-actions">
+              <button class="btn btn-secondary" type="button" data-prev hidden>Anterior</button>
+              <button class="btn btn-secondary" type="button" data-next>Siguiente</button>
+              <button class="btn btn-primary" type="button" data-submit hidden>Recibir recomendación</button>
+            </div>
+          </section>
+
+          <section class="sommelier-loading" data-result-loading hidden>
+            <p class="eyebrow">Procesando perfil</p>
+            <h2>Estamos catando tu información.</h2>
+            <p>En segundos vas a ver recomendaciones personalizadas, caja sugerida y opciones para seguir conversando con la IA.</p>
+          </section>
+
+          <section class="sommelier-result" data-result hidden>
+            <div class="sommelier-result-head">
+              <p class="eyebrow">Resultado Sommelier IA</p>
+              <h2>Tu selección recomendada</h2>
+            </div>
+
+            <div class="sommelier-result-grid" data-result-list></div>
+
+            <article class="sommelier-profile" data-profile hidden>
+              <p class="eyebrow">Perfil detectado</p>
+              <h3 data-profile-name></h3>
+              <p data-profile-description></p>
+            </article>
+
+            <article class="sommelier-box" data-box hidden>
+              <p class="sommelier-box-subtitle">Caja sugerida para vos</p>
+              <h3>Selección lista para armar</h3>
+              <div class="sommelier-box-list" data-box-list></div>
+              <p class="sommelier-box-note" data-box-note></p>
+            </article>
+
+            <article class="sommelier-membership" data-membership hidden>
+              <p class="sommelier-membership-subtitle">Club Lombardo</p>
+              <h3>Tu mensualidad recomendada</h3>
+              <div class="sommelier-membership-list" data-membership-list></div>
+              <p class="sommelier-membership-note" data-membership-note></p>
+              <ul class="sommelier-membership-logic">
+                <li>Combinamos etiquetas alineadas a tu perfil con 1 vino de descubrimiento.</li>
+                <li>Podés pedir ajustes por presupuesto o por maridaje principal.</li>
+                <li>Incluye soporte por WhatsApp para reposición o cambio.</li>
+              </ul>
+              <a class="btn btn-secondary" data-membership-wa href="https://wa.me/543412762319?text=Hola%2C%20quiero%20conocer%20la%20mensualidad%20de%20Club%20Lombardo" target="_blank" rel="noopener">Consultar mensualidad</a>
+            </article>
+
+            <article class="sommelier-ai-chat" data-ai-chat>
+              <div class="sommelier-ai-chat-head">
+                <p class="eyebrow">Asistente IA</p>
+                <h3>Seguí ajustando tu recomendación</h3>
+                <p>Podés pedir opciones por uva, región, nivel de cuerpo o franja de precio.</p>
+              </div>
+              <div class="sommelier-ai-chat-messages" data-chat-messages aria-live="polite"></div>
+              <form class="sommelier-ai-chat-form" data-chat-form>
+                <label class="sr-only" for="sommelier-chat-input">Mensaje para Sommelier IA</label>
+                <input id="sommelier-chat-input" data-chat-input type="text" placeholder="Ej: Quiero un tinto frutado de menos de $20.000" required />
+                <button class="btn btn-primary" type="submit" data-chat-submit>Enviar</button>
+              </form>
+            </article>
+
+            <article class="sommelier-closing" data-sommelier-closing>
+              <h3>Nota del equipo Lombardo</h3>
+              <p data-sommelier-quote>“El mejor vino no siempre es el más caro, sino el que mejor acompaña el momento.”</p>
+            </article>
+
+            <div class="sommelier-result-actions">
+              <button class="btn btn-secondary" type="button" data-restart>Volver a hacer el quiz</button>
+              <a class="btn btn-primary" data-wa-link href="https://wa.me/543412762319?text=Hola%2C%20quiero%20continuar%20con%20la%20recomendaci%C3%B3n%20del%20Sommelier%20IA" target="_blank" rel="noopener">Pedir por WhatsApp</a>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <h3>LOMBARDO<sup class="tm">TM</sup></h3><p>TU PUNTO DE ENCUENTRO EN PUEBLO ESTHER. CAFÉ, VINO Y BUENOS MOMENTOS.</p>
+      <nav><a href="/index.html">INICIO</a><a href="/carta.html">CARTA</a><a href="/sommelier.html">SOMMELIER IA</a><a href="/experiencias.html">EXPERIENCIAS</a><a href="/club.html">CLUB LOMBARDO</a><a href="/contacto.html">CONTACTO</a></nav>
+      <small>LOMBARDO — MERCATO DE ENCUENTRO · <span data-year></span></small>
+    </div>
+  </footer>
+
+  <div class="float-wa"><a class="btn btn-primary btn-whatsapp" data-wa="Hola Lombardo, quiero info sobre Sommelier IA." aria-label="Escribinos por WhatsApp"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.52 3.48A11.84 11.84 0 0 0 12.09 0C5.58 0 .24 5.34.24 11.84c0 2.08.54 4.12 1.57 5.92L0 24l6.42-1.68a11.8 11.8 0 0 0 5.67 1.45h.01c6.5 0 11.84-5.34 11.84-11.84 0-3.16-1.23-6.12-3.42-8.45Zm-8.43 18.3h-.01a9.86 9.86 0 0 1-5.03-1.38l-.36-.21-3.81 1 1.02-3.71-.23-.38a9.86 9.86 0 0 1-1.5-5.26c0-5.44 4.44-9.88 9.9-9.88 2.63 0 5.1 1.02 6.95 2.88a9.8 9.8 0 0 1 2.9 6.99c0 5.44-4.45 9.88-9.83 9.88Zm5.42-7.4c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.35.23-.64.08-.3-.15-1.26-.47-2.4-1.5a8.98 8.98 0 0 1-1.66-2.06c-.17-.3-.02-.45.13-.6.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.38-.03-.53-.08-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.57c-.2 0-.53.08-.8.38-.27.3-1.03 1.02-1.03 2.48s1.06 2.87 1.2 3.08c.15.2 2.07 3.16 5.03 4.43.7.3 1.25.48 1.67.61.7.22 1.35.19 1.86.12.57-.08 1.75-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.12-.27-.2-.57-.35Z"/></svg><span>WhatsApp</span></a></div>
+  <script src="/js/script.js"></script>
+</body>
+</html>

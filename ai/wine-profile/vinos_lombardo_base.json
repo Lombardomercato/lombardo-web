@@ -1,0 +1,112 @@
+[
+  {
+    "nombre": "Trumpeter Malbec",
+    "precio": 18500,
+    "tipo_vino": "tinto",
+    "varietal": "Malbec",
+    "maridaje_principal": "carne",
+    "ocasion": "asado",
+    "nivel_precio": "medio",
+    "prioridad_venta": "alta",
+    "activo": true
+  },
+  {
+    "nombre": "Saint Felicien Chardonnay",
+    "precio": 19800,
+    "tipo_vino": "blanco",
+    "varietal": "Chardonnay",
+    "maridaje_principal": "pescado_sushi",
+    "ocasion": "cena_amigos",
+    "nivel_precio": "medio",
+    "prioridad_venta": "media",
+    "activo": true
+  },
+  {
+    "nombre": "Rutini Cabernet Malbec",
+    "precio": 26500,
+    "tipo_vino": "tinto",
+    "varietal": "Blend",
+    "maridaje_principal": "carne",
+    "ocasion": "regalo",
+    "nivel_precio": "alto",
+    "prioridad_venta": "alta",
+    "activo": true
+  },
+  {
+    "nombre": "Luigi Bosca Pinot Noir",
+    "precio": 24200,
+    "tipo_vino": "tinto",
+    "varietal": "Pinot Noir",
+    "maridaje_principal": "pasta",
+    "ocasion": "cena_amigos",
+    "nivel_precio": "alto",
+    "prioridad_venta": "media",
+    "activo": true
+  },
+  {
+    "nombre": "Salentein Reserve Rosé",
+    "precio": 14600,
+    "tipo_vino": "rosado",
+    "varietal": "Rosé Blend",
+    "maridaje_principal": "picada",
+    "ocasion": "diario",
+    "nivel_precio": "medio",
+    "prioridad_venta": "media",
+    "activo": true
+  },
+  {
+    "nombre": "Chandon Extra Brut",
+    "precio": 21900,
+    "tipo_vino": "espumoso",
+    "varietal": "Extra Brut",
+    "maridaje_principal": "sin_comida",
+    "ocasion": "descubrir",
+    "nivel_precio": "alto",
+    "prioridad_venta": "alta",
+    "activo": true
+  },
+  {
+    "nombre": "Portillo Sauvignon Blanc",
+    "precio": 11900,
+    "tipo_vino": "blanco",
+    "varietal": "Sauvignon Blanc",
+    "maridaje_principal": "pescado_sushi",
+    "ocasion": "diario",
+    "nivel_precio": "bajo",
+    "prioridad_venta": "alta",
+    "activo": true
+  },
+  {
+    "nombre": "Zuccardi Serie A Malbec",
+    "precio": 17200,
+    "tipo_vino": "tinto",
+    "varietal": "Malbec",
+    "maridaje_principal": "carne",
+    "ocasion": "cena_amigos",
+    "nivel_precio": "medio",
+    "prioridad_venta": "alta",
+    "activo": true
+  },
+  {
+    "nombre": "Catena Alta Malbec",
+    "precio": 38200,
+    "tipo_vino": "tinto",
+    "varietal": "Malbec",
+    "maridaje_principal": "carne",
+    "ocasion": "regalo",
+    "nivel_precio": "premium",
+    "prioridad_venta": "alta",
+    "activo": true
+  },
+  {
+    "nombre": "Norton Cosecha Tardía",
+    "precio": 9400,
+    "tipo_vino": "blanco",
+    "varietal": "Cosecha Tardía",
+    "maridaje_principal": "sin_comida",
+    "ocasion": "descubrir",
+    "nivel_precio": "bajo",
+    "prioridad_venta": "baja",
+    "activo": false
+  }
+]
