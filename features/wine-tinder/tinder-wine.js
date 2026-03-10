@@ -42,7 +42,7 @@
   };
 
   const loadCatalog = async () => {
-    const response = await fetch('vinos_lombardo_base.json', { cache: 'no-store' });
+    const response = await fetch('/vinos_lombardo_base.json', { cache: 'no-store' });
     const data = await response.json();
     catalog = Array.isArray(data) ? data.filter((wine) => wine?.activo !== false) : [];
   };
