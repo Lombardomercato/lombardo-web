@@ -85,12 +85,89 @@ const SYSTEM_PROMPT = [
   'Cerrá cada respuesta con un siguiente paso útil y natural según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
 ].join('\n');
 
+const parseNumericStock = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const parseBooleanStock = (value, fallback = false) => {
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (['1', 'true', 'si', 'sí', 'yes', 'y', 'activo', 'disponible'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'n', 'inactivo', 'agotado', 'sin_stock'].includes(normalized)) return false;
+  return fallback;
+};
+
+const normalizeStockWine = (wine, index) => {
+  if (!wine || typeof wine !== 'object') return null;
+
+  const stock = parseNumericStock(wine.stock_actual, 0);
+  const disponible = parseBooleanStock(wine.disponible, stock > 0);
+
+  if (!disponible || stock <= 0) return null;
+
+  return {
+    id_producto: wine.id_producto || `stock-${index + 1}`,
+    nombre: wine.nombre,
+    bodega: wine.bodega || '',
+    categoria: wine.categoria || 'vino',
+    subcategoria: wine.subcategoria || '',
+    varietal: wine.varietal || '',
+    pais: wine.pais || '',
+    region: wine.region || '',
+    tipo_vino: wine.tipo_vino || '',
+    cuerpo: wine.cuerpo || '',
+    intensidad: wine.intensidad || '',
+    perfil: wine.perfil || '',
+    acidez: wine.acidez || '',
+    taninos: wine.taninos || '',
+    estilo: wine.estilo || '',
+    maridaje_principal: wine.maridaje_principal || '',
+    maridaje_secundario: wine.maridaje_secundario || '',
+    precio_venta: parseNumericStock(wine.precio_venta, 0),
+    stock_actual: stock,
+    disponible,
+    recomendado_para_regalo: parseBooleanStock(wine.recomendado_para_regalo, false),
+    recomendado_para_caja: parseBooleanStock(wine.recomendado_para_caja, false),
+    recomendado_para_club: parseBooleanStock(wine.recomendado_para_club, false),
+    nivel: wine.nivel || 'clasico',
+    descripcion_corta: wine.descripcion_corta || '',
+    // Compatibilidad con la lógica de recomendaciones actual:
+    precio: parseNumericStock(wine.precio_venta, 0),
+    ocasion: wine.recomendado_para_regalo ? 'regalo' : '',
+    nivel_precio: wine.nivel || 'clasico',
+    activo: true,
+    prioridad_venta: wine.recomendado_para_club ? 'alta' : 'media',
+  };
+};
+
+const readCatalogFile = async (fileName) => {
+  const filePath = path.join(process.cwd(), fileName);
+  const raw = await fs.readFile(filePath, 'utf-8');
+  const data = JSON.parse(raw);
+  return { filePath, data };
+};
+
 const readWineCatalog = async () => {
-  const filePath = path.join(process.cwd(), 'vinos_lombardo_base.json');
   try {
-    const raw = await fs.readFile(filePath, 'utf-8');
+    const { data } = await readCatalogFile('lombardo_stock_ai.json');
+    if (!Array.isArray(data)) return [];
+    return data.map(normalizeStockWine).filter(Boolean);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      error.code = 'WINE_CATALOG_PARSE_ERROR';
+      throw error;
+    }
+  }
+
+  const fallbackPath = path.join(process.cwd(), 'vinos_lombardo_base.json');
+  try {
+    const raw = await fs.readFile(fallbackPath, 'utf-8');
     const data = JSON.parse(raw);
-    return Array.isArray(data) ? data.filter((wine) => wine && wine.activo !== false) : [];
+    return Array.isArray(data)
+      ? data.filter((wine) => wine && wine.activo !== false && parseNumericStock(wine.stock_actual, 1) > 0)
+      : [];
   } catch (error) {
     error.code = error.code === 'ENOENT' ? 'WINE_CATALOG_NOT_FOUND' : 'WINE_CATALOG_PARSE_ERROR';
     throw error;
