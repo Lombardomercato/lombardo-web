@@ -27,11 +27,13 @@ const inferProfile = (message = '') => {
 
 const intentToCategory = (intent = '') => {
   const map = {
-    recomendacion: 'recomendación de vino',
-    educativa: 'maridaje',
-    caja: 'caja',
-    mensualidad: 'mensualidad',
-    comercial: 'club',
+    consulta_producto: 'recomendación de vino',
+    consulta_educativa_vino: 'maridaje',
+    consulta_caja: 'caja',
+    consulta_mensualidad: 'mensualidad',
+    consulta_experiencias: 'experiencias',
+    consulta_club: 'club',
+    consulta_contacto: 'contacto',
   };
 
   return map[intent] || 'otros';
