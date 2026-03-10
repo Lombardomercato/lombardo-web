@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lombardo IA · Admin Insights</title>
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="../../css/admin-insights.css" />
+</head>
+<body class="admin-insights-page">
+  <main class="insights-shell">
+    <header class="insights-header">
+      <p class="eyebrow">Asistente IA Lombardo</p>
+      <h1>Panel de Insights</h1>
+      <p>Vista comercial para entender cómo usan los clientes el chat y qué están buscando.</p>
+    </header>
+
+    <section id="authSection" class="insights-auth card">
+      <h2>Acceso</h2>
+      <p>Ingresá la clave de administración para consultar métricas.</p>
+      <form id="authForm" class="auth-form">
+        <input id="adminKey" type="password" autocomplete="current-password" placeholder="Clave ADMIN_INSIGHTS_KEY" />
+        <button type="submit" class="btn btn-primary">Entrar</button>
+      </form>
+      <small>Si el backend no define clave, podés entrar sin completar este campo.</small>
+    </section>
+
+    <section id="dashboard" class="insights-dashboard" hidden>
+      <div class="summary-grid" id="summaryCards"></div>
+
+      <div class="insights-grid">
+        <article class="card">
+          <h3>Consultas más frecuentes</h3>
+          <div id="consultasFrecuentes" class="bar-chart"></div>
+        </article>
+
+        <article class="card">
+          <h3>Perfiles de cliente</h3>
+          <div id="perfilesCliente" class="bar-chart"></div>
+        </article>
+
+        <article class="card">
+          <h3>Consultas que más derivan a WhatsApp</h3>
+          <ol id="whatsappRanking" class="ordered-list"></ol>
+        </article>
+
+        <article class="card">
+          <h3>Vinos más sugeridos</h3>
+          <ol id="vinosRanking" class="ordered-list"></ol>
+        </article>
+
+        <article class="card full-width">
+          <h3>Temas emergentes</h3>
+          <ul id="temasEmergentes" class="topic-list"></ul>
+        </article>
+      </div>
+    </section>
+
+    <p id="stateMessage" class="state-message"></p>
+  </main>
+
+  <script src="../../js/admin-insights.js"></script>
+</body>
+</html>

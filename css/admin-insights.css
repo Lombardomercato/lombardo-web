@@ -1,0 +1,136 @@
+.admin-insights-page {
+  background: #f7f8fb;
+  color: #12243a;
+}
+
+.insights-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 40px 20px 56px;
+}
+
+.insights-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.insights-header p {
+  margin-top: 8px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .75rem;
+  color: #003a70;
+  font-weight: 700;
+}
+
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #e6e8ef;
+  box-shadow: 0 6px 20px rgba(10, 30, 60, 0.05);
+}
+
+.auth-form {
+  display: flex;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+
+.auth-form input {
+  flex: 1;
+  border: 1px solid #d4dae5;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.metric-card {
+  background: #fff;
+  border: 1px solid #e6e8ef;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.metric-card .label {
+  font-size: .82rem;
+  color: #5e6b7f;
+}
+
+.metric-card .value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.bar-chart {
+  display: grid;
+  gap: 10px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 170px 1fr 42px;
+  align-items: center;
+  gap: 10px;
+  font-size: .88rem;
+}
+
+.bar-track {
+  width: 100%;
+  background: #eef1f8;
+  border-radius: 999px;
+  overflow: hidden;
+  height: 10px;
+}
+
+.bar-fill {
+  background: linear-gradient(90deg, #003a70, #3f75a8);
+  height: 100%;
+}
+
+.ordered-list, .topic-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ordered-list li, .topic-list li {
+  margin-bottom: 8px;
+}
+
+.state-message {
+  margin-top: 14px;
+  color: #9d2f2f;
+  font-size: .92rem;
+}
+
+@media (max-width: 860px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bar-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
