@@ -1983,31 +1983,74 @@ main > .section:last-child::after,
 
 /* Sommelier IA */
 .sommelier-hero {
-  padding-bottom: clamp(34px, 6vw, 68px);
+  padding-bottom: clamp(40px, 6vw, 74px);
   background:
-    radial-gradient(circle at 8% 12%, rgba(224, 60, 49, 0.18), transparent 48%),
-    radial-gradient(circle at 90% 14%, rgba(0, 58, 112, 0.2), transparent 42%),
+    radial-gradient(circle at 8% 12%, rgba(224, 60, 49, 0.22), transparent 48%),
+    radial-gradient(circle at 90% 14%, rgba(0, 58, 112, 0.24), transparent 42%),
+    radial-gradient(circle at 55% 72%, rgba(255, 183, 170, 0.24), transparent 44%),
     linear-gradient(180deg, rgba(252, 247, 242, 0.8), rgba(255, 255, 255, 0));
 }
 
 .sommelier-intro {
-  text-align: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(20px, 4vw, 42px);
+  align-items: center;
+}
+
+.sommelier-hero-copy {
+  text-align: left;
 }
 
 .sommelier-intro h1 {
-  margin-inline: auto;
+  margin-inline: 0;
   max-width: 14ch;
 }
 
 .sommelier-lead {
   font-size: clamp(1.07rem, 1.8vw, 1.3rem);
-  margin-inline: auto;
+  margin-inline: 0;
   max-width: 50ch;
 }
 
 .sommelier-note {
   color: rgba(0, 58, 112, 0.78);
-  margin-inline: auto;
+  margin-inline: 0;
+}
+
+.sommelier-hero-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sommelier-hero-stats {
+  display: grid;
+  gap: 12px;
+}
+
+.sommelier-stat-card {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 255, 0.9));
+  box-shadow: 0 14px 30px rgba(0, 58, 112, 0.1);
+  padding: 14px 16px;
+}
+
+.sommelier-stat-value {
+  margin: 0;
+  font-family: 'Gopher', sans-serif;
+  color: var(--azul);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+}
+
+.sommelier-stat-label {
+  margin: 6px 0 0;
+  color: rgba(0, 58, 112, 0.78);
+  font-size: 0.93rem;
 }
 
 .sommelier-section {
@@ -2641,6 +2684,23 @@ main > .section:last-child::after,
 }
 
 @media (max-width: 640px) {
+  .sommelier-intro {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .sommelier-hero-copy,
+  .sommelier-note,
+  .sommelier-lead,
+  .sommelier-intro h1 {
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .sommelier-hero-actions {
+    justify-content: center;
+  }
+
   .sommelier-app {
     padding: 18px;
   }
@@ -2652,6 +2712,10 @@ main > .section:last-child::after,
 
   .sommelier-step-title {
     text-align: left;
+  }
+
+  .wine-tinder {
+    margin-top: 0;
   }
 
   .sommelier-textarea {
@@ -3499,6 +3563,8 @@ main > .section:last-child::after,
 }
 
 .wine-tinder {
+  position: relative;
+  margin-top: -20px;
   border: 1px solid rgba(0, 58, 112, 0.16);
   border-radius: var(--radius-lg);
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 255, 0.88));
@@ -3507,12 +3573,20 @@ main > .section:last-child::after,
 }
 
 .wine-tinder-start,
+.wine-tinder-swipe,
+.wine-tinder-result {
+  width: min(100%, 900px);
+  margin-inline: auto;
+}
+
+.wine-tinder-start,
 .wine-tinder-result {
   text-align: center;
 }
 
 .wine-tinder-start h2 {
-  margin-bottom: 10px;
+  margin: 0 auto 10px;
+  max-width: 16ch;
 }
 
 .wine-tinder-start p {
