@@ -293,6 +293,67 @@ if (sommelierApp) {
 
   const chatHistory = [];
 
+  const getSommelierPageContext = () => {
+    const fileName = window.location.pathname.split('/').pop() || 'sommelier.html';
+    const map = {
+      'index.html': 'home',
+      'vinos.html': 'vinos',
+      'sommelier.html': 'sommelier',
+      'club.html': 'club',
+      'cafe.html': 'cafe',
+      'experiencias.html': 'experiencias',
+      'eventos.html': 'eventos',
+      'contacto.html': 'contacto',
+    };
+
+    return map[fileName] || 'general';
+  };
+
+  let sommelierLocalCatalogCache = null;
+
+  const getSommelierLocalCatalog = async () => {
+    if (Array.isArray(sommelierLocalCatalogCache)) return sommelierLocalCatalogCache;
+
+    const response = await fetch('vinos_lombardo_base.json', { cache: 'no-store' });
+    const data = await response.json().catch(() => []);
+    sommelierLocalCatalogCache = Array.isArray(data) ? data.filter((wine) => wine?.activo !== false) : [];
+    return sommelierLocalCatalogCache;
+  };
+
+  const buildSommelierLocalFallback = async (message) => {
+    const wines = await getSommelierLocalCatalog();
+    if (!wines.length) return 'Ahora mismo no pude responder. Probá de nuevo en unos segundos.';
+
+    const normalized = String(message || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '');
+
+    const priorities = wines.map((wine) => {
+      let score = 0;
+      if (/regal/.test(normalized) && wine.ocasion === 'regalo') score += 4;
+      if (/(asado|carne|parrilla)/.test(normalized) && wine.maridaje_principal === 'carne') score += 4;
+      if (/(picada|queso|fiambre)/.test(normalized) && wine.maridaje_principal === 'picada') score += 4;
+      if (/(blanco|fresco|suave)/.test(normalized) && wine.tipo_vino === 'blanco') score += 2;
+      if (/(tinto|intenso|cuerpo)/.test(normalized) && wine.tipo_vino === 'tinto') score += 2;
+      if (wine.prioridad_venta === 'alta') score += 1;
+      return { wine, score };
+    });
+
+    const selected = priorities
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((entry) => entry.wine);
+
+    const lines = selected.map((wine) => `• ${wine.nombre} · ${wine.varietal} · ${formatPrice(wine.precio)}`);
+
+    return [
+      'No pude conectar con el backend en este momento, pero te dejo una selección local para avanzar:',
+      ...lines,
+      'Si querés, te la ajusto por ocasión, comida o presupuesto.',
+    ].join('\n');
+  };
+
   const appendChatMessage = (role, content, options = {}) => {
     if (!chatMessages || !content) return null;
 
@@ -329,7 +390,11 @@ if (sommelierApp) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({
+        message,
+        history: chatHistory.slice(-14),
+        pagina_actual: getSommelierPageContext(),
+      }),
     });
 
     const data = await response.json().catch(() => ({}));
@@ -370,7 +435,10 @@ if (sommelierApp) {
         appendChatMessage('assistant', answer || 'No encontré una sugerencia clara. Si querés, probá reformulando con comida, ocasión o estilo.');
       } catch (error) {
         if (typingNode) typingNode.remove();
-        appendChatMessage('assistant', 'Ahora mismo no pude responder. Probá de nuevo en unos segundos.');
+        const localFallback = await buildSommelierLocalFallback(message).catch(() => '');
+        const safeFallback = localFallback || 'Ahora mismo no pude responder. Probá de nuevo en unos segundos.';
+        appendChatMessage('assistant', safeFallback);
+        chatHistory.push({ role: 'assistant', content: safeFallback });
         console.error(error);
       } finally {
         setChatLoading(false);
