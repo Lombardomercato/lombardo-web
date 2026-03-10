@@ -1441,6 +1441,8 @@ const initGlobalLombardoAssistant = () => {
     switch (error?.code) {
       case 'NETWORK_ERROR':
         return 'No pude conectarme en este momento. Revisá tu conexión y probá de nuevo.';
+      case 'BACKEND_UNAVAILABLE':
+        return 'No encontramos el backend del asistente en este entorno. Configurá assistant-api-url (o assistant-api-base) para conectarlo.';
       case 'OPENAI_NETWORK_ERROR':
       case 'OPENAI_CONFIG_ERROR':
       case 'OPENAI_HTTP_ERROR':
@@ -1453,27 +1455,83 @@ const initGlobalLombardoAssistant = () => {
     }
   };
 
+  const resolveAssistantApiUrl = () => {
+    const explicit = document.querySelector('meta[name="assistant-api-url"]')?.content?.trim();
+    if (explicit) return explicit;
+
+    // Causa raíz detectada: en deploys estáticos (ej: GitHub Pages) no existe /api/*.
+    // Permitimos configurar un backend externo sin tocar JS mediante meta tag.
+    const base = document.querySelector('meta[name="assistant-api-base"]')?.content?.trim();
+    if (base) return `${base.replace(/\/$/, '')}/api/sommelier-chat`;
+
+    return '/api/sommelier-chat';
+  };
+
+  const buildLocalAssistantFallback = async (message) => {
+    const response = await fetch('vinos_lombardo_base.json', { cache: 'no-store' });
+    const wines = (await response.json().catch(() => [])).slice(0, 3);
+    if (!Array.isArray(wines) || !wines.length) {
+      return 'Gracias por tu consulta. Si querés, contame ocasión, presupuesto y estilo para ayudarte mejor.';
+    }
+
+    const listed = wines
+      .map((wine) => [wine.nombre, wine.varietal, wine.tipo_vino, wine.precio].filter(Boolean).join(' · '))
+      .map((line) => `• ${line}`)
+      .join('\n');
+
+    return [
+      'Estoy en modo local (sin backend activo), pero igual puedo recomendarte opciones reales de Lombardo:',
+      listed,
+      `Si querés, afino estas opciones según tu consulta: "${message.slice(0, 120)}".`,
+    ].join('\n');
+  };
+
   const sendMessage = async (message) => {
+    const payload = {
+      message,
+      pagina_actual: pageContext,
+      history,
+    };
+    const endpoint = resolveAssistantApiUrl();
+    console.log('[assistant-widget][debug] payload enviado:', payload);
+    console.log('[assistant-widget][debug] endpoint:', endpoint);
+
     let response;
     try {
-      response = await fetch('/api/sommelier-chat', {
+      response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message,
-          pagina_actual: pageContext,
-          history,
-        }),
+        body: JSON.stringify(payload),
       });
     } catch (error) {
+      console.error('[assistant-widget][debug] fetch error:', error);
       const networkError = new Error('No se pudo conectar con el endpoint del asistente.');
       networkError.code = 'NETWORK_ERROR';
       throw networkError;
     }
 
-    const data = await response.json().catch(() => ({}));
+    const rawBody = await response.text().catch(() => '');
+    let data = {};
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {};
+    } catch (error) {
+      console.warn('[assistant-widget][debug] respuesta no JSON:', rawBody.slice(0, 300));
+    }
+
+    console.log('[assistant-widget][debug] status HTTP:', response.status);
+    console.log('[assistant-widget][debug] body recibido:', data);
 
     if (!response.ok) {
+      const endpointUnavailable = [404, 405, 500, 501, 502, 503].includes(response.status);
+      const nonJsonReply = !rawBody || rawBody.trim().startsWith('<!DOCTYPE') || rawBody.trim().startsWith('<html');
+
+      if (endpointUnavailable && (nonJsonReply || !data.error_code)) {
+        const backendError = new Error('El backend /api/sommelier-chat no está disponible en este host.');
+        backendError.code = 'BACKEND_UNAVAILABLE';
+        backendError.status = response.status;
+        throw backendError;
+      }
+
       const endpointError = new Error(data.error || 'No se pudo obtener respuesta del asistente.');
       endpointError.code = data.error_code || 'ENDPOINT_ERROR';
       endpointError.status = response.status;
@@ -1508,7 +1566,19 @@ const initGlobalLombardoAssistant = () => {
       writeHistory(history);
     } catch (error) {
       console.error('[assistant-widget] Error al responder chat:', error);
-      appendMessage('assistant', getFriendlyClientError(error));
+
+      if (error?.code === 'BACKEND_UNAVAILABLE') {
+        const localAnswer = await buildLocalAssistantFallback(trimmed).catch(() => '');
+        if (localAnswer) {
+          appendMessage('assistant', localAnswer);
+          history.push({ role: 'assistant', content: localAnswer });
+          writeHistory(history);
+        } else {
+          appendMessage('assistant', getFriendlyClientError(error));
+        }
+      } else {
+        appendMessage('assistant', getFriendlyClientError(error));
+      }
     } finally {
       setLoading(false);
       input.value = '';

@@ -324,6 +324,7 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
 
   let response;
   try {
+    console.log('[sommelier-chat][debug] llamando OpenAI', { model: OPENAI_MODEL, endpoint: OPENAI_URL });
     response = await fetch(OPENAI_URL, {
       method: 'POST',
       headers: {
@@ -359,6 +360,11 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
     error.code = 'OPENAI_PARSE_ERROR';
     throw error;
   });
+
+  console.log('[sommelier-chat][debug] OpenAI response ok', {
+    hasOutputText: Boolean(data.output_text),
+  });
+
   return (data.output_text || '').trim();
 };
 
@@ -402,6 +408,43 @@ const appendWhatsAppSuggestion = ({ answer, pageContext }) => {
   return `${trimmed}\n\n${buildWhatsAppSuggestion(pageContext)}`;
 };
 
+const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext }) => {
+  const options = (recommendedWines.length ? recommendedWines : wines.slice(0, MAX_RECOMMENDATIONS)).slice(
+    0,
+    MAX_RECOMMENDATIONS
+  );
+
+  if (!options.length) {
+    return [
+      '¡Gracias por tu consulta! En este momento no pude cargar recomendaciones específicas.',
+      'Si querés, contame ocasión, presupuesto aproximado y estilo de vino para ayudarte mejor.',
+    ].join(' ');
+  }
+
+  const introByContext = {
+    club: '¡Buenísimo! Para el club, te propongo esta selección inicial:',
+    sommelier: '¡Genial! Con lo que me contaste, te recomiendo estas opciones:',
+    vinos: '¡Excelente elección! Te recomiendo estas etiquetas de Lombardo:',
+  };
+
+  const intro = introByContext[pageContext] || '¡Perfecto! Acá van algunas opciones que te pueden encajar:';
+
+  const listed = options
+    .map((wine) => {
+      const parts = [wine.nombre, wine.varietal, wine.tipo_vino, wine.precio]
+        .map((part) => sanitizeMessage(String(part || '')))
+        .filter(Boolean);
+      return `• ${parts.join(' · ')}`;
+    })
+    .join('\n');
+
+  const closing = hasRecommendationIntent(message)
+    ? 'Si querés, te ajusto la selección por comida, ocasión o presupuesto.'
+    : 'Si me compartís la ocasión o comida principal, te afino la recomendación.';
+
+  return [intro, listed, closing].join('\n');
+};
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -409,27 +452,57 @@ module.exports = async (req, res) => {
   }
 
   try {
+    console.log('[sommelier-chat][debug] request recibido', {
+      method: req.method,
+      contentType: req.headers?.['content-type'] || '',
+      hasBody: Boolean(req.body),
+    });
+
     const message = sanitizeMessage(req.body?.message);
     const pageContext = sanitizePageContext(req.body?.pagina_actual);
     const history = sanitizeHistory(req.body?.history);
+
+    console.log('[sommelier-chat][debug] payload recibido', {
+      messageLength: message.length,
+      pageContext,
+      historyItems: history.length,
+    });
 
     if (!message) {
       return res.status(400).json({ error: 'El campo "message" es obligatorio.' });
     }
 
     const wines = await readWineCatalog();
+    console.log('[sommelier-chat][debug] catálogo cargado', { wines: wines.length });
+
     const recommendedWines = selectRecommendedWines({ wines, message });
-    const rawAnswer = await createOpenAIResponse({
-      message,
-      wines,
-      pageContext,
-      history,
-      recommendedWines,
-    });
+    console.log('[sommelier-chat][debug] preselección', { recommended: recommendedWines.length });
+    const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
+    console.log('[sommelier-chat][debug] OpenAI key disponible:', hasOpenAIKey);
+
+    const rawAnswer = hasOpenAIKey
+      ? await createOpenAIResponse({
+          message,
+          wines,
+          pageContext,
+          history,
+          recommendedWines,
+        })
+      : buildFallbackRecommendationAnswer({
+          message,
+          wines,
+          recommendedWines,
+          pageContext,
+        });
 
     if (!rawAnswer) {
       return res.status(502).json({ error: 'No se obtuvo respuesta del modelo.' });
     }
+
+    console.log('[sommelier-chat][debug] respuesta generada', {
+      answerLength: rawAnswer.length,
+      via: hasOpenAIKey ? 'openai' : 'fallback-local',
+    });
 
     const suggestWhatsApp = shouldSuggestWhatsApp({ message, pageContext });
     const answer = suggestWhatsApp
