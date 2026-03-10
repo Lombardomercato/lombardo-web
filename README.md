@@ -75,8 +75,10 @@ Legado archivado:
 - Variables de entorno necesarias:
   - `OPENAI_API_KEY`
   - `OPENAI_MODEL` (opcional, default `gpt-4o-mini`)
+  - `AI_INTERACTIONS_FILE` (opcional, default `data/ai-interactions.jsonl`)
 - El front-end de `sommelier.html` llama a ese endpoint y NO expone la API key en cliente.
 - El endpoint usa `vinos_lombardo_base.json` como única base para recomendar.
+- Además registra interacciones comerciales estructuradas para aprendizaje de negocio (sin autoentrenamiento) y expone resumen en `GET /api/sommelier-learning-summary`.
 - Si deployás en hosting estático puro (ej: GitHub Pages), la ruta `/api/sommelier-chat` no existe por defecto.
   - Configurá un backend externo agregando en el `<head>`:
     - `<meta name="assistant-api-url" content="https://tu-backend.com/api/sommelier-chat" />`
