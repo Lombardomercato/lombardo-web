@@ -1,5 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { recordInteraction, inferProfile, intentToCategory } = require('./lib/assistant-interactions');
 
 const {
   detectConsultCategory,
@@ -719,21 +720,15 @@ module.exports = async (req, res) => {
       },
     };
 
-    const category = detectConsultCategory({ message, intent, pageContext });
-    const profile = detectProfile({ message, category });
-    const interactionRecord = buildInteractionRecord({
-      message,
-      pageContext,
-      intent,
-      profile,
-      category,
-      suggestedProducts: recommendedWines.map((wine) => wine?.nombre).filter(Boolean),
-      closingType,
-      derivoWhatsapp: suggestWhatsApp,
-    });
-
-    logInteractionRecord(interactionRecord).catch((recordError) => {
-      console.error('[sommelier-chat][interaction-log-error]', recordError);
+    await recordInteraction({
+      mensaje_usuario: message,
+      pagina_actual: pageContext,
+      intencion_detectada: intent,
+      perfil_detectado: inferProfile(message),
+      categoria_consulta: intentToCategory(intent),
+      productos_sugeridos: recommendedWines.map((wine) => wine.nombre).filter(Boolean),
+      tipo_cierre: closingType,
+      derivo_whatsapp: suggestWhatsApp,
     });
 
     return res.status(200).json({

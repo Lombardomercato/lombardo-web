@@ -92,3 +92,12 @@ Legado archivado:
 - Contrato canónico documentado en `ai-backend-canonical.md`.
 - `lombardo-ai-backend/` queda explícitamente deprecado para evitar drift arquitectónico.
 - El frontend (widget global + chat embebido Sommelier) quedó alineado al mismo endpoint y acepta el shape canónico (`reply`, `suggestions`, `whatsappUrl`, `fallback`) con compatibilidad legacy.
+
+
+13) PANEL ADMIN INSIGHTS
+- Nueva vista de analytics: `admin/insights/` (ruta pública esperada: `/admin/insights`).
+- API de insights: `GET /api/admin-insights`.
+- Autenticación simple opcional por token bearer:
+  - Variable de entorno: `ADMIN_INSIGHTS_KEY`
+  - Si no está definida, el endpoint permite acceso sin token.
+- El endpoint de chat `POST /api/sommelier-chat` ahora registra interacciones en `.data/assistant-interactions.json` para alimentar el dashboard.
