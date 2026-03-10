@@ -2190,8 +2190,8 @@ const initGlobalLombardoAssistant = () => {
         'Si querés salir de lo de siempre, estas tres opciones te pueden sorprender:',
       ],
       generic: [
-        '¡Vamos con una selección bien Lombardo para arrancar!',
-        'Te comparto tres opciones equilibradas para empezar a elegir mejor:',
+        'Vamos directo a una selección Lombardo para tu caso:',
+        'Tres opciones equilibradas para arrancar:',
       ],
     }[introKey] || []);
 
@@ -2227,7 +2227,7 @@ const initGlobalLombardoAssistant = () => {
     }
 
     if (intent === 'educational') {
-      return '¡Excelente pregunta! Te respondo desde lo educativo y, si querés después, te puedo sugerir opciones de Lombardo en esa línea.';
+      return 'Te explico rápido y simple: si querés, después lo bajamos a etiquetas concretas de Lombardo.';
     }
 
     if (intent === 'club') {
@@ -2239,7 +2239,7 @@ const initGlobalLombardoAssistant = () => {
     }
 
     if (!wines.length) {
-      return 'Gracias por escribirnos 💙 Si me contás ocasión, presupuesto y estilo, te orientamos ahora mismo. Y si querés cerrar rápido, te paso contacto por WhatsApp.';
+      return 'Si me decís ocasión, presupuesto y estilo, te propongo opciones concretas en un mensaje.';
     }
 
     if (intent === 'box') {
@@ -2279,9 +2279,9 @@ const initGlobalLombardoAssistant = () => {
     }
 
     return chooseVariant(message, [
-      'Estoy para ayudarte con vinos, regalos, cajas, mensualidad del club y experiencias. Si querés, empezamos por ocasión + presupuesto y te hago una propuesta concreta.',
-      'Podemos armar juntos una recomendación de vinos, una caja o una mensualidad. Contame qué ocasión tenés y cuánto querés invertir, y te propongo algo bien a medida.',
-      'Si tu consulta es general, te puedo orientar acá mismo. Y si querés cerrar una reserva o compra, lo derivamos por WhatsApp en un segundo.',
+      'Contame ocasión y presupuesto, y te armo una recomendación concreta de vinos, caja o mensualidad.',
+      'Puedo armarte una recomendación de vinos, una caja o una mensualidad según ocasión y presupuesto.',
+      'Si querés cerrar compra o reserva, te paso el enlace directo de WhatsApp.',
     ]);
   };
 
@@ -2402,7 +2402,7 @@ const initGlobalLombardoAssistant = () => {
   if (history.length) {
     history.forEach((item) => appendMessage(item.role, item.content));
   } else {
-    const welcome = '¡Hola! Soy el Asistente IA Lombardo. Estoy para ayudarte con vinos, regalos, cajas, club, café y experiencias.';
+    const welcome = '¡Hola! Soy el Asistente IA Lombardo. Decime qué estás buscando y te recomiendo algo concreto.';
     appendMessage('assistant', welcome);
     history.push({ role: 'assistant', content: welcome });
     writeHistory(history);

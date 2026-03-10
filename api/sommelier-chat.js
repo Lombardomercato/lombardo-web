@@ -102,7 +102,7 @@ const SYSTEM_PROMPT = [
   'Si la intención es consulta_contacto: derivá a WhatsApp o contacto humano.',
   'No sugieras navegar a páginas independientes de vino, café, eventos, catas, galería o tienda.',
   'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
-  'Si aporta valor, cerrá con un siguiente paso útil y natural según intención: educativo, etiquetas, caja ideal, mensualidad o WhatsApp.',
+  'Si aporta valor, cerrá con un siguiente paso útil; si no suma, cerrá sin follow-up.',
 ].join('\n');
 
 const parseNumericStock = (value, fallback = 0) => {
@@ -503,12 +503,12 @@ const buildClosingSuggestion = ({ closingType, pageContext }) => {
 
   const byType = {
     [CLOSING_TYPES.EDUCATIONAL]:
-      'Si querés, también te puedo orientar sobre qué estilos van mejor con distintas comidas o momentos.',
+      'Si querés, lo bajo a estilos concretos según la comida o el momento que tengas.',
     [CLOSING_TYPES.LABELS]:
-      'Si querés, también te puedo sugerir algunas etiquetas de Lombardo en esa línea.',
-    [CLOSING_TYPES.BOX]: 'Si querés, también te puedo armar una caja de 3 vinos pensada para ese perfil.',
+      'Si te sirve, te paso 2 o 3 etiquetas de Lombardo que vayan con eso.',
+    [CLOSING_TYPES.BOX]: 'Si querés, te armo una caja de 3 vinos en esa línea (segura, especial y para descubrir).',
     [CLOSING_TYPES.SUBSCRIPTION]:
-      'Si ese estilo es el que más disfrutás, también te puedo sugerir una mensualidad recomendada.',
+      'Si ese perfil te representa, te puedo sugerir una mensualidad alineada a tu gusto.',
   };
 
   return byType[closingType] || byType[CLOSING_TYPES.EDUCATIONAL];
@@ -549,13 +549,14 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }
     return { answer: trimmed, closingType };
   }
 
-  if (closingType !== CLOSING_TYPES.WHATSAPP && trimmed.length > 320) {
+  if (closingType !== CLOSING_TYPES.WHATSAPP && trimmed.length > 220) {
     return { answer: trimmed, closingType };
   }
 
-  return { answer: `${trimmed}
+  const shouldAppend = closingType === CLOSING_TYPES.WHATSAPP || trimmed.length < 160;
+  if (!shouldAppend) return { answer: trimmed, closingType };
 
-${suggestion}`, closingType };
+  return { answer: `${trimmed}\n\n${suggestion}`, closingType };
 };
 
 const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent }) => {
@@ -594,7 +595,7 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     'Si es modo mixto, explicá primero la lógica general y luego ofrecé o sugerí opciones de Lombardo alineadas.',
     'No uses siempre el mismo formato de respuesta. Variá entre párrafo corto, párrafo + bullets o respuesta breve según lo que pida el cliente.',
     'Evitá repetir fórmulas automáticas de apertura/cierre entre respuestas consecutivas.',
-    'Cerrá con una pregunta breve y útil solo cuando ayude a avanzar.',
+    'Cerrá con una pregunta breve y útil solo cuando ayude a avanzar (no en todas las respuestas).',
     '',
     'Ejemplo deseado (consulta_producto): “Si querés moverte cerca de los $20.000, hay varias opciones que pueden ir bien. Trumpeter Malbec suele ser una alternativa muy rendidora en ese rango, fácil de recomendar y bastante versátil. También podrías mirar Zuccardi Serie A Malbec si querés algo con un perfil un poco más gastronómico. Y si te interesa algo apenas más arriba, Rutini Cabernet Malbec también puede entrar en juego. ¿Lo buscás para comida, regalo o para tomar solo?”.',
     'Ejemplo deseado (consulta_educativa_vino): “El Malbec suele ir muy bien con carnes rojas, asado, empanadas, pastas con salsa intensa y quesos semiduros. En general funciona mejor con platos que tengan cierta intensidad, porque si la comida es muy liviana el vino puede taparla. Si querés, también te puedo sugerir opciones de Lombardo que vayan bien para ese tipo de comida.”.',
@@ -644,7 +645,7 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
           },
         ],
         max_output_tokens: 350,
-        temperature: 0.4,
+        temperature: 0.7,
       }),
     });
   } catch (error) {
