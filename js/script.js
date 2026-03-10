@@ -318,12 +318,14 @@ if (sommelierApp) {
     const fileName = window.location.pathname.split('/').pop() || 'sommelier.html';
     const map = {
       'index.html': 'home',
-      'vinos.html': 'vinos',
+      'vinos.html': 'experiencias',
       'sommelier.html': 'sommelier',
       'club.html': 'club',
-      'cafe.html': 'cafe',
+      'cafe.html': 'experiencias',
       'experiencias.html': 'experiencias',
-      'eventos.html': 'eventos',
+      'eventos.html': 'experiencias',
+      'galeria.html': 'experiencias',
+      'tienda.html': 'club',
       'contacto.html': 'contacto',
     };
 
@@ -1483,17 +1485,32 @@ const formatAssistantCurrencyDisplay = (content) => {
 
 const getPageContext = () => {
   const customContext = document.body?.dataset?.pageContext;
-  if (customContext) return customContext;
+  const contextAliases = {
+    vinos: 'experiencias',
+    vino: 'experiencias',
+    cafe: 'experiencias',
+    eventos: 'experiencias',
+    catas: 'experiencias',
+    galeria: 'experiencias',
+    tienda: 'club',
+    membresia: 'club',
+    cajas: 'club',
+    seleccion_mensual: 'club',
+  };
+
+  if (customContext) return contextAliases[customContext] || customContext;
 
   const fileName = window.location.pathname.split('/').pop() || 'index.html';
   const contextMap = {
     'index.html': 'home',
-    'vinos.html': 'vinos',
+    'vinos.html': 'experiencias',
     'sommelier.html': 'sommelier',
     'club.html': 'club',
-    'cafe.html': 'cafe',
+    'cafe.html': 'experiencias',
     'experiencias.html': 'experiencias',
-    'eventos.html': 'eventos',
+    'eventos.html': 'experiencias',
+    'galeria.html': 'experiencias',
+    'tienda.html': 'club',
     'contacto.html': 'contacto',
   };
 
@@ -1694,8 +1711,8 @@ const initGlobalLombardoAssistant = () => {
       discover: /(distinto|descubrir|nuevo|sorprender|fuera de lo comun|explorar)/,
       box: /(armame una caja|arma(me)? una caja|caja de vinos|seleccion para llevar)/,
       membership: /(mensualidad|membresia|suscripcion|club mensual|todos los meses)/,
-      clubInfo: /(que incluye el club|beneficios del club|como funciona el club|club lombardo)/,
-      experiences: /(que experiencias|experiencias tienen|catas|after office|balcon|eventos)/,
+      clubInfo: /(que incluye el club|beneficios del club|como funciona el club|club lombardo|membresia|membresía|tienda)/,
+      experiences: /(que experiencias|experiencias tienen|catas|after office|balcon|balc[oó]n|eventos|cafe|caf[eé]|galeria|galer[ií]a|vino)/,
     };
 
     if (checks.membership.test(text)) return 'membership';
