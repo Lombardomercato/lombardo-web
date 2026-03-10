@@ -3841,3 +3841,89 @@ main > .section:last-child::after,
 .sommelier-ia-intro p {
   color: rgba(0, 58, 112, 0.82);
 }
+
+/* 2026 consistency pass — Apple-like visual system */
+:root {
+  --font-hero: clamp(2.6rem, 8vw, 5.6rem);
+  --font-title: clamp(1.8rem, 4.2vw, 3.2rem);
+  --font-subtitle: clamp(1.1rem, 2vw, 1.42rem);
+  --font-body: clamp(0.98rem, 1.2vw, 1.08rem);
+  --font-button: 0.78rem;
+  --space-section: clamp(68px, 9vw, 128px);
+  --surface-card: rgba(255, 255, 255, 0.62);
+}
+
+.section,
+main > .section:nth-of-type(odd):not(.hero),
+main > .section:nth-of-type(even):not(.hero) {
+  padding-block: var(--space-section);
+}
+
+h1,
+.hero-editorial h1 {
+  font-size: var(--font-hero);
+}
+
+h2,
+.home-editorial h2 {
+  font-size: var(--font-title);
+}
+
+h3 {
+  font-size: var(--font-subtitle);
+}
+
+p,
+.section-lead,
+.hero p {
+  font-size: var(--font-body);
+}
+
+.btn,
+.main-nav .nav-cta {
+  border-radius: 999px;
+  font-size: var(--font-button);
+  letter-spacing: 0.11em;
+  transition: transform 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-primary {
+  box-shadow: 0 10px 24px rgba(0, 58, 112, 0.18);
+}
+
+.btn-secondary,
+.btn-tertiary {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.card,
+.section-card,
+.wine-card,
+.sommelier-wine-card,
+.wine-tinder-start,
+.wine-tinder-swipe,
+.wine-tinder-result,
+.sommelier-app,
+.sommelier-profile,
+.sommelier-box,
+.sommelier-membership,
+.sommelier-ai-chat,
+.sommelier-closing {
+  background: var(--surface-card);
+  border-color: rgba(0, 58, 112, 0.16);
+  box-shadow: 0 14px 30px rgba(0, 58, 112, 0.1);
+}
+
+.card:hover,
+.sommelier-wine-card:hover,
+.wine-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 36px rgba(0, 58, 112, 0.14);
+}
+
+@media (max-width: 760px) {
+  :root {
+    --font-button: 0.74rem;
+    --space-section: 56px;
+  }
+}
