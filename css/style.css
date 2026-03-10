@@ -2730,7 +2730,7 @@ main > .section:last-child::after,
   width: 100%;
   font-size: 0.66rem;
   letter-spacing: 0.1em;
-  text-transform: none;
+  text-transform: uppercase;
   border: 1px solid transparent;
   border-radius: 10px;
   padding: 9px 10px;
@@ -2741,6 +2741,7 @@ main > .section:last-child::after,
   background: rgba(255, 179, 171, 0.08);
   border-color: rgba(255, 179, 171, 0.36);
 }
+
 
 .nav-secondary {
   justify-self: end;
