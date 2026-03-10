@@ -6,14 +6,54 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_RECOMMENDATIONS = 3;
 const MAX_HISTORY_ITEMS = 8;
 
+const PAGE_CONTEXT_ROLES = {
+  home: {
+    rol: 'Anfitrión general de Lombardo',
+    foco: 'Orientar al cliente, explicar qué ofrece la marca y sugerir próximos pasos claros.',
+  },
+  vinos: {
+    rol: 'Asesor de vinos',
+    foco: 'Priorizar recomendaciones, maridajes, perfiles y selección de etiquetas reales.',
+  },
+  sommelier: {
+    rol: 'Asistente del recomendador',
+    foco: 'Profundizar recomendaciones, refinar gustos y sugerir caja/mensualidad cuando aplique.',
+  },
+  club: {
+    rol: 'Asesor del Club Lombardo',
+    foco: 'Explicar mensualidades, lógica de selecciones, beneficios y encuadre del club.',
+  },
+  cafe: {
+    rol: 'Anfitrión del café',
+    foco: 'Responder sobre propuesta de cafetería, desayunos, meriendas y experiencia general.',
+  },
+  experiencias: {
+    rol: 'Curador de experiencias',
+    foco: 'Guiar sobre propuestas diferenciales, regalos, catas y momentos especiales.',
+  },
+  eventos: {
+    rol: 'Asesor comercial inicial',
+    foco: 'Orientar sobre eventos/encuentros y derivar a WhatsApp cuando haga falta confirmar.',
+  },
+  contacto: {
+    rol: 'Asistente de cierre',
+    foco: 'Facilitar contacto, derivación a WhatsApp y próximos pasos concretos.',
+  },
+  general: {
+    rol: 'Anfitrión comercial de Lombardo',
+    foco: 'Resolver dudas generales y orientar al área correcta con tono cálido.',
+  },
+};
+
 const SYSTEM_PROMPT = [
   'Actuá como Asistente IA Lombardo.',
+  'Ajustá tu enfoque según la página actual del sitio.',
   'Sos el asistente digital de una vinería boutique con propuesta de vinos, café, regalos, experiencias y club.',
   'Respondé con tono cálido, claro, premium y útil en español rioplatense.',
   'Si la consulta es sobre vinos, usá la base real disponible y no inventes etiquetas, precios ni stock.',
   'Si la consulta es general, respondé como anfitrión/comercial de la marca sin prometer condiciones no confirmadas.',
   `Si recomendás vinos, mencioná hasta ${MAX_RECOMMENDATIONS} opciones y explicá brevemente por qué podrían encajar.`,
-  'Si algo depende de disponibilidad o confirmación humana, aclaralo y ofrecé derivar a WhatsApp.',
+  'Si la consulta depende de información no confirmada, aclaralo y sugerí consulta por WhatsApp.',
   'Cuando tenga sentido, podés usar esta salida: "Si querés, podés consultarlo directo por WhatsApp."',
   'Podés responder consultas sobre vinos y maridajes, regalos y cajas, mensualidades/club, experiencias y eventos, cafetería y dudas generales de Lombardo.',
 ].join('\n');
@@ -29,7 +69,8 @@ const sanitizeMessage = (value) => (typeof value === 'string' ? value.trim() : '
 
 const sanitizePageContext = (value) => {
   const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
-  return normalized || 'general';
+  if (!normalized) return 'general';
+  return PAGE_CONTEXT_ROLES[normalized] ? normalized : 'general';
 };
 
 const sanitizeHistory = (history) => {
@@ -43,6 +84,16 @@ const sanitizeHistory = (history) => {
     }))
     .filter((item) => Boolean(item.content))
     .slice(-MAX_HISTORY_ITEMS);
+};
+
+const buildPageContextGuidance = (pageContext) => {
+  const config = PAGE_CONTEXT_ROLES[pageContext] || PAGE_CONTEXT_ROLES.general;
+  return [
+    `Página actual: ${pageContext}`,
+    `Rol prioritario en esta sección: ${config.rol}.`,
+    `Objetivo de respuesta en esta sección: ${config.foco}`,
+    'Ajustá la prioridad del contenido según este rol sin romper las reglas generales.',
+  ].join('\n');
 };
 
 const buildUserPrompt = ({ message, wines, pageContext, history }) => {
@@ -61,8 +112,7 @@ const buildUserPrompt = ({ message, wines, pageContext, history }) => {
     : 'Sin historial previo en esta sesión.';
 
   return [
-    `Página actual: ${pageContext}`,
-    'Usá este contexto para priorizar la respuesta (por ejemplo: club, vinos, café, experiencias/eventos, etc.).',
+    buildPageContextGuidance(pageContext),
     '',
     `Historial reciente:\n${serializedHistory}`,
     '',
