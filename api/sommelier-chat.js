@@ -4,7 +4,7 @@ const path = require('node:path');
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_RECOMMENDATIONS = 3;
-const MAX_HISTORY_ITEMS = 8;
+const MAX_HISTORY_ITEMS = 14;
 const WHATSAPP_PHONE = '543412762319';
 const WHATSAPP_BASE_MESSAGE = 'Hola Lombardo, quiero continuar esta consulta.';
 
@@ -59,6 +59,7 @@ const SYSTEM_PROMPT = [
   `Si recomendás vinos, mencioná hasta ${MAX_RECOMMENDATIONS} opciones y explicá brevemente por qué podrían encajar.`,
   'Si la consulta depende de información no confirmada, aclaralo y sugerí consulta por WhatsApp.',
   'Podés responder consultas sobre vinos y maridajes, regalos y cajas, mensualidades/club, experiencias y eventos, cafetería y dudas generales de Lombardo.',
+  'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
 ].join('\n');
 
 const readWineCatalog = async () => {
@@ -284,9 +285,8 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
   return [
     buildPageContextGuidance(pageContext),
     '',
-    `Historial reciente:\n${serializedHistory}`,
-    '',
-    `Pregunta del cliente: "${message}"`,
+    'Usá el historial de conversación para mantener continuidad en preguntas de seguimiento.',
+    'Si el último mensaje depende del contexto previo, asumí continuidad temática salvo que el cliente cambie de tema explícitamente.',
     '',
     `Base de vinos Lombardo (JSON): ${JSON.stringify(compactCatalog)}`,
     '',
