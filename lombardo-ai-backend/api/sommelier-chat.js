@@ -38,6 +38,90 @@ const sanitizeHistory = (history) => {
     .slice(-14);
 };
 
+const normalizeText = (value) =>
+  (typeof value === 'string' ? value : '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const containsKeyword = (text, patterns) => patterns.some((pattern) => pattern.test(text));
+
+const CLOSING_TYPES = {
+  EDUCATIONAL: 'educational',
+  LABELS: 'labels',
+  BOX: 'box',
+  SUBSCRIPTION: 'subscription',
+  WHATSAPP: 'whatsapp',
+};
+
+const detectClosingType = ({ message, history, paginaActual }) => {
+  const conversationText = normalizeText(
+    [message, ...history.map((item) => item.content), paginaActual].filter(Boolean).join(' | ')
+  );
+
+  const whatsappPatterns = [
+    /(avanzar|cerrar|confirmar|coordinar)/,
+    /(whatsapp|hablar con|asesor|humano|equipo)/,
+    /(evento|corporativo|privado|reserva)/,
+  ];
+  if (containsKeyword(conversationText, whatsappPatterns)) return CLOSING_TYPES.WHATSAPP;
+
+  if (containsKeyword(conversationText, [/(mensualidad|suscrip|membres|club)/, /(cada mes|todos los meses|recurrente)/])) {
+    return CLOSING_TYPES.SUBSCRIPTION;
+  }
+
+  if (containsKeyword(conversationText, [/(caja|box)/, /(comprar|llevar|encargar|regalo)/])) {
+    return CLOSING_TYPES.BOX;
+  }
+
+  if (containsKeyword(conversationText, [/(recomend|suger)/, /(que vino|vino para|maridaje|etiqueta)/])) {
+    return CLOSING_TYPES.LABELS;
+  }
+
+  return CLOSING_TYPES.EDUCATIONAL;
+};
+
+const buildClosingMessage = (closingType) => {
+  const map = {
+    [CLOSING_TYPES.EDUCATIONAL]:
+      'Si querés, también te puedo orientar sobre qué estilos van mejor con distintas comidas o momentos.',
+    [CLOSING_TYPES.LABELS]:
+      'Si querés, también te puedo sugerir algunas etiquetas de Lombardo en esa línea.',
+    [CLOSING_TYPES.BOX]: 'Si querés, también te puedo armar una caja de 3 vinos pensada para ese perfil.',
+    [CLOSING_TYPES.SUBSCRIPTION]:
+      'Si ese estilo es el que más disfrutás, también te puedo sugerir una mensualidad recomendada.',
+    [CLOSING_TYPES.WHATSAPP]:
+      'Si querés avanzar con esto o ajustarlo con alguien del equipo, también podés seguir por WhatsApp.',
+  };
+
+  return map[closingType] || map[CLOSING_TYPES.EDUCATIONAL];
+};
+
+const appendAdaptiveClosing = ({ answer, message, history, paginaActual }) => {
+  const trimmed = typeof answer === 'string' ? answer.trim() : '';
+  if (!trimmed) return { answer: '', closingType: CLOSING_TYPES.EDUCATIONAL };
+
+  const closingType = detectClosingType({ message, history, paginaActual });
+  const closingMessage = buildClosingMessage(closingType);
+  const normalizedAnswer = normalizeText(trimmed);
+
+  const alreadySuggested = {
+    [CLOSING_TYPES.WHATSAPP]: /whatsapp/,
+    [CLOSING_TYPES.SUBSCRIPTION]: /(mensualidad|club|suscrip)/,
+    [CLOSING_TYPES.BOX]: /(caja|box)/,
+    [CLOSING_TYPES.LABELS]: /(etiquetas?|opciones? de lombardo)/,
+    [CLOSING_TYPES.EDUCATIONAL]: /(estilos?|comidas?|momentos?)/,
+  }[closingType].test(normalizedAnswer);
+
+  return {
+    answer: alreadySuggested ? trimmed : `${trimmed}
+
+${closingMessage}`,
+    closingType,
+  };
+};
+
 const loadWineCatalog = async () => {
   if (Array.isArray(catalogCache)) return catalogCache;
 
@@ -76,17 +160,27 @@ Sos el Asistente IA Lombardo de una marca premium de café y vinos.
 Tono y estilo:
 - cálido, claro, útil, premium y cercano.
 - respuestas en español rioplatense.
-- evitá sonar robótico o técnico.
+- evitá sonar robótico, enciclopédico o pedante.
 
 Alcance:
-- podés responder sobre vinos, regalos, cajas, club, café y experiencias.
+- combiná 3 modos: conocimiento general, catálogo Lombardo y modo mixto.
+- conocimiento general: respondé dudas generales sobre vino, maridajes y cultura vínica con lenguaje simple y confiable.
+- catálogo Lombardo: cuando pidan recomendaciones concretas, etiquetas, cajas, club o disponibilidad de Lombardo, usá solo la base real.
+- modo mixto: explicá primero la lógica general y luego ofrecé bajar esa recomendación a opciones de Lombardo cuando tenga sentido.
 - página actual del usuario: ${paginaActual || 'sin contexto'}.
 
 Reglas críticas:
-- Si la consulta es de vinos, apoyate SOLO en esta base local (no inventes etiquetas, precios, ni stock).
+- Si recomendás etiquetas concretas de Lombardo, apoyate SOLO en esta base local (no inventes etiquetas, precios, ni stock).
+- Para consultas generales, podés responder con conocimiento vínico general sin limitarte al catálogo.
 - Si faltan datos, decilo con honestidad.
 - Si tiene sentido comercial, sugerí continuar por WhatsApp de forma natural.
 - Mantené respuestas concretas (ideal 4 a 10 líneas).
+- Cerrá cada respuesta con un siguiente paso útil y natural según intención (educativo, etiquetas, caja, mensualidad o WhatsApp).
+
+Temas generales habilitados:
+- maridajes, varietales, estilos de vino, diferencias entre tintos/blancos/rosados/espumantes.
+- temperatura de servicio, copas, ocasiones de consumo, regalos, vinos para principiantes.
+- lógica de cuerpo, acidez, dulzor, frescura y estructura.
 
 Base de vinos Lombardo:
 ${catalogContext}
@@ -181,14 +275,20 @@ module.exports = async (req, res) => {
     const catalogContext = formatCatalogContext(wines);
     const systemPrompt = buildSystemPrompt({ paginaActual, catalogContext });
 
-    const answer = await callOpenAI({ message, history, systemPrompt });
+    const rawAnswer = await callOpenAI({ message, history, systemPrompt });
+    const { answer, closingType } = appendAdaptiveClosing({
+      answer: rawAnswer,
+      message,
+      history,
+      paginaActual,
+    });
 
     sendJson(res, 200, {
       ok: true,
       answer,
-      suggest_whatsapp: /whatsapp|hablar con asesor|contacto directo/i.test(answer),
+      suggest_whatsapp: closingType === CLOSING_TYPES.WHATSAPP,
       whatsapp_label: 'Continuar por WhatsApp',
-      whatsapp_url: WHATSAPP_URL,
+      whatsapp_url: closingType === CLOSING_TYPES.WHATSAPP ? WHATSAPP_URL : '',
       source: 'openai',
     });
   } catch (error) {
