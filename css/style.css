@@ -613,18 +613,6 @@ main > .section:nth-of-type(even) .grid-2 > img {
 .club-benefits li::marker {
   color: var(--coral);
 }
-.main-nav a[href="carta.html"],
-.main-nav a[href="contacto.html"] {
-  padding-inline: 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(228, 213, 211, 0.42);
-}
-
-.main-nav a[href="carta.html"]:hover,
-.main-nav a[href="contacto.html"]:hover {
-  border-color: rgba(212, 235, 142, 0.84);
-}
-
 .bg-coral .btn-tertiary,
 .bg-verde .btn-tertiary {
   background: rgba(0, 58, 112, 0.06);
@@ -780,11 +768,6 @@ main > .section:nth-of-type(even) .grid-2 > img {
     max-width: 100%;
   }
 
-  .main-nav a[href="carta.html"],
-  .main-nav a[href="contacto.html"] {
-    border-radius: var(--radius-sm);
-    padding: 8px 10px;
-  }
 }
 
 
