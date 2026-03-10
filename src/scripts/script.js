@@ -180,6 +180,43 @@ if (!prefersReducedMotion) {
 }
 
 const WINE_PROFILE_STORAGE_KEY = 'lombardo_wine_profile';
+const WINE_CATALOG_ENDPOINT = '/vinos_lombardo_base.json';
+
+const resolvePageContextFromPath = (pathname = window.location.pathname) => {
+  const cleanPath = String(pathname || '/').replace(/\/+$/, '') || '/';
+
+  const directMap = {
+    '/': 'home',
+    '/index.html': 'home',
+    '/pages/home': 'home',
+    '/sommelier.html': 'sommelier',
+    '/pages/sommelier-ia': 'sommelier',
+    '/wine-tinder.html': 'experiencias',
+    '/tinder-wine.html': 'experiencias',
+    '/pages/wine-tinder': 'experiencias',
+    '/pages/experiencias': 'experiencias',
+    '/experiencias.html': 'experiencias',
+    '/vinos.html': 'experiencias',
+    '/cafe.html': 'experiencias',
+    '/eventos.html': 'experiencias',
+    '/galeria.html': 'experiencias',
+    '/club.html': 'club',
+    '/pages/club': 'club',
+    '/tienda.html': 'club',
+    '/pages/tienda': 'club',
+    '/contacto.html': 'contacto',
+    '/pages/contacto': 'contacto',
+  };
+
+  if (directMap[cleanPath]) return directMap[cleanPath];
+
+  if (cleanPath.startsWith('/pages/sommelier-ia')) return 'sommelier';
+  if (cleanPath.startsWith('/pages/wine-tinder') || cleanPath.startsWith('/pages/experiencias')) return 'experiencias';
+  if (cleanPath.startsWith('/pages/club') || cleanPath.startsWith('/pages/tienda')) return 'club';
+  if (cleanPath.startsWith('/pages/contacto')) return 'contacto';
+
+  return 'general';
+};
 
 const readStoredWineProfile = () => {
   try {
@@ -350,32 +387,14 @@ if (sommelierApp) {
   const chatHistory = [];
   let currentWineProfile = readStoredWineProfile();
 
-  const getSommelierPageContext = () => {
-    const fileName = window.location.pathname.split('/').pop() || 'sommelier.html';
-    const map = {
-      'index.html': 'home',
-      'vinos.html': 'experiencias',
-      'sommelier.html': 'sommelier',
-      'wine-tinder.html': 'experiencias',
-      'tinder-wine.html': 'experiencias',
-      'club.html': 'club',
-      'cafe.html': 'experiencias',
-      'experiencias.html': 'experiencias',
-      'eventos.html': 'experiencias',
-      'galeria.html': 'experiencias',
-      'tienda.html': 'club',
-      'contacto.html': 'contacto',
-    };
-
-    return map[fileName] || 'general';
-  };
+  const getSommelierPageContext = () => resolvePageContextFromPath(window.location.pathname);
 
   let sommelierLocalCatalogCache = null;
 
   const getSommelierLocalCatalog = async () => {
     if (Array.isArray(sommelierLocalCatalogCache)) return sommelierLocalCatalogCache;
 
-    const response = await fetch('vinos_lombardo_base.json', { cache: 'no-store' });
+    const response = await fetch(WINE_CATALOG_ENDPOINT, { cache: 'no-store' });
     const data = await response.json().catch(() => []);
     sommelierLocalCatalogCache = Array.isArray(data) ? data.filter((wine) => wine?.activo !== false) : [];
     return sommelierLocalCatalogCache;
@@ -1388,7 +1407,7 @@ if (sommelierApp) {
   };
 
   const loadWineCatalog = async () => {
-    const response = await fetch('vinos_lombardo_base.json');
+    const response = await fetch(WINE_CATALOG_ENDPOINT);
 
     if (!response.ok) {
       throw new Error('No se pudo cargar la base de vinos.');
@@ -1868,23 +1887,7 @@ const getPageContext = () => {
 
   if (customContext) return contextAliases[customContext] || customContext;
 
-  const fileName = window.location.pathname.split('/').pop() || 'index.html';
-  const contextMap = {
-    'index.html': 'home',
-    'vinos.html': 'experiencias',
-    'sommelier.html': 'sommelier',
-    'wine-tinder.html': 'experiencias',
-    'tinder-wine.html': 'experiencias',
-    'club.html': 'club',
-    'cafe.html': 'experiencias',
-    'experiencias.html': 'experiencias',
-    'eventos.html': 'experiencias',
-    'galeria.html': 'experiencias',
-    'tienda.html': 'club',
-    'contacto.html': 'contacto',
-  };
-
-  return contextMap[fileName] || 'general';
+  return resolvePageContextFromPath(window.location.pathname);
 };
 
 const initGlobalLombardoAssistant = () => {
@@ -2077,7 +2080,7 @@ const initGlobalLombardoAssistant = () => {
 
   const readLocalCatalog = async () => {
     if (Array.isArray(localCatalogCache)) return localCatalogCache;
-    const response = await fetch('vinos_lombardo_base.json', { cache: 'no-store' });
+    const response = await fetch(WINE_CATALOG_ENDPOINT, { cache: 'no-store' });
     const data = await response.json().catch(() => []);
     localCatalogCache = Array.isArray(data) ? data.filter((wine) => wine?.activo !== false) : [];
     return localCatalogCache;
@@ -2591,7 +2594,7 @@ if (wineShopApp) {
     });
   };
 
-  fetch('vinos_lombardo_base.json')
+  fetch(WINE_CATALOG_ENDPOINT)
     .then((response) => response.json())
     .then((items) => {
       wines = items
