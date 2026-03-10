@@ -3018,3 +3018,25 @@ main > .section:last-child::after,
     width: 100%;
   }
 }
+
+.assistant-whatsapp-link {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 58, 112, 0.24);
+  color: var(--azul);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.assistant-whatsapp-link:hover {
+  background: rgba(0, 58, 112, 0.08);
+  transform: translateY(-1px);
+}

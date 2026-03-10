@@ -1359,11 +1359,31 @@ const initGlobalLombardoAssistant = () => {
 
   let history = readHistory();
 
-  const appendMessage = (role, content) => {
+  const appendMessage = (role, content, options = {}) => {
     if (!messages || !content) return;
     const item = document.createElement('article');
     item.className = `assistant-message is-${role}`;
-    item.innerHTML = `<p class="assistant-role">${role === 'assistant' ? 'Asistente' : 'Vos'}</p><p>${content}</p>`;
+
+    const roleLabel = document.createElement('p');
+    roleLabel.className = 'assistant-role';
+    roleLabel.textContent = role === 'assistant' ? 'Asistente' : 'Vos';
+
+    const body = document.createElement('p');
+    body.textContent = content;
+
+    item.appendChild(roleLabel);
+    item.appendChild(body);
+
+    if (role === 'assistant' && options.whatsappUrl) {
+      const waLink = document.createElement('a');
+      waLink.className = 'assistant-whatsapp-link';
+      waLink.href = options.whatsappUrl;
+      waLink.target = '_blank';
+      waLink.rel = 'noopener';
+      waLink.textContent = options.whatsappLabel || 'Seguir por WhatsApp';
+      item.appendChild(waLink);
+    }
+
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
   };
@@ -1392,7 +1412,12 @@ const initGlobalLombardoAssistant = () => {
       throw new Error(data.error || 'No se pudo obtener respuesta del asistente.');
     }
 
-    return typeof data.answer === 'string' ? data.answer.trim() : '';
+    return {
+      answer: typeof data.answer === 'string' ? data.answer.trim() : '',
+      suggestWhatsApp: Boolean(data.suggest_whatsapp),
+      whatsappLabel: typeof data.whatsapp_label === 'string' ? data.whatsapp_label.trim() : '',
+      whatsappUrl: typeof data.whatsapp_url === 'string' ? data.whatsapp_url.trim() : '',
+    };
   };
 
   const handleSubmit = async (message) => {
@@ -1405,13 +1430,16 @@ const initGlobalLombardoAssistant = () => {
 
     setLoading(true);
     try {
-      const answer = await sendMessage(trimmed);
-      const safeAnswer = answer || 'Gracias por tu consulta. Si querés, podés consultarlo directo por WhatsApp.';
-      appendMessage('assistant', safeAnswer);
+      const result = await sendMessage(trimmed);
+      const safeAnswer = result.answer || 'Gracias por tu consulta. Contame un poco más y te ayudo a avanzar.';
+      appendMessage('assistant', safeAnswer, {
+        whatsappUrl: result.suggestWhatsApp ? result.whatsappUrl : '',
+        whatsappLabel: result.whatsappLabel,
+      });
       history.push({ role: 'assistant', content: safeAnswer });
       writeHistory(history);
     } catch (error) {
-      appendMessage('assistant', 'Ahora mismo no pude responder. Si querés, podés consultarlo directo por WhatsApp.');
+      appendMessage('assistant', 'Ahora mismo no pude responder. Probá de nuevo en unos segundos.');
     } finally {
       setLoading(false);
       input.value = '';
