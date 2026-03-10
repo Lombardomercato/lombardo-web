@@ -3129,3 +3129,179 @@ main > .section:last-child::after,
     transform: translateY(8px) scale(0.98);
   }
 }
+
+/* Experiencias landing */
+.experiencias-hero::before {
+  background: linear-gradient(112deg, rgba(8, 23, 36, 0.82), rgba(8, 23, 36, 0.54) 52%, rgba(8, 23, 36, 0.78));
+}
+
+.experiencias-hero .hero-video {
+  filter: saturate(0.86) contrast(1.08);
+}
+
+.experiencias-intro {
+  background: linear-gradient(180deg, rgba(244, 236, 234, 0.92), rgba(244, 236, 234, 0.7));
+}
+
+.experiencias-gallery img {
+  min-height: clamp(190px, 26vw, 340px);
+}
+
+.experiencias-cta .shell-head {
+  text-align: center;
+  justify-items: center;
+}
+
+.experiencias-cta .section-lead,
+.experiencias-cta p {
+  margin-inline: auto;
+}
+
+@media (max-width: 760px) {
+  .experiencias-hero .hero-layout {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .experiencias-hero .hero-note {
+    padding-left: 14px;
+  }
+
+  .experiencias-gallery {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Club Lombardo landing */
+.club-hero::before {
+  background: linear-gradient(112deg, rgba(10, 23, 36, 0.84), rgba(10, 23, 36, 0.58) 50%, rgba(10, 23, 36, 0.82));
+}
+
+.club-hero .hero-video {
+  filter: saturate(0.84) contrast(1.06);
+}
+
+.club-intro {
+  background: linear-gradient(180deg, rgba(244, 236, 234, 0.9), rgba(244, 236, 234, 0.72));
+}
+
+.club-cards-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.club-benefits-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.club-benefits-grid .section-card p {
+  margin: 0;
+  font-family: 'Gopher', Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.25;
+}
+
+.club-steps-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.club-section-cta {
+  margin-top: clamp(20px, 3vw, 34px);
+}
+
+.club-tienda-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.club-tienda-grid .tienda-card {
+  min-height: 110px;
+  justify-content: center;
+  text-align: center;
+}
+
+.club-tienda-grid .tienda-card h3 {
+  margin: 0;
+  font-size: clamp(0.9rem, 1.4vw, 1rem);
+  letter-spacing: 0.06em;
+}
+
+.club-final-cta .shell-head {
+  justify-items: center;
+  text-align: center;
+}
+
+@media (max-width: 1024px) {
+  .club-cards-grid,
+  .club-steps-grid,
+  .club-tienda-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .club-hero .hero-layout,
+  .club-cards-grid,
+  .club-steps-grid,
+  .club-tienda-grid,
+  .club-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .club-hero .hero-note {
+    padding-left: 14px;
+  }
+}
+
+/* Club + Experiencias alignment fixes */
+.experiencias-hero,
+.club-hero {
+  min-height: 100svh;
+}
+
+.experiencias-hero .hero-video,
+.club-hero .hero-video {
+  object-position: center center;
+}
+
+.experiencias-hero .hero-layout,
+.club-hero .hero-layout {
+  align-items: center;
+}
+
+.experiencias-hero .hero-note,
+.club-hero .hero-note {
+  align-self: end;
+}
+
+#vino .section-media img {
+  object-position: center 35%;
+}
+
+#cafe .section-media img {
+  object-position: center center;
+}
+
+#vino .section-card,
+#cafe .section-card,
+#eventos .section-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 760px) {
+  .experiencias-hero,
+  .club-hero {
+    min-height: 100svh;
+  }
+
+  .experiencias-hero .hero-video,
+  .club-hero .hero-video {
+    object-position: center top;
+  }
+
+  .experiencias-hero .hero-note,
+  .club-hero .hero-note {
+    align-self: start;
+  }
+}
