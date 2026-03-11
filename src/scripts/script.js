@@ -388,7 +388,7 @@ if (sommelierApp) {
   const chatHistory = [];
   let currentWineProfile = readStoredWineProfile();
 
-  const getSommelierPageContext = () => resolvePageContextFromPath(window.location.pathname);
+  const getSommelierPageContext = () => getPageContext();
 
   let sommelierLocalCatalogCache = null;
 

@@ -1,3 +1,8 @@
+const fs = require('node:fs');
+const path = require('node:path');
+
+const INTENT_RULES_DOC_PATH = 'docs/AI_INTENT_RULES_LOMBARDO.md';
+
 const INTENTS = {
   CONSULTA_PRODUCTO: 'consulta_producto',
   CONSULTA_EDUCATIVA_VINO: 'consulta_educativa_vino',
@@ -35,16 +40,42 @@ const canonicalPageContext = (pageContext = 'general') => {
 
 const containsKeyword = (text, patterns) => patterns.some((pattern) => pattern.test(text));
 
-const DIRECT_PRODUCT_PATTERNS = [
-  /(quiero|busco|dame)\s+algo\s+para/,
-  /vino\s+para/,
-  /(recomend|suger).*(vino|etiqueta)/,
-  /quiero\s+un\s+vino/,
-];
+let docIntentSignalsCache = null;
+const getIntentSignalsFromDocs = () => {
+  if (docIntentSignalsCache) return docIntentSignalsCache;
+
+  try {
+    const raw = fs.readFileSync(path.join(process.cwd(), INTENT_RULES_DOC_PATH), 'utf8');
+    const normalized = normalizeText(raw);
+
+    docIntentSignalsCache = {
+      producto: /vino para|que vino compro|recomendarme un vino|algo para una cena/.test(normalized),
+      educativa: /maridar malbec|diferencia entre malbec y cabernet|temperatura se sirve/.test(normalized),
+      caja: /armame una caja|quiero tres vinos/.test(normalized),
+      mensualidad: /seleccion mensual|cuanto sale la suscripcion/.test(normalized),
+      experiencias: /hacen catas|que experiencias ofrecen/.test(normalized),
+      contacto: /quiero hablar con alguien|whatsapp/.test(normalized),
+    };
+  } catch {
+    docIntentSignalsCache = {
+      producto: true,
+      educativa: true,
+      caja: true,
+      mensualidad: true,
+      experiencias: true,
+      contacto: true,
+    };
+  }
+
+  return docIntentSignalsCache;
+};
+
+const DIRECT_PRODUCT_PATTERNS = [/(quiero|busco|dame)\s+algo\s+para/, /vino\s+para/, /(recomend|suger).*(vino|etiqueta)/, /quiero\s+un\s+vino/];
 
 const isDirectProductIntent = (text) => containsKeyword(text, DIRECT_PRODUCT_PATTERNS);
 
 const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
+  const rulesEnabled = getIntentSignalsFromDocs();
   const normalized = normalizeText(message);
   const context = history
     .slice(-3)
@@ -53,7 +84,7 @@ const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
   const combined = `${context} ${normalized}`.trim();
   const page = canonicalPageContext(pageContext);
 
-  if (isDirectProductIntent(normalized)) return INTENTS.CONSULTA_PRODUCTO;
+  if (rulesEnabled.producto && isDirectProductIntent(normalized)) return INTENTS.CONSULTA_PRODUCTO;
 
   const patterns = {
     contacto: [
@@ -75,13 +106,13 @@ const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
     ],
   };
 
-  if (containsKeyword(combined, patterns.contacto)) return INTENTS.CONSULTA_CONTACTO;
-  if (containsKeyword(combined, patterns.mensualidad)) return INTENTS.CONSULTA_MENSUALIDAD;
-  if (containsKeyword(combined, patterns.caja)) return INTENTS.CONSULTA_CAJA;
+  if (rulesEnabled.contacto && containsKeyword(combined, patterns.contacto)) return INTENTS.CONSULTA_CONTACTO;
+  if (rulesEnabled.mensualidad && containsKeyword(combined, patterns.mensualidad)) return INTENTS.CONSULTA_MENSUALIDAD;
+  if (rulesEnabled.caja && containsKeyword(combined, patterns.caja)) return INTENTS.CONSULTA_CAJA;
   if (containsKeyword(combined, patterns.club)) return INTENTS.CONSULTA_CLUB;
-  if (containsKeyword(combined, patterns.experiencias)) return INTENTS.CONSULTA_EXPERIENCIAS;
-  if (containsKeyword(normalized, patterns.educativa)) return INTENTS.CONSULTA_EDUCATIVA_VINO;
-  if (containsKeyword(normalized, patterns.producto)) return INTENTS.CONSULTA_PRODUCTO;
+  if (rulesEnabled.experiencias && containsKeyword(combined, patterns.experiencias)) return INTENTS.CONSULTA_EXPERIENCIAS;
+  if (rulesEnabled.educativa && containsKeyword(normalized, patterns.educativa)) return INTENTS.CONSULTA_EDUCATIVA_VINO;
+  if (rulesEnabled.producto && containsKeyword(normalized, patterns.producto)) return INTENTS.CONSULTA_PRODUCTO;
 
   if (page === 'club') return INTENTS.CONSULTA_CLUB;
   if (page === 'experiencias') return INTENTS.CONSULTA_EXPERIENCIAS;
@@ -90,4 +121,4 @@ const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
   return INTENTS.CONSULTA_GENERAL;
 };
 
-module.exports = { INTENTS, detectIntent, normalizeText, canonicalPageContext };
+module.exports = { INTENTS, INTENT_RULES_DOC_PATH, detectIntent, normalizeText, canonicalPageContext };

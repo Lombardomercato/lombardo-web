@@ -315,51 +315,6 @@ const rewriteMenuLikeOpening = (answer = '', intent) => {
   return cleaned || answer;
 };
 
-const detectIntentLegacy = (message, pageContext, history = []) => {
-  const normalized = normalizeText(message);
-  const recentContext = history
-    .slice(-3)
-    .map((item) => normalizeText(item.content || ''))
-    .join(' ');
-  const combined = `${recentContext} ${normalized}`.trim();
-
-  const patterns = {
-    contacto: [
-      /whatsapp|asesor|persona|humano|vendedor|contacto/,
-      /(comprar|encargar|reservar|pagar|factura|envio|retiro|avanzar|cerrar|confirmar)/,
-    ],
-    mensualidad: [/(mensualidad|suscrip|membresia|seleccion mensual|todos los meses|cada mes)/],
-    club: [/(que incluye el club|beneficios del club|como funciona el club|club lombardo)/],
-    caja: [/(armame|arma|armar|sugerime).*(caja|box|seleccion)/, /(quiero|dame).*(tres|3).*(vinos?)/],
-    experiencias: [/(cata|catas|experiencias?|after office|balcon|balcon|evento|encuentro)/],
-    educativa: [
-      /maridar|maridaje/,
-      /(diferencia|diferencias).*(malbec|cabernet|varietal|vino)/,
-      /(temperatura|servicio|decantar|copa|acidez|taninos|cuerpo)/,
-      /(que|qué) significa.*(cuerpo|acidez|taninos)/,
-      /varietal|estilo de vino/,
-    ],
-    producto: [
-      ...RECOMMENDATION_INTENT_PATTERNS,
-      /(que|qué) vino me sugeris/,
-      /(quiero|busco).*(vino|etiqueta|opciones?)/,
-      /(hasta|por|de)\s?\$?\s?\d{2,}/,
-    ],
-  };
-
-  if (containsKeyword(combined, patterns.contacto)) return INTENTS.CONSULTA_CONTACTO;
-  if (containsKeyword(combined, patterns.mensualidad)) return INTENTS.CONSULTA_MENSUALIDAD;
-  if (containsKeyword(combined, patterns.club)) return INTENTS.CONSULTA_CLUB;
-  if (containsKeyword(combined, patterns.caja)) return INTENTS.CONSULTA_CAJA;
-  if (containsKeyword(combined, patterns.experiencias)) return INTENTS.CONSULTA_EXPERIENCIAS;
-  if (containsKeyword(normalized, patterns.educativa)) return INTENTS.CONSULTA_EDUCATIVA_VINO;
-  if (containsKeyword(normalized, patterns.producto)) return INTENTS.CONSULTA_PRODUCTO;
-
-  if (pageContext === 'club') return INTENTS.CONSULTA_CLUB;
-  if (pageContext === 'experiencias') return INTENTS.CONSULTA_EXPERIENCIAS;
-  return INTENTS.CONSULTA_GENERAL;
-};
-
 const findRequestedValues = (normalizedMessage, dictionary) =>
   Object.entries(dictionary)
     .filter(([, aliases]) => aliases.some((alias) => normalizedMessage.includes(alias)))
@@ -394,43 +349,6 @@ const matchFieldScore = (wineValue, requestedValues, score) => {
   if (!requestedValues.length) return 0;
   const normalizedWineValue = normalizeText(String(wineValue || ''));
   return requestedValues.some((value) => normalizedWineValue.includes(value)) ? score : 0;
-};
-
-const selectRecommendedWines = ({ wines, message, intent }) => {
-  const shouldRecommendCatalog = [
-    INTENTS.CONSULTA_PRODUCTO,
-    INTENTS.CONSULTA_CAJA,
-    INTENTS.CONSULTA_MENSUALIDAD,
-  ].includes(intent);
-  if (!shouldRecommendCatalog) return [];
-
-  const signals = buildRecommendationSignals(message);
-  const budget = extractBudget(message);
-
-  const ranked = wines
-    .map((wine) => {
-      let score = 0;
-      score += matchFieldScore(wine.tipo_vino, signals.tipo_vino, 4);
-      score += matchFieldScore(wine.maridaje_principal, signals.maridaje_principal, 5);
-      score += matchFieldScore(wine.ocasion, signals.ocasion, 4);
-      score += matchFieldScore(wine.varietal, signals.varietal, 3);
-      score += matchFieldScore(buildStyleHints(wine).join(' '), signals.estilo, 3);
-
-      if (wine.prioridad_venta === 'alta') score += 1;
-      if (budget && Number.isFinite(wine.precio)) {
-        const delta = Math.abs(wine.precio - budget);
-        if (delta <= 2500) score += 5;
-        else if (delta <= 5000) score += 3;
-        else if (delta <= 9000) score += 1;
-      }
-
-      return { wine, score };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_RECOMMENDATIONS)
-    .map((entry) => entry.wine);
-
-  return ranked.filter(Boolean);
 };
 
 const shouldSuggestWhatsApp = ({ message, pageContext, intent }) => {
@@ -832,7 +750,7 @@ module.exports = async (req, res) => {
     const message = sanitizeMessage(req.body?.message);
     const pageContext = sanitizePageContext(req.body?.pagina_actual);
     const history = sanitizeHistory(req.body?.history);
-    const intent = detectIntentByRules({ message, pageContext, history }) || detectIntentLegacy(message, pageContext, history);
+    const intent = detectIntentByRules({ message, pageContext, history });
     const category = detectConsultCategory({ message, intent, pageContext });
     const profile = detectProfile({ message, category });
 
