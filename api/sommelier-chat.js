@@ -66,43 +66,9 @@ const PAGE_CONTEXT_ALIASES = {
 };
 
 const SYSTEM_PROMPT = [
-  'Actuá como Asistente IA Lombardo.',
-  'Tu prioridad es entender la intención real del usuario y responder exactamente a lo que pregunta.',
-  'Podés responder tanto consultas generales sobre vino como recomendaciones concretas de Lombardo.',
-  'Ajustá tu enfoque según la página actual del sitio.',
-  'Sos el asistente digital de una vinería boutique con propuesta de vinos, café, regalos, experiencias y club.',
-  'Respondé con tono cálido, claro, premium y útil en español rioplatense.',
-  'Evitá sonar enciclopédico o pedante: explicá como asesor experto, simple y cercano.',
-  'Respondé primero a la pregunta del cliente, sin introducciones automáticas o repetitivas.',
-  'Flujo obligatorio: responder primero, preguntar después solo si hace falta, recomendar cuando corresponda y vender/derivar solo cuando suma.',
-  'Evitá frases prefabricadas repetidas (por ejemplo: “excelente pregunta”, “te comparto tres opciones”, “te respondo desde…”), salvo uso puntual.',
-  'Variá largo y formato: no todas las respuestas deben tener la misma estructura, cantidad de bullets o cierre.',
-  'Cuando corresponda, cerrá con una sola pregunta de seguimiento breve y útil (nunca más de una por respuesta).',
-  'Primero ayudá dentro del chat y no empujes a WhatsApp demasiado rápido.',
-  'Sugerí WhatsApp solo cuando tenga sentido comercial o de cierre, de forma opcional y natural.',
-  'Manejá tres modos: conocimiento general, catálogo Lombardo y modo mixto.',
-  'Modo conocimiento general: si la pregunta es de cultura vínica, maridajes, servicio, varietales o estilos, respondé con conocimiento general claro y útil.',
-  'Modo catálogo Lombardo: si piden etiquetas, cajas, mensualidad/club o disponibilidad de Lombardo, usá la base real disponible y no inventes etiquetas, precios ni stock.',
-  'Modo mixto: cuando tenga sentido, primero explicá lo general y después ofrecé bajar esa recomendación a opciones reales de Lombardo.',
-  'Podés recomendar etiquetas de Lombardo cuando corresponda, pero no fuerces recomendaciones de catálogo si la consulta es puramente educativa.',
-  'Si la consulta es general, no inventes políticas comerciales, promociones o condiciones no confirmadas.',
-  `Si recomendás vinos, mencioná hasta ${MAX_RECOMMENDATIONS} opciones y explicá brevemente por qué podrían encajar.`,
-  'Si la consulta depende de información no confirmada, aclaralo y sugerí consulta por WhatsApp.',
-  'Podés responder consultas sobre maridajes, varietales, estilos, temperatura de servicio, copas, ocasiones de consumo, regalos, vinos para principiantes y lógica de cuerpo/acidez/dulzor/estructura.',
-  'No mezcles experiencias/club/cafetería cuando la intención principal es consulta de producto concreto.',
-  'También respondé sobre regalos y cajas, mensualidades/club, experiencias y eventos, cafetería y dudas generales de Lombardo.',
-  'Estructura vigente del sitio: contextos principales = home, sommelier, experiencias, club y contacto.',
-  'Dentro de experiencias tratá vino, café, eventos, catas y galería como subtemas, no como páginas independientes.',
-  'Dentro de club tratá membresía, cajas, selección mensual y tienda como subtemas, no como páginas independientes.',
-  'Si la intención es consulta_producto: priorizá catálogo real, detectá presupuesto/tipo/ocasión si aparecen y devolvé 1 a 3 opciones.',
-  'Si la intención es consulta_educativa_vino: respondé en modo educativo sin forzar catálogo.',
-  'Si la intención es consulta_caja: proponé 3 opciones con lógica segura/especial/descubrir.',
-  'Si la intención es consulta_mensualidad o consulta_club: explicá beneficios y lógica del club.',
-  'Si la intención es consulta_experiencias: respondé sobre catas/encuentros/experiencias.',
-  'Si la intención es consulta_contacto: derivá a WhatsApp o contacto humano.',
-  'No sugieras navegar a páginas independientes de vino, café, eventos, catas, galería o tienda.',
-  'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
-  'Si aporta valor, cerrá con un siguiente paso útil; si no suma, cerrá sin follow-up.',
+  'Refuerzo operativo mínimo: seguir estrictamente la configuración canónica cargada desde docs/.',
+  'No inventar etiquetas, precios, stock ni políticas comerciales.',
+  'Máximo 3 recomendaciones cuando corresponda y una sola pregunta de seguimiento útil.',
 ].join('\n');
 
 let SYSTEM_PROMPT_CACHE = null;
@@ -329,51 +295,6 @@ const rewriteMenuLikeOpening = (answer = '', intent) => {
   return cleaned || answer;
 };
 
-const detectIntentLegacy = (message, pageContext, history = []) => {
-  const normalized = normalizeText(message);
-  const recentContext = history
-    .slice(-3)
-    .map((item) => normalizeText(item.content || ''))
-    .join(' ');
-  const combined = `${recentContext} ${normalized}`.trim();
-
-  const patterns = {
-    contacto: [
-      /whatsapp|asesor|persona|humano|vendedor|contacto/,
-      /(comprar|encargar|reservar|pagar|factura|envio|retiro|avanzar|cerrar|confirmar)/,
-    ],
-    mensualidad: [/(mensualidad|suscrip|membresia|seleccion mensual|todos los meses|cada mes)/],
-    club: [/(que incluye el club|beneficios del club|como funciona el club|club lombardo)/],
-    caja: [/(armame|arma|armar|sugerime).*(caja|box|seleccion)/, /(quiero|dame).*(tres|3).*(vinos?)/],
-    experiencias: [/(cata|catas|experiencias?|after office|balcon|balcon|evento|encuentro)/],
-    educativa: [
-      /maridar|maridaje/,
-      /(diferencia|diferencias).*(malbec|cabernet|varietal|vino)/,
-      /(temperatura|servicio|decantar|copa|acidez|taninos|cuerpo)/,
-      /(que|qué) significa.*(cuerpo|acidez|taninos)/,
-      /varietal|estilo de vino/,
-    ],
-    producto: [
-      ...RECOMMENDATION_INTENT_PATTERNS,
-      /(que|qué) vino me sugeris/,
-      /(quiero|busco).*(vino|etiqueta|opciones?)/,
-      /(hasta|por|de)\s?\$?\s?\d{2,}/,
-    ],
-  };
-
-  if (containsKeyword(combined, patterns.contacto)) return INTENTS.CONSULTA_CONTACTO;
-  if (containsKeyword(combined, patterns.mensualidad)) return INTENTS.CONSULTA_MENSUALIDAD;
-  if (containsKeyword(combined, patterns.club)) return INTENTS.CONSULTA_CLUB;
-  if (containsKeyword(combined, patterns.caja)) return INTENTS.CONSULTA_CAJA;
-  if (containsKeyword(combined, patterns.experiencias)) return INTENTS.CONSULTA_EXPERIENCIAS;
-  if (containsKeyword(normalized, patterns.educativa)) return INTENTS.CONSULTA_EDUCATIVA_VINO;
-  if (containsKeyword(normalized, patterns.producto)) return INTENTS.CONSULTA_PRODUCTO;
-
-  if (pageContext === 'club') return INTENTS.CONSULTA_CLUB;
-  if (pageContext === 'experiencias') return INTENTS.CONSULTA_EXPERIENCIAS;
-  return INTENTS.CONSULTA_GENERAL;
-};
-
 const findRequestedValues = (normalizedMessage, dictionary) =>
   Object.entries(dictionary)
     .filter(([, aliases]) => aliases.some((alias) => normalizedMessage.includes(alias)))
@@ -408,43 +329,6 @@ const matchFieldScore = (wineValue, requestedValues, score) => {
   if (!requestedValues.length) return 0;
   const normalizedWineValue = normalizeText(String(wineValue || ''));
   return requestedValues.some((value) => normalizedWineValue.includes(value)) ? score : 0;
-};
-
-const selectRecommendedWines = ({ wines, message, intent }) => {
-  const shouldRecommendCatalog = [
-    INTENTS.CONSULTA_PRODUCTO,
-    INTENTS.CONSULTA_CAJA,
-    INTENTS.CONSULTA_MENSUALIDAD,
-  ].includes(intent);
-  if (!shouldRecommendCatalog) return [];
-
-  const signals = buildRecommendationSignals(message);
-  const budget = extractBudget(message);
-
-  const ranked = wines
-    .map((wine) => {
-      let score = 0;
-      score += matchFieldScore(wine.tipo_vino, signals.tipo_vino, 4);
-      score += matchFieldScore(wine.maridaje_principal, signals.maridaje_principal, 5);
-      score += matchFieldScore(wine.ocasion, signals.ocasion, 4);
-      score += matchFieldScore(wine.varietal, signals.varietal, 3);
-      score += matchFieldScore(buildStyleHints(wine).join(' '), signals.estilo, 3);
-
-      if (wine.prioridad_venta === 'alta') score += 1;
-      if (budget && Number.isFinite(wine.precio)) {
-        const delta = Math.abs(wine.precio - budget);
-        if (delta <= 2500) score += 5;
-        else if (delta <= 5000) score += 3;
-        else if (delta <= 9000) score += 1;
-      }
-
-      return { wine, score };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_RECOMMENDATIONS)
-    .map((entry) => entry.wine);
-
-  return ranked.filter(Boolean);
 };
 
 const shouldSuggestWhatsApp = ({ message, pageContext, intent }) => {
@@ -863,7 +747,7 @@ module.exports = async (req, res) => {
     const message = sanitizeMessage(req.body?.message);
     const pageContext = sanitizePageContext(req.body?.pagina_actual);
     const history = sanitizeHistory(req.body?.history);
-    const intent = detectIntentByRules({ message, pageContext, history }) || detectIntentLegacy(message, pageContext, history);
+    const intent = detectIntentByRules({ message, pageContext, history });
     const category = detectConsultCategory({ message, intent, pageContext });
     const profile = detectProfile({ message, category });
 
