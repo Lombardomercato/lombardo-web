@@ -1735,8 +1735,102 @@ p {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.section-contact {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 179, 171, 0.2), transparent 42%),
+    radial-gradient(circle at 86% 14%, rgba(0, 58, 112, 0.12), transparent 44%),
+    linear-gradient(180deg, rgba(250, 245, 243, 0.92), rgba(255, 255, 255, 0.82));
+}
+
+.section-contact .shell-head {
+  max-width: 780px;
+}
+
 .contact-grid {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: stretch;
+}
+
+.contact-card {
+  position: relative;
+  display: grid;
+  gap: 22px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(0, 58, 112, 0.15);
+  box-shadow: 0 20px 45px rgba(0, 32, 62, 0.12);
+  backdrop-filter: blur(7px);
+}
+
+.contact-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  border-radius: 20px 20px 0 0;
+  background: linear-gradient(90deg, var(--azul), var(--coral));
+}
+
+.contact-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.contact-links li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.12);
+}
+
+.contact-links li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.contact-links span {
+  min-width: 92px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.contact-links a {
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.contact-links a:hover {
+  color: var(--rojo);
+}
+
+.contact-card .actions {
+  margin-top: 4px;
+}
+
+.contact-card .btn-primary {
+  background: linear-gradient(120deg, var(--azul), #0a4f96);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 14px 30px rgba(0, 42, 80, 0.28);
+}
+
+.contact-card .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(0, 42, 80, 0.34);
+}
+
+.contact-map {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow-media);
+  border: 1px solid rgba(0, 58, 112, 0.1);
 }
 
 .reveal {
@@ -1767,7 +1861,16 @@ p {
   .section-media {
     min-height: 220px;
   }
+
+  .contact-card {
+    gap: 18px;
+  }
+
+  .contact-links span {
+    min-width: 0;
+  }
 }
+
 
 /* Motion & micro-interactions refinement */
 .site-header {
