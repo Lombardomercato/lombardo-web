@@ -546,6 +546,14 @@ if (sommelierApp) {
           throw new Error(data.error || 'No se pudo obtener una respuesta del Sommelier IA.');
         }
 
+        if (typeof data.reply !== 'string') {
+          console.warn('[sommelier-chat][debug] respuesta sin "reply"', {
+            endpoint,
+            status: response.status,
+            body: data,
+          });
+        }
+
         return typeof data.reply === 'string'
           ? data.reply.trim()
           : typeof data.answer === 'string'
@@ -2401,6 +2409,14 @@ const initGlobalLombardoAssistant = () => {
       const backendError = new Error('No encontramos un backend disponible para Sommelier IA.');
       backendError.code = 'BACKEND_UNAVAILABLE';
       throw backendError;
+    }
+
+    if (typeof data.reply !== 'string') {
+      console.warn('[assistant-widget][debug] respuesta sin "reply"', {
+        endpointTried: response?.url || '',
+        status: response?.status,
+        body: data,
+      });
     }
 
     return {

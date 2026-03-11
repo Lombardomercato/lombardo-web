@@ -734,10 +734,40 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
   return [intro, contextHint, listed, closing].filter(Boolean).join('\n');
 };
 
+const buildServiceErrorFallbackReply = ({ message, wines = [], recommendedWines = [], pageContext = 'sommelier' }) => {
+  const fallbackCatalog = recommendedWines.length ? recommendedWines : wines;
+  const malbecCandidate = fallbackCatalog.find((wine) => /malbec/i.test(String(wine?.varietal || wine?.nombre || '')));
+  const suggestedLabel = malbecCandidate?.nombre
+    ? ` Si querés, te puedo sugerir también ${malbecCandidate.nombre} de Lombardo.`
+    : ' Si querés, también te puedo sugerir algunos Malbec de Lombardo.';
+
+  const educationalWineFallback =
+    `El Malbec suele ir muy bien con carnes rojas, asado y pastas con salsa intensa.${suggestedLabel}`;
+
+  const recommendationFallback = buildFallbackRecommendationAnswer({
+    message,
+    wines,
+    recommendedWines,
+    pageContext,
+    intent: detectIntentByRules({ message, pageContext, history: [] }),
+    recommendationContext: null,
+    recommendationIntro: null,
+  });
+
+  return sanitizeMessage(recommendationFallback || educationalWineFallback) || educationalWineFallback;
+};
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({
+      error: 'Method not allowed',
+      reply: buildServiceErrorFallbackReply({ message: '', pageContext: 'sommelier' }),
+      fallback: {
+        used: true,
+        mode: 'method-fallback',
+      },
+    });
   }
 
   try {
@@ -762,7 +792,14 @@ module.exports = async (req, res) => {
     });
 
     if (!message) {
-      return res.status(400).json({ error: 'El campo "message" es obligatorio.' });
+      return res.status(400).json({
+        error: 'El campo "message" es obligatorio.',
+        reply: buildServiceErrorFallbackReply({ message: '', pageContext }),
+        fallback: {
+          used: true,
+          mode: 'validation-fallback',
+        },
+      });
     }
 
     const wines = await readWineCatalog();
@@ -773,8 +810,12 @@ module.exports = async (req, res) => {
     const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
     console.log('[sommelier-chat][debug] OpenAI key disponible:', hasOpenAIKey);
 
-    const rawAnswer = hasOpenAIKey
-      ? await createOpenAIResponse({
+    let fallbackMode = hasOpenAIKey ? 'openai' : 'local';
+    let rawAnswer = '';
+
+    if (hasOpenAIKey) {
+      try {
+        rawAnswer = await createOpenAIResponse({
           message,
           wines,
           pageContext,
@@ -783,24 +824,45 @@ module.exports = async (req, res) => {
           intent,
           recommendationContext,
           recommendationIntro,
-        })
-      : buildFallbackRecommendationAnswer({
-          message,
-          wines,
-          recommendedWines,
-          pageContext,
-          intent,
-          recommendationContext,
-          recommendationIntro,
         });
+      } catch (openAIError) {
+        fallbackMode = 'openai-error-fallback';
+        console.warn('[sommelier-chat][debug] OpenAI fallback activado por error:', {
+          code: openAIError?.code || 'OPENAI_UNKNOWN_ERROR',
+          message: openAIError?.message || '',
+        });
+      }
+    }
 
     if (!rawAnswer) {
-      return res.status(502).json({ error: 'No se obtuvo respuesta del modelo.' });
+      rawAnswer = buildFallbackRecommendationAnswer({
+        message,
+        wines,
+        recommendedWines,
+        pageContext,
+        intent,
+        recommendationContext,
+        recommendationIntro,
+      });
+      if (hasOpenAIKey && fallbackMode === 'openai-error-fallback') {
+        rawAnswer = buildServiceErrorFallbackReply({ message, wines, recommendedWines, pageContext }) || rawAnswer;
+      }
+    }
+
+    if (!rawAnswer) {
+      const safeReply = buildServiceErrorFallbackReply({ message, wines, recommendedWines, pageContext });
+      return res.status(200).json({
+        reply: safeReply,
+        fallback: {
+          used: true,
+          mode: 'service-error-fallback',
+        },
+      });
     }
 
     console.log('[sommelier-chat][debug] respuesta generada', {
       answerLength: rawAnswer.length,
-      via: hasOpenAIKey ? 'openai' : 'fallback-local',
+      via: fallbackMode,
     });
 
     const normalizedAnswer = rewriteMenuLikeOpening(rawAnswer, intent);
@@ -818,8 +880,8 @@ module.exports = async (req, res) => {
       suggestions: suggestWhatsApp ? [buildWhatsAppSuggestion(pageContext)] : [],
       whatsappUrl: suggestWhatsApp ? buildWhatsAppUrl(message) : '',
       fallback: {
-        used: !hasOpenAIKey,
-        mode: hasOpenAIKey ? 'openai' : 'local',
+        used: fallbackMode !== 'openai',
+        mode: fallbackMode,
       },
     };
 
@@ -863,7 +925,15 @@ module.exports = async (req, res) => {
     });
   } catch (error) {
     const { status, payload } = buildServerErrorPayload(error);
+    const emergencyReply = buildServiceErrorFallbackReply({ message: sanitizeMessage(req.body?.message), pageContext: sanitizePageContext(req.body?.pagina_actual) });
     console.error(`[sommelier-chat][${payload.error_code}]`, error);
-    return res.status(status).json(payload);
+    return res.status(status).json({
+      ...payload,
+      reply: emergencyReply,
+      fallback: {
+        used: true,
+        mode: 'catch-fallback',
+      },
+    });
   }
 };
