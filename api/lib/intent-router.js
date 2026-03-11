@@ -35,6 +35,15 @@ const canonicalPageContext = (pageContext = 'general') => {
 
 const containsKeyword = (text, patterns) => patterns.some((pattern) => pattern.test(text));
 
+const DIRECT_PRODUCT_PATTERNS = [
+  /(quiero|busco|dame)\s+algo\s+para/,
+  /vino\s+para/,
+  /(recomend|suger).*(vino|etiqueta)/,
+  /quiero\s+un\s+vino/,
+];
+
+const isDirectProductIntent = (text) => containsKeyword(text, DIRECT_PRODUCT_PATTERNS);
+
 const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
   const normalized = normalizeText(message);
   const context = history
@@ -43,6 +52,8 @@ const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
     .join(' ');
   const combined = `${context} ${normalized}`.trim();
   const page = canonicalPageContext(pageContext);
+
+  if (isDirectProductIntent(normalized)) return INTENTS.CONSULTA_PRODUCTO;
 
   const patterns = {
     contacto: [
