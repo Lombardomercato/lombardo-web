@@ -1270,23 +1270,40 @@ p {
 
 .editorial-menu .menu-lines {
   display: grid;
-  gap: 18px;
-  padding-top: 12px;
+  gap: 12px;
+  padding: clamp(16px, 2vw, 22px);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: rgba(244, 228, 227, 0.58);
+  box-shadow: 0 10px 24px rgba(0, 58, 112, 0.08);
+  backdrop-filter: blur(3px);
 }
 
-.editorial-menu .menu-lines p {
+.editorial-menu .menu-line-item {
   margin: 0;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(0, 58, 112, 0.36);
+  padding: 0 0 12px;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.3);
+}
+
+.editorial-menu .menu-line-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.editorial-menu .menu-line-title {
+  margin: 0;
+  font-family: 'Gopher', Arial, sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-size: clamp(0.92rem, 1.05vw, 1.06rem);
+  font-size: clamp(0.82rem, 0.9vw, 0.92rem);
+  color: rgba(0, 58, 112, 0.86);
 }
 
-.editorial-menu .menu-lines p span {
-  display: inline-block;
-  min-width: 12ch;
-  font-family: 'Gopher', Arial, sans-serif;
+.editorial-menu .menu-line-copy {
+  margin: 6px 0 0;
+  font-size: clamp(0.94rem, 1.05vw, 1.06rem);
+  line-height: 1.45;
+  color: rgba(0, 58, 112, 0.98);
 }
 
 .image-composition {
@@ -1431,8 +1448,7 @@ p {
   z-index: 1;
 }
 
-.editorial-offer .editorial-list,
-.editorial-menu .menu-lines {
+.editorial-offer .editorial-list {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(0, 58, 112, 0.12);
   padding: clamp(16px, 1.8vw, 24px);
@@ -1993,17 +2009,37 @@ main > .section:last-child::after,
     radial-gradient(circle at 90% 14%, rgba(0, 58, 112, 0.24), transparent 42%),
     radial-gradient(circle at 55% 72%, rgba(255, 183, 170, 0.24), transparent 44%),
     linear-gradient(180deg, rgba(252, 247, 242, 0.8), rgba(255, 255, 255, 0));
+  position: relative;
+  overflow: hidden;
+}
+
+.sommelier-hero::after {
+  content: '';
+  position: absolute;
+  inset: auto -8% -32% auto;
+  width: clamp(240px, 34vw, 520px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 58, 112, 0.18), transparent 68%);
+  pointer-events: none;
 }
 
 .sommelier-intro {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: clamp(20px, 4vw, 42px);
-  align-items: center;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: clamp(28px, 5vw, 56px);
+  align-items: start;
 }
 
 .sommelier-hero-copy {
   text-align: left;
+  max-width: min(100%, 620px);
+}
+
+.sommelier-hero-stats {
+  align-self: start;
+  justify-self: end;
+  width: min(100%, 460px);
 }
 
 .sommelier-intro h1 {
@@ -2040,6 +2076,14 @@ main > .section:last-child::after,
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 255, 0.9));
   box-shadow: 0 14px 30px rgba(0, 58, 112, 0.1);
   padding: 14px 16px;
+  backdrop-filter: blur(4px);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.sommelier-stat-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(224, 60, 49, 0.4);
+  box-shadow: 0 20px 38px rgba(0, 58, 112, 0.13);
 }
 
 .sommelier-stat-value {
@@ -2056,6 +2100,21 @@ main > .section:last-child::after,
   color: rgba(0, 58, 112, 0.78);
   font-size: 0.93rem;
 }
+
+.wine-tinder-intro {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  text-align: center;
+  max-width: 78ch;
+}
+
+.wine-tinder-intro h1,
+.wine-tinder-intro .sommelier-lead,
+.wine-tinder-intro .eyebrow {
+  margin-inline: auto;
+  text-align: center;
+}
+
 
 .sommelier-section {
   padding-top: 0;
@@ -2096,6 +2155,17 @@ main > .section:last-child::after,
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(224, 60, 49, 0.22), transparent 68%);
+  z-index: -1;
+}
+
+.sommelier-app::after {
+  content: '';
+  position: absolute;
+  inset: auto auto -20% -22%;
+  width: clamp(220px, 28vw, 420px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 58, 112, 0.12), transparent 70%);
   z-index: -1;
 }
 
@@ -2311,6 +2381,7 @@ main > .section:last-child::after,
   padding: 18px;
   box-shadow: 0 10px 26px rgba(0, 58, 112, 0.08);
   transition: transform 220ms ease, box-shadow 220ms ease;
+  backdrop-filter: blur(2px);
 }
 
 .sommelier-wine-card:hover {
@@ -2521,6 +2592,7 @@ main > .section:last-child::after,
   padding: 12px;
   display: grid;
   gap: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .sommelier-chat-message {
@@ -2684,6 +2756,36 @@ main > .section:last-child::after,
   .sommelier-box-list,
   .sommelier-membership-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .sommelier-intro {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .sommelier-hero-copy,
+  .sommelier-note,
+  .sommelier-lead,
+  .sommelier-intro h1 {
+    margin-inline: auto;
+    text-align: center;
+    max-width: 24ch;
+  }
+
+  .sommelier-hero-copy {
+    max-width: min(100%, 760px);
+  }
+
+  .sommelier-hero-actions {
+    justify-content: center;
+  }
+
+  .sommelier-hero-stats {
+    justify-self: center;
+    width: min(100%, 760px);
+    margin-inline: auto;
   }
 }
 
@@ -3574,9 +3676,24 @@ main > .section:last-child::after,
   margin-top: -20px;
   border: 1px solid rgba(0, 58, 112, 0.16);
   border-radius: var(--radius-lg);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 255, 0.88));
+  background:
+    radial-gradient(circle at 8% 12%, rgba(224, 60, 49, 0.12), transparent 40%),
+    radial-gradient(circle at 92% 8%, rgba(0, 58, 112, 0.12), transparent 42%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 255, 0.88));
   box-shadow: 0 20px 44px rgba(0, 58, 112, 0.12);
   padding: clamp(20px, 4vw, 36px);
+  overflow: hidden;
+}
+
+.wine-tinder::after {
+  content: '';
+  position: absolute;
+  inset: auto -12% -38% auto;
+  width: clamp(240px, 32vw, 480px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(171, 30, 58, 0.12), transparent 65%);
+  pointer-events: none;
 }
 
 .wine-tinder-start,
@@ -3645,6 +3762,12 @@ main > .section:last-child::after,
   touch-action: pan-y;
   user-select: none;
   cursor: grab;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.wine-tinder-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 48px rgba(0, 58, 112, 0.16);
 }
 
 
@@ -3775,6 +3898,7 @@ main > .section:last-child::after,
   border: 1px solid rgba(0, 58, 112, 0.14);
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 24px rgba(0, 58, 112, 0.08);
 }
 
 .wine-tinder-mini-card h5 {
