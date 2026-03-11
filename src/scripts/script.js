@@ -429,7 +429,7 @@ if (sommelierApp) {
     const lines = selected.map((wine) => `• ${wine.nombre} · ${wine.varietal} · ${formatPrice(wine.precio)}`);
 
     return [
-      'No pude conectar con el backend en este momento, pero te dejo una selección local para avanzar:',
+      'Estoy trabajando con nuestro catálogo local en este momento. Te dejo una selección para avanzar:',
       ...lines,
       'Si querés, te la ajusto por ocasión, comida o presupuesto.',
     ].join('\n');
@@ -465,41 +465,98 @@ if (sommelierApp) {
     chatSubmit.textContent = isLoading ? 'Enviando...' : 'Enviar';
   };
 
-  const resolveSommelierApiUrl = () => {
+  const resolveAssistantApiCandidates = () => {
+    const normalizeEndpoint = (value) => {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      if (/\/api\/sommelier-chat\/?$/i.test(raw)) return raw.replace(/\/$/, '');
+      return `${raw.replace(/\/$/, '')}/api/sommelier-chat`;
+    };
+
+    const safeReadStorage = (key) => {
+      try {
+        return window.localStorage?.getItem(key)?.trim() || '';
+      } catch (error) {
+        return '';
+      }
+    };
+
+    const params = new URLSearchParams(window.location.search);
     const explicit = document.querySelector('meta[name="assistant-api-url"]')?.content?.trim();
-    if (explicit) return explicit;
-
     const base = document.querySelector('meta[name="assistant-api-base"]')?.content?.trim();
-    if (base) return `${base.replace(/\/$/, '')}/api/sommelier-chat`;
+    const queryUrl = params.get('assistant_api_url')?.trim();
+    const queryBase = params.get('assistant_api_base')?.trim();
+    const localUrl = safeReadStorage('assistant-api-url');
+    const localBase = safeReadStorage('assistant-api-base');
 
-    return '/api/sommelier-chat';
+    const fallbackDomain =
+      window.location.hostname === 'www.lombardomercato.com' ? 'https://lombardo-web.vercel.app' : '';
+
+    const candidates = [
+      normalizeEndpoint(explicit),
+      normalizeEndpoint(base),
+      normalizeEndpoint(queryUrl),
+      normalizeEndpoint(queryBase),
+      normalizeEndpoint(localUrl),
+      normalizeEndpoint(localBase),
+      '/api/sommelier-chat',
+      normalizeEndpoint(fallbackDomain),
+    ].filter(Boolean);
+
+    return [...new Set(candidates)];
   };
 
+
   const requestSommelierChat = async (message) => {
-    const response = await fetch(resolveSommelierApiUrl(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message,
-        history: chatHistory.slice(-14),
-        pagina_actual: getSommelierPageContext(),
-        wine_profile: currentWineProfile,
-      }),
-    });
+    const endpoints = resolveAssistantApiCandidates();
+    let latestError = null;
 
-    const data = await response.json().catch(() => ({}));
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message,
+            history: chatHistory.slice(-14),
+            pagina_actual: getSommelierPageContext(),
+            wine_profile: currentWineProfile,
+          }),
+        });
 
-    if (!response.ok) {
-      throw new Error(data.error || 'No se pudo obtener una respuesta del Sommelier IA.');
+        const rawBody = await response.text().catch(() => '');
+        let data = {};
+        try {
+          data = rawBody ? JSON.parse(rawBody) : {};
+        } catch (error) {
+          data = {};
+        }
+
+        if (!response.ok) {
+          const endpointUnavailable = [404, 405, 500, 501, 502, 503].includes(response.status);
+          const nonJsonReply = !rawBody || rawBody.trim().startsWith('<!DOCTYPE') || rawBody.trim().startsWith('<html');
+
+          if (endpointUnavailable && (nonJsonReply || !data.error_code)) {
+            latestError = new Error(`Endpoint no disponible en ${endpoint}`);
+            continue;
+          }
+
+          throw new Error(data.error || 'No se pudo obtener una respuesta del Sommelier IA.');
+        }
+
+        return typeof data.reply === 'string'
+          ? data.reply.trim()
+          : typeof data.answer === 'string'
+          ? data.answer.trim()
+          : '';
+      } catch (error) {
+        latestError = error;
+      }
     }
 
-    return typeof data.reply === 'string'
-      ? data.reply.trim()
-      : typeof data.answer === 'string'
-      ? data.answer.trim()
-      : '';
+    throw latestError || new Error('No se pudo conectar con el Sommelier IA.');
   };
 
   const initSommelierChat = () => {
@@ -2052,17 +2109,6 @@ const initGlobalLombardoAssistant = () => {
 
   const getFriendlyClientError = () => 'Hoy estoy con mucha demanda y no pude responder como quería. Si querés, probá de nuevo en un rato o seguimos por WhatsApp.';
 
-  const resolveAssistantApiUrl = () => {
-    const explicit = document.querySelector('meta[name="assistant-api-url"]')?.content?.trim();
-    if (explicit) return explicit;
-
-    // Causa raíz detectada: en deploys estáticos (ej: GitHub Pages) no existe /api/*.
-    // Permitimos configurar un backend externo sin tocar JS mediante meta tag.
-    const base = document.querySelector('meta[name="assistant-api-base"]')?.content?.trim();
-    if (base) return `${base.replace(/\/$/, '')}/api/sommelier-chat`;
-
-    return '/api/sommelier-chat';
-  };
 
   let localCatalogCache = null;
 
@@ -2299,50 +2345,62 @@ const initGlobalLombardoAssistant = () => {
       history,
       wine_profile: readStoredWineProfile(),
     };
-    const endpoint = resolveAssistantApiUrl();
+    const endpoints = resolveAssistantApiCandidates();
     console.log('[assistant-widget][debug] payload enviado:', payload);
-    console.log('[assistant-widget][debug] endpoint:', endpoint);
+    console.log('[assistant-widget][debug] endpoints candidatos:', endpoints);
 
     let response;
-    try {
-      response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    } catch (error) {
-      console.error('[assistant-widget][debug] fetch error:', error);
-      const networkError = new Error('No se pudo conectar con el endpoint del asistente.');
-      networkError.code = 'NETWORK_ERROR';
-      throw networkError;
-    }
-
-    const rawBody = await response.text().catch(() => '');
     let data = {};
-    try {
-      data = rawBody ? JSON.parse(rawBody) : {};
-    } catch (error) {
-      console.warn('[assistant-widget][debug] respuesta no JSON:', rawBody.slice(0, 300));
-    }
+    let rawBody = '';
+    let latestError = null;
 
-    console.log('[assistant-widget][debug] status HTTP:', response.status);
-    console.log('[assistant-widget][debug] body recibido:', data);
-
-    if (!response.ok) {
-      const endpointUnavailable = [404, 405, 500, 501, 502, 503].includes(response.status);
-      const nonJsonReply = !rawBody || rawBody.trim().startsWith('<!DOCTYPE') || rawBody.trim().startsWith('<html');
-
-      if (endpointUnavailable && (nonJsonReply || !data.error_code)) {
-        const backendError = new Error('El backend /api/sommelier-chat no está disponible en este host.');
-        backendError.code = 'BACKEND_UNAVAILABLE';
-        backendError.status = response.status;
-        throw backendError;
+    for (const endpoint of endpoints) {
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch (error) {
+        console.error('[assistant-widget][debug] fetch error:', { endpoint, error });
+        latestError = error;
+        continue;
       }
 
-      const endpointError = new Error(data.error || 'No se pudo obtener respuesta del asistente.');
-      endpointError.code = data.error_code || 'ENDPOINT_ERROR';
-      endpointError.status = response.status;
-      throw endpointError;
+      rawBody = await response.text().catch(() => '');
+      try {
+        data = rawBody ? JSON.parse(rawBody) : {};
+      } catch (error) {
+        console.warn('[assistant-widget][debug] respuesta no JSON:', rawBody.slice(0, 300));
+        data = {};
+      }
+
+      console.log('[assistant-widget][debug] status HTTP:', { endpoint, status: response.status });
+      console.log('[assistant-widget][debug] body recibido:', data);
+
+      if (!response.ok) {
+        const endpointUnavailable = [404, 405, 500, 501, 502, 503].includes(response.status);
+        const nonJsonReply = !rawBody || rawBody.trim().startsWith('<!DOCTYPE') || rawBody.trim().startsWith('<html');
+
+        if (endpointUnavailable && (nonJsonReply || !data.error_code)) {
+          latestError = new Error(`Endpoint no disponible en ${endpoint}`);
+          continue;
+        }
+
+        const endpointError = new Error(data.error || 'No se pudo obtener respuesta del asistente.');
+        endpointError.code = data.error_code || 'ENDPOINT_ERROR';
+        endpointError.status = response.status;
+        throw endpointError;
+      }
+
+      latestError = null;
+      break;
+    }
+
+    if (!response || latestError) {
+      const backendError = new Error('No encontramos un backend disponible para Sommelier IA.');
+      backendError.code = 'BACKEND_UNAVAILABLE';
+      throw backendError;
     }
 
     return {
