@@ -1,43 +1,19 @@
-You are designing the Lombardo website.
+# LEGACY / DEPRECATED
 
-Use the brandbook as the main reference.
+Este archivo queda **deprecado** como fuente de comportamiento del asistente IA en runtime.
 
-Follow these rules strictly.
+## Estado
+- No forma parte del set canónico consumido por `api/lib/lombardo-ai-config.js`.
+- Se conserva únicamente como referencia histórica de diseño.
 
-Typography
+## Fuente de verdad vigente
+El comportamiento del asistente se define exclusivamente por estos documentos:
 
-Gopher must always be uppercase.
-Use only for headings.
-
-Articulat CF must be used for body text.
-
-Color palette
-
-#003A70
-#D4EB8E
-#FFB3AB
-#E4D5D3
-#E03C31
-
-Do not introduce new colors.
-
-Design tone
-
-Elegant
-Friendly
-Community oriented
-
-The website must feel like a meeting point.
-
-Sections required
-
-Menu / Carta
-Coffee
-Wine
-Experiences
-Events
-Club Lombardo
-Gallery
-Location with embedded map
-Contact
-Future ecommerce
+- `docs/LOMBARDO_ARCHITECTURE.md`
+- `docs/AI_SYSTEM_PROMPT_LOMBARDO.md`
+- `docs/AI_TONE_GUIDE_LOMBARDO.md`
+- `docs/AI_INTENT_RULES_LOMBARDO.md`
+- `docs/WINE_RECOMMENDATION_ENGINE_LOMBARDO.md`
+- `docs/CONVERSATION_FLOW_LOMBARDO.md`
+- `docs/AI_LEARNING_LAYER_LOMBARDO.md`
+- `docs/WINE_SCORING_ENGINE_LOMBARDO.md`

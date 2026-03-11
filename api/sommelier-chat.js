@@ -65,24 +65,44 @@ const PAGE_CONTEXT_ALIASES = {
   seleccion_mensual: 'club',
 };
 
-const SYSTEM_PROMPT = [
-  'Refuerzo operativo mínimo: seguir estrictamente la configuración canónica cargada desde docs/.',
-  'No inventar etiquetas, precios, stock ni políticas comerciales.',
-  'Máximo 3 recomendaciones cuando corresponda y una sola pregunta de seguimiento útil.',
+const OPERATIONAL_PROMPT_FALLBACK = [
+  'Actuá como Asistente IA Lombardo en español rioplatense.',
+  'Priorizá las reglas de los documentos canónicos cargados por el backend.',
+  'Usá solo etiquetas reales del catálogo cuando recomiendes productos Lombardo.',
 ].join('\n');
 
 let SYSTEM_PROMPT_CACHE = null;
 
 const getCanonicalSystemPrompt = async () => {
-  if (SYSTEM_PROMPT_CACHE && SYSTEM_PROMPT_CACHE.length > 200) return SYSTEM_PROMPT_CACHE;
   const fromDocs = await buildSystemPromptFromDocs();
 
-  if (fromDocs && fromDocs.length > 200) {
-    SYSTEM_PROMPT_CACHE = [fromDocs, 'Refuerzo operativo interno:', SYSTEM_PROMPT].join('\n\n');
+  if (!fromDocs?.prompt || fromDocs.prompt.length < 200) {
+    const error = new Error('No se pudo construir el prompt canónico desde docs.');
+    error.code = 'CANONICAL_PROMPT_BUILD_ERROR';
+    throw error;
+  }
+
+  const signature = fromDocs?.metadata?.docsSignature || '';
+  if (SYSTEM_PROMPT_CACHE && SYSTEM_PROMPT_CACHE.signature === signature) {
     return SYSTEM_PROMPT_CACHE;
   }
 
-  SYSTEM_PROMPT_CACHE = SYSTEM_PROMPT;
+  SYSTEM_PROMPT_CACHE = {
+    prompt: fromDocs.prompt,
+    metadata: {
+      ...fromDocs.metadata,
+      extraBlocks: [
+        {
+          name: 'operational_fallback',
+          included: false,
+          chars: OPERATIONAL_PROMPT_FALLBACK.length,
+          reason: 'Disponible solo para fallback de error; no se concatena en condiciones normales.',
+        },
+      ],
+    },
+    signature,
+  };
+
   return SYSTEM_PROMPT_CACHE;
 };
 
@@ -496,60 +516,31 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     ? history.map((item) => `${item.role === 'assistant' ? 'Asistente' : 'Cliente'}: ${item.content}`).join('\n')
     : 'Sin historial previo en esta sesión.';
 
+  const requestContext = {
+    pagina_actual: pageContext,
+    intencion_detectada: intent,
+    recomendacion_contexto: recommendationContext || null,
+    recomendacion_intro: recommendationIntro || null,
+    max_recomendaciones: MAX_RECOMMENDATIONS,
+  };
+
   return [
+    'Usá como fuente principal las instrucciones canónicas del system prompt cargado desde docs.',
     buildPageContextGuidance(pageContext),
-    '',
     `Mensaje actual del cliente: ${message}`,
-    '',
-    `Historial de conversación:\n${serializedHistory}`,
-    '',
-    'Usá el historial de conversación para mantener continuidad en preguntas de seguimiento.',
-    'No uses formato de menú ni enumeres servicios del tipo “puedo armarte recomendación, caja o mensualidad” salvo pedido explícito del cliente.',
-    'Si el último mensaje depende del contexto previo, asumí continuidad temática salvo que el cliente cambie de tema explícitamente.',
-    `Intención detectada (detectIntent): ${intent}.`,
-    recommendationContext ? `Contexto de recomendación: ${JSON.stringify(recommendationContext)}.` : '',
-    recommendationIntro ? `Introducción recomendada para esta respuesta: ${recommendationIntro}` : '',
-    'Reglas por intención: consulta_educativa_vino => responder primero la pregunta concreta del usuario en modo educativo (sin menú ni lista de servicios) y recién después, en una segunda frase opcional, ofrecer bajar a etiquetas de Lombardo.',
-    `Reglas por intención: consulta_producto => actuar como asesor de vinoteca real, sugerir de 1 a ${MAX_RECOMMENDATIONS} vinos reales y explicar cada opción con lenguaje natural (sin mezclar experiencias ni club). La apertura debe usar ocasión, presupuesto y/o varietal cuando existan; evitá frases genéricas.`,
-    'Reglas por intención: consulta_caja => proponer exactamente 3 vinos con lógica: opción segura, opción más especial, opción para descubrir.',
-    'Reglas por intención: consulta_mensualidad => explicar lógica de club/selección mensual y sugerir selección mensual.',
-    'Reglas por intención: consulta_experiencias => responder como anfitrión de experiencias (catas/eventos), evitando bloque comercial rígido.',
-    'Reglas por intención: consulta_club => responder únicamente sobre club/membresía/beneficios.',
-    'Reglas por intención: consulta_contacto => priorizar cierre y derivar naturalmente a WhatsApp.',
-    'Reglas por intención: consulta_general => responder directo y, solo si falta contexto real, hacer exactamente una pregunta útil (no más de una).',
-    'Definí internamente si esta consulta cae en modo conocimiento general, modo catálogo Lombardo o modo mixto, y respondé en consecuencia.',
-    'Si es modo mixto, explicá primero la lógica general y luego ofrecé o sugerí opciones de Lombardo alineadas.',
-    'No mezcles intenciones en una misma respuesta: priorizá la intención detectada y evitá meter club/experiencias/caja si no fue pedido.',
-    'No uses siempre el mismo formato de respuesta. Variá entre párrafo corto, párrafo + bullets o respuesta breve según lo que pida el cliente.',
-    'Flujo conversacional obligatorio (CONVERSATION_FLOW_LOMBARDO): responder primero; preguntar después solo si hace falta; recomendar cuando corresponda; vender o derivar recién cuando realmente suma.',
-    'Nunca arranques con formato menú (“puedo ayudarte con...”, “podemos empezar por...”, “te explico rápido...”). Contestá directo a lo que preguntó el cliente.',
-    'Evitá repetir fórmulas automáticas de apertura/cierre entre respuestas consecutivas.',
-    'Evitá follow-ups mecánicos o de checklist. Si cerrás con pregunta, que sea una sola, natural y realmente útil para avanzar.',
-    'No empujes CTA de venta o WhatsApp al inicio. Primero resolver, después sugerir siguiente paso comercial si tiene sentido.',
-    '',
-    'Ejemplo deseado (consulta_producto): “Si querés moverte cerca de los $20.000, hay varias opciones que pueden ir bien. Trumpeter Malbec suele ser una alternativa muy rendidora en ese rango, fácil de recomendar y bastante versátil. También podrías mirar Zuccardi Serie A Malbec si querés algo con un perfil un poco más gastronómico. Y si te interesa algo apenas más arriba, Rutini Cabernet Malbec también puede entrar en juego. ¿Lo buscás para comida, regalo o para tomar solo?”.',
-    'Ejemplo deseado (consulta_educativa_vino): “El Malbec suele ir muy bien con carnes rojas, asado, empanadas, pastas con salsa intensa y quesos semiduros. En general funciona mejor con platos que tengan cierta intensidad, porque si la comida es muy liviana el vino puede taparla. Si querés, también te puedo sugerir opciones de Lombardo que vayan bien para ese tipo de comida.”.',
-    'Ejemplo deseado (consulta_experiencias): “Depende del formato, pero en general una cata suele estar pensada para probar distintas etiquetas, comparar estilos y entender un poco mejor qué hace diferente a cada vino. También puede haber algo de maridaje o una guía más relajada para disfrutar la experiencia sin que se vuelva técnica. Si querés, te cuento qué tipo de experiencia te puede ir mejor.”.',
-    '',
-    `Base de vinos Lombardo (JSON): ${JSON.stringify(compactCatalog)}`,
-    '',
+    `Historial de conversación:
+${serializedHistory}`,
+    `Contexto estructurado de esta consulta: ${JSON.stringify(requestContext)}`,
+    `Catálogo Lombardo disponible (JSON): ${JSON.stringify(compactCatalog)}`,
     [INTENTS.CONSULTA_PRODUCTO, INTENTS.CONSULTA_CAJA, INTENTS.CONSULTA_MENSUALIDAD].includes(intent)
-      ? `Preselección sugerida para esta consulta (máximo ${MAX_RECOMMENDATIONS}): ${JSON.stringify(
-          recommendedWines
-        )}`
-      : 'No hay preselección forzada para esta consulta.',
-    '',
-    [INTENTS.CONSULTA_PRODUCTO, INTENTS.CONSULTA_CAJA, INTENTS.CONSULTA_MENSUALIDAD].includes(intent)
-      ? 'Cuando haya intención de recomendación, usá la preselección como base principal y no inventes etiquetas.'
-      : 'Si recomendás vinos de todos modos, usá solo etiquetas reales del catálogo.',
-    '',
-    `Si hacés recomendaciones, máximo ${MAX_RECOMMENDATIONS} opciones.`,
-  ].join('\n');
+      ? `Preselección sugerida para esta consulta: ${JSON.stringify(recommendedWines)}`
+      : 'Sin preselección forzada para esta consulta.',
+  ].join('\n\n');
 };
 
 const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }) => {
   const apiKey = process.env.OPENAI_API_KEY;
-  const systemPrompt = await getCanonicalSystemPrompt();
+  const canonicalPrompt = await getCanonicalSystemPrompt();
 
   if (!apiKey) {
     const configError = new Error('OPENAI_API_KEY no está configurada en el entorno.');
@@ -559,7 +550,13 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
 
   let response;
   try {
-    console.log('[sommelier-chat][debug] llamando OpenAI', { model: OPENAI_MODEL, endpoint: OPENAI_URL });
+    console.log('[sommelier-chat][debug] llamando OpenAI', {
+      model: OPENAI_MODEL,
+      endpoint: OPENAI_URL,
+      canonicalDocs: canonicalPrompt.metadata.docs.map((doc) => doc.file),
+      extraBlocks: canonicalPrompt.metadata.extraBlocks,
+      truncated: canonicalPrompt.metadata.truncated,
+    });
     response = await fetch(OPENAI_URL, {
       method: 'POST',
       headers: {
@@ -569,7 +566,7 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
       body: JSON.stringify({
         model: OPENAI_MODEL,
         input: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: canonicalPrompt.prompt },
           {
             role: 'user',
             content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }),
@@ -612,6 +609,9 @@ const buildServerErrorPayload = (error) => {
     OPENAI_CONFIG_ERROR: 500,
     OPENAI_HTTP_ERROR: 502,
     OPENAI_PARSE_ERROR: 502,
+    CANONICAL_PROMPT_BUILD_ERROR: 500,
+    CANONICAL_DOC_EMPTY: 500,
+    ENOENT: 500,
     INTERNAL_SERVER_ERROR: 500,
   };
 
@@ -622,6 +622,9 @@ const buildServerErrorPayload = (error) => {
     OPENAI_CONFIG_ERROR: 'La configuración del servicio de IA está incompleta en el servidor.',
     OPENAI_HTTP_ERROR: 'El servicio de IA devolvió un error.',
     OPENAI_PARSE_ERROR: 'No pudimos interpretar la respuesta del servicio de IA.',
+    CANONICAL_PROMPT_BUILD_ERROR: 'No pudimos reconstruir el prompt canónico del asistente.',
+    CANONICAL_DOC_EMPTY: 'Hay un documento canónico vacío en la configuración del asistente.',
+    ENOENT: 'Falta un documento canónico requerido para el asistente.',
     INTERNAL_SERVER_ERROR: 'No pudimos generar la recomendación en este momento.',
   };
 
