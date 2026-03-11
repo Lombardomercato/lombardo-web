@@ -55,6 +55,7 @@ const PAGE_CONTEXT_ALIASES = {
   membresia: 'club',
   cajas: 'club',
   seleccion_mensual: 'club',
+  'wine-tinder': 'wine-tinder',
 };
 
 const canonicalPageContext = (pageContext) => {
@@ -86,8 +87,10 @@ const detectConsultCategory = ({ message, intent, pageContext }) => {
   const normalized = normalizeText(message);
   const canonicalContext = canonicalPageContext(pageContext);
 
-  if (intent === 'mensualidad') return 'mensualidad';
-  if (intent === 'caja') return 'caja';
+  if (intent === 'consulta_mensualidad') return 'mensualidad';
+  if (intent === 'consulta_caja') return 'caja';
+  if (intent === 'consulta_club') return 'club';
+  if (intent === 'consulta_contacto') return 'contacto';
 
   const fromPatterns = Object.entries(CATEGORY_PATTERNS).find(([, patterns]) =>
     patterns.some((pattern) => pattern.test(normalized))
@@ -97,6 +100,9 @@ const detectConsultCategory = ({ message, intent, pageContext }) => {
   if (canonicalContext === 'club') return 'club';
   if (canonicalContext === 'experiencias') return 'experiencias';
   if (canonicalContext === 'contacto') return 'contacto';
+  if (canonicalContext === 'wine-tinder') return 'recomendacion_producto';
+
+  if (intent === 'consulta_general') return 'recomendacion_producto';
 
   return 'recomendacion_producto';
 };

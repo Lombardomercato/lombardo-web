@@ -34,6 +34,7 @@ const intentToCategory = (intent = '') => {
     consulta_experiencias: 'experiencias',
     consulta_club: 'club',
     consulta_contacto: 'contacto',
+    consulta_general: 'general',
   };
 
   return map[intent] || 'otros';
@@ -94,7 +95,7 @@ const recordInteraction = async (input) => {
     fecha: new Date().toISOString(),
     mensaje_usuario: input.mensaje_usuario || '',
     pagina_actual: input.pagina_actual || 'general',
-    intencion_detectada: input.intencion_detectada || 'educativa',
+    intencion_detectada: input.intencion_detectada || 'consulta_general',
     perfil_detectado: input.perfil_detectado || inferProfile(input.mensaje_usuario || ''),
     categoria_consulta: input.categoria_consulta || intentToCategory(input.intencion_detectada),
     productos_sugeridos: Array.isArray(input.productos_sugeridos) ? input.productos_sugeridos.slice(0, 5) : [],

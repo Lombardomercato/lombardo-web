@@ -191,9 +191,9 @@ const resolvePageContextFromPath = (pathname = window.location.pathname) => {
     '/pages/home': 'home',
     '/sommelier.html': 'sommelier',
     '/pages/sommelier-ia': 'sommelier',
-    '/wine-tinder.html': 'experiencias',
-    '/tinder-wine.html': 'experiencias',
-    '/pages/wine-tinder': 'experiencias',
+    '/wine-tinder.html': 'wine-tinder',
+    '/tinder-wine.html': 'wine-tinder',
+    '/pages/wine-tinder': 'wine-tinder',
     '/pages/experiencias': 'experiencias',
     '/experiencias.html': 'experiencias',
     '/vinos.html': 'experiencias',
@@ -211,7 +211,8 @@ const resolvePageContextFromPath = (pathname = window.location.pathname) => {
   if (directMap[cleanPath]) return directMap[cleanPath];
 
   if (cleanPath.startsWith('/pages/sommelier-ia')) return 'sommelier';
-  if (cleanPath.startsWith('/pages/wine-tinder') || cleanPath.startsWith('/pages/experiencias')) return 'experiencias';
+  if (cleanPath.startsWith('/pages/wine-tinder')) return 'wine-tinder';
+  if (cleanPath.startsWith('/pages/experiencias')) return 'experiencias';
   if (cleanPath.startsWith('/pages/club') || cleanPath.startsWith('/pages/tienda')) return 'club';
   if (cleanPath.startsWith('/pages/contacto')) return 'contacto';
 
@@ -1873,6 +1874,8 @@ const formatAssistantCurrencyDisplay = (content) => {
 const getPageContext = () => {
   const customContext = document.body?.dataset?.pageContext;
   const contextAliases = {
+    'wine-tinder': 'wine-tinder',
+    wine_tinder: 'wine-tinder',
     vinos: 'experiencias',
     vino: 'experiencias',
     cafe: 'experiencias',
