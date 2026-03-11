@@ -4,6 +4,7 @@ const path = require('node:path');
 const DOC_FILES = {
   architecture: 'docs/LOMBARDO_ARCHITECTURE.md',
   systemPrompt: 'docs/AI_SYSTEM_PROMPT_LOMBARDO.md',
+  conversationFlow: 'docs/CONVERSATION_FLOW_LOMBARDO.md',
   toneGuide: 'docs/AI_TONE_GUIDE_LOMBARDO.md',
   intentRules: 'docs/AI_INTENT_RULES_LOMBARDO.md',
   recommendationEngine: 'docs/WINE_RECOMMENDATION_ENGINE_LOMBARDO.md',
@@ -31,9 +32,10 @@ const compact = (value) =>
 const clip = (value, maxChars = 5000) => compact(value).slice(0, maxChars);
 
 const buildSystemPromptFromDocs = async () => {
-  const [systemPrompt, toneGuide, intentRules, recommendationEngine, architecture, learningLayer] =
+  const [systemPrompt, conversationFlow, toneGuide, intentRules, recommendationEngine, architecture, learningLayer] =
     await Promise.all([
       readDoc(DOC_FILES.systemPrompt),
+      readDoc(DOC_FILES.conversationFlow),
       readDoc(DOC_FILES.toneGuide),
       readDoc(DOC_FILES.intentRules),
       readDoc(DOC_FILES.recommendationEngine),
@@ -42,9 +44,10 @@ const buildSystemPromptFromDocs = async () => {
     ]);
 
   const sections = [
-    'Fuente canónica obligatoria Lombardo (docs): prompt, tono, intención, motor de recomendación, arquitectura y learning layer.',
+    'Fuente canónica obligatoria Lombardo (docs): prompt, flujo conversacional, tono, intención, motor de recomendación, arquitectura y learning layer.',
     architecture ? `Arquitectura:\n${clip(architecture, 1600)}` : '',
     systemPrompt ? `Comportamiento general:\n${clip(systemPrompt, 5000)}` : '',
+    conversationFlow ? `Flujo conversacional (orden obligatorio: responder → preguntar si hace falta → recomendar cuando corresponda → vender/derivar solo cuando suma):\n${clip(conversationFlow, 4200)}` : '',
     toneGuide ? `Guía de tono:\n${clip(toneGuide, 2800)}` : '',
     intentRules ? `Reglas de intención:\n${clip(intentRules, 3500)}` : '',
     recommendationEngine ? `Motor de recomendación:\n${clip(recommendationEngine, 3500)}` : '',
