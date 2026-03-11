@@ -87,6 +87,11 @@ Legado archivado:
   - Configurá un backend externo agregando en el `<head>`:
     - `<meta name="assistant-api-url" content="https://tu-backend.com/api/sommelier-chat" />`
     - o `<meta name="assistant-api-base" content="https://tu-backend.com" />`
+  - También podés inyectarlo sin redeploy con:
+    - Query string: `?assistant_api_url=https://tu-backend.com/api/sommelier-chat`
+    - Query string: `?assistant_api_base=https://tu-backend.com`
+    - LocalStorage: `assistant-api-url` o `assistant-api-base`
+  - El frontend ahora reintenta automáticamente sobre múltiples candidatos hasta encontrar un endpoint disponible.
 - Para debug del chat, revisar logs en consola del navegador con prefijo `[assistant-widget][debug]` y en servidor con `[sommelier-chat][debug]`.
 
 
