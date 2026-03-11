@@ -1891,6 +1891,11 @@ const getPageContext = () => {
 };
 
 const initGlobalLombardoAssistant = () => {
+  const pageContext = getPageContext();
+  const hasEmbeddedSommelierChat = Boolean(document.querySelector('[data-ai-chat]'));
+
+  if (pageContext === 'sommelier' || hasEmbeddedSommelierChat) return;
+
   const container = document.createElement('section');
   container.className = 'assistant-widget';
   container.setAttribute('data-assistant-widget', '');
@@ -1941,7 +1946,6 @@ const initGlobalLombardoAssistant = () => {
   const submitBtn = form?.querySelector('button[type="submit"]');
   const promptButtons = container.querySelectorAll('[data-assistant-prompts] button');
   const closeBtn = container.querySelector('[data-assistant-close]');
-  const pageContext = getPageContext();
   const widgetState = {
     isOpen: false,
     isMinimized: true,
