@@ -1,6 +1,9 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { recordInteraction, inferProfile, intentToCategory } = require('./lib/assistant-interactions');
+const { detectIntent: detectIntentByRules, INTENTS } = require('./lib/intent-router');
+const { recommendWines } = require('./lib/wine-recommendation-engine');
+const { buildSystemPromptFromDocs } = require('./lib/lombardo-ai-config');
 
 const {
   detectConsultCategory,
@@ -15,15 +18,6 @@ const MAX_RECOMMENDATIONS = 3;
 const MAX_HISTORY_ITEMS = 14;
 const WHATSAPP_PHONE = '543412762319';
 const WHATSAPP_BASE_MESSAGE = 'Hola Lombardo, quiero continuar esta consulta.';
-const INTENTS = {
-  CONSULTA_PRODUCTO: 'consulta_producto',
-  CONSULTA_EDUCATIVA_VINO: 'consulta_educativa_vino',
-  CONSULTA_CAJA: 'consulta_caja',
-  CONSULTA_MENSUALIDAD: 'consulta_mensualidad',
-  CONSULTA_EXPERIENCIAS: 'consulta_experiencias',
-  CONSULTA_CLUB: 'consulta_club',
-  CONSULTA_CONTACTO: 'consulta_contacto',
-};
 
 const PAGE_CONTEXT_ROLES = {
   home: {
@@ -33,6 +27,10 @@ const PAGE_CONTEXT_ROLES = {
   sommelier: {
     rol: 'Asistente del recomendador',
     foco: 'Profundizar recomendaciones, refinar gustos y sugerir caja/mensualidad cuando aplique.',
+  },
+  'wine-tinder': {
+    rol: 'Analista de perfil vínico',
+    foco: 'Convertir likes/dislikes en perfil y sugerencias de 1 a 3 vinos reales del catálogo.',
   },
   club: {
     rol: 'Asesor del Club Lombardo',
@@ -54,6 +52,7 @@ const PAGE_CONTEXT_ROLES = {
 };
 
 const PAGE_CONTEXT_ALIASES = {
+  'wine-tinder': 'wine-tinder',
   vinos: 'experiencias',
   vino: 'experiencias',
   cafe: 'experiencias',
@@ -104,6 +103,15 @@ const SYSTEM_PROMPT = [
   'Tené en cuenta el historial de conversación para mantener coherencia en respuestas de seguimiento.',
   'Si aporta valor, cerrá con un siguiente paso útil; si no suma, cerrá sin follow-up.',
 ].join('\n');
+
+let SYSTEM_PROMPT_CACHE = null;
+
+const getCanonicalSystemPrompt = async () => {
+  if (SYSTEM_PROMPT_CACHE && SYSTEM_PROMPT_CACHE.length > 200) return SYSTEM_PROMPT_CACHE;
+  const fromDocs = await buildSystemPromptFromDocs();
+  SYSTEM_PROMPT_CACHE = fromDocs && fromDocs.length > 200 ? fromDocs : SYSTEM_PROMPT;
+  return SYSTEM_PROMPT_CACHE;
+};
 
 const parseNumericStock = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -291,7 +299,7 @@ const hasRecommendationIntent = (message) => {
   return containsKeyword(normalized, RECOMMENDATION_INTENT_PATTERNS);
 };
 
-const detectIntent = (message, pageContext, history = []) => {
+const detectIntentLegacy = (message, pageContext, history = []) => {
   const normalized = normalizeText(message);
   const recentContext = history
     .slice(-3)
@@ -333,7 +341,7 @@ const detectIntent = (message, pageContext, history = []) => {
 
   if (pageContext === 'club') return INTENTS.CONSULTA_CLUB;
   if (pageContext === 'experiencias') return INTENTS.CONSULTA_EXPERIENCIAS;
-  return INTENTS.CONSULTA_EDUCATIVA_VINO;
+  return INTENTS.CONSULTA_GENERAL;
 };
 
 const findRequestedValues = (normalizedMessage, dictionary) =>
@@ -559,7 +567,7 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }
   return { answer: `${trimmed}\n\n${suggestion}`, closingType };
 };
 
-const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent }) => {
+const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext }) => {
   const compactCatalog = wines.map((wine) => ({
     nombre: wine.nombre,
     precio: wine.precio,
@@ -584,6 +592,7 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     'Usá el historial de conversación para mantener continuidad en preguntas de seguimiento.',
     'Si el último mensaje depende del contexto previo, asumí continuidad temática salvo que el cliente cambie de tema explícitamente.',
     `Intención detectada (detectIntent): ${intent}.`,
+    recommendationContext ? `Contexto de recomendación: ${JSON.stringify(recommendationContext)}.` : '',
     'Reglas por intención: consulta_educativa_vino => responder directo y claro en modo educativo, sin prefacios rígidos; opcionalmente ofrecer bajar a opciones de Lombardo.',
     `Reglas por intención: consulta_producto => actuar como asesor de vinoteca real, sugerir de 1 a ${MAX_RECOMMENDATIONS} vinos reales y explicar cada opción con lenguaje natural (sin mezclar experiencias ni club).`,
     'Reglas por intención: consulta_caja => proponer exactamente 3 vinos con lógica: opción segura, opción más especial, opción para descubrir.',
@@ -591,6 +600,7 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     'Reglas por intención: consulta_experiencias => responder como anfitrión de experiencias (catas/eventos), evitando bloque comercial rígido.',
     'Reglas por intención: consulta_club => responder únicamente sobre club/membresía/beneficios.',
     'Reglas por intención: consulta_contacto => priorizar cierre y derivar naturalmente a WhatsApp.',
+    'Reglas por intención: consulta_general => hacer 1 o 2 preguntas de descubrimiento antes de recomendar.',
     'Definí internamente si esta consulta cae en modo conocimiento general, modo catálogo Lombardo o modo mixto, y respondé en consecuencia.',
     'Si es modo mixto, explicá primero la lógica general y luego ofrecé o sugerí opciones de Lombardo alineadas.',
     'No uses siempre el mismo formato de respuesta. Variá entre párrafo corto, párrafo + bullets o respuesta breve según lo que pida el cliente.',
@@ -617,8 +627,9 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
   ].join('\n');
 };
 
-const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines, intent }) => {
+const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext }) => {
   const apiKey = process.env.OPENAI_API_KEY;
+  const systemPrompt = await getCanonicalSystemPrompt();
 
   if (!apiKey) {
     const configError = new Error('OPENAI_API_KEY no está configurada en el entorno.');
@@ -638,10 +649,10 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
       body: JSON.stringify({
         model: OPENAI_MODEL,
         input: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           {
             role: 'user',
-            content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines, intent }),
+            content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext }),
           },
         ],
         max_output_tokens: 350,
@@ -712,7 +723,7 @@ const appendWhatsAppSuggestion = ({ answer, pageContext }) => {
   return `${trimmed}\n\n${buildWhatsAppSuggestion(pageContext)}`;
 };
 
-const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext, intent }) => {
+const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext, intent, recommendationContext }) => {
   if (intent === INTENTS.CONSULTA_EDUCATIVA_VINO) {
     return [
       'En este caso conviene mirar primero la lógica general del vino y después, si querés, lo bajamos a etiquetas concretas.',
@@ -780,6 +791,9 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
   };
 
   const intro = introByContext[pageContext] || 'Con lo que me contás, estas opciones pueden encajar bien:';
+  const contextHint = recommendationContext
+    ? `Perfil ${recommendationContext.profile || 'general'} · ocasión ${recommendationContext.ocasion || 'libre'}${recommendationContext.budget ? ` · presupuesto cercano a $${Number(recommendationContext.budget).toLocaleString('es-AR')}` : ''}`
+    : '';
 
   const listed = options
     .map((wine) => {
@@ -794,7 +808,7 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
     ? '¿Lo buscás para comida, regalo o para tomar solo?'
     : '¿Preferís algo más suave o con más cuerpo?';
 
-  return [intro, listed, closing].join('\n');
+  return [intro, contextHint, listed, closing].filter(Boolean).join('\n');
 };
 
 module.exports = async (req, res) => {
@@ -813,7 +827,7 @@ module.exports = async (req, res) => {
     const message = sanitizeMessage(req.body?.message);
     const pageContext = sanitizePageContext(req.body?.pagina_actual);
     const history = sanitizeHistory(req.body?.history);
-    const intent = detectIntent(message, pageContext, history);
+    const intent = detectIntentByRules({ message, pageContext, history }) || detectIntentLegacy(message, pageContext, history);
     const category = detectConsultCategory({ message, intent, pageContext });
     const profile = detectProfile({ message, category });
 
@@ -831,7 +845,7 @@ module.exports = async (req, res) => {
     const wines = await readWineCatalog();
     console.log('[sommelier-chat][debug] catálogo cargado', { wines: wines.length });
 
-    const recommendedWines = selectRecommendedWines({ wines, message, intent });
+    const { recommendations: recommendedWines, context: recommendationContext } = recommendWines({ wines, message, intent, wineProfile: req.body?.wine_profile });
     console.log('[sommelier-chat][debug] preselección', { recommended: recommendedWines.length });
     const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
     console.log('[sommelier-chat][debug] OpenAI key disponible:', hasOpenAIKey);
@@ -844,6 +858,7 @@ module.exports = async (req, res) => {
           history,
           recommendedWines,
           intent,
+          recommendationContext,
         })
       : buildFallbackRecommendationAnswer({
           message,
@@ -851,6 +866,7 @@ module.exports = async (req, res) => {
           recommendedWines,
           pageContext,
           intent,
+          recommendationContext,
         });
 
     if (!rawAnswer) {

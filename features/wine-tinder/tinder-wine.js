@@ -109,7 +109,7 @@
     shareRoot.hidden = false;
     const text = `Hice match con el vino en Wine Tinder de Lombardo: ${profile.name} (${estimateMatchPercent()}% match). Mis elegidos: ${recommendations.slice(0,2).map((w) => w.nombre).join(' + ')}. ¿Cuál te salió a vos? 🍷 #WineTinderLombardo`;
     const encodedText = encodeURIComponent(text);
-    const siteUrl = encodeURIComponent('https://lombardo.com.ar/tinder-wine');
+    const siteUrl = encodeURIComponent('https://lombardo.com.ar/pages/wine-tinder/');
     if (shareWhatsAppNode) shareWhatsAppNode.href = `https://wa.me/?text=${encodedText}`;
     if (shareXNode) shareXNode.href = `https://twitter.com/intent/tweet?text=${encodedText}&url=${siteUrl}`;
     if (shareFacebookNode) shareFacebookNode.href = `https://www.facebook.com/sharer/sharer.php?u=${siteUrl}&quote=${encodedText}`;
@@ -125,9 +125,62 @@
     }
   };
 
+
+  const deriveRecommendationContext = (profile) => {
+    const dominant = state.likes[0] || {};
+    const avgPrice = state.likes.length
+      ? Math.round(state.likes.reduce((acc, wine) => acc + Number(wine.precio || 0), 0) / state.likes.length)
+      : null;
+
+    return {
+      perfil: profile.name,
+      ocasion: dominant.ocasion || 'descubrir',
+      presupuesto: avgPrice,
+      estilo: dominant.varietal || dominant.tipo_vino || 'clasico',
+    };
+  };
+
+  const scoreByRecommendationContext = (wine, context) => {
+    let score = scoreByLikes(wine);
+    const wineText = `${wine.varietal || ''} ${wine.tipo_vino || ''} ${wine.descripcion_corta || ''}`.toLowerCase();
+    if (context.ocasion && String(wine.ocasion || '').toLowerCase().includes(String(context.ocasion).toLowerCase())) score += 5;
+    if (context.estilo && wineText.includes(String(context.estilo).toLowerCase())) score += 3;
+    if (Number.isFinite(context.presupuesto)) {
+      const delta = Math.abs(Number(wine.precio || 0) - context.presupuesto);
+      if (delta <= 3000) score += 5;
+      else if (delta <= 7000) score += 2;
+    }
+    return score;
+  };
+
+
+  const logTinderInteraction = (profile, context, recommendations) => {
+    const payload = {
+      fecha: new Date().toISOString().slice(0, 10),
+      mensaje_usuario: 'Resultado Wine Tinder',
+      pagina_actual: 'wine-tinder',
+      intencion_detectada: 'consulta_producto',
+      perfil_detectado: context?.perfil || profile?.name || 'Perfil Wine Tinder',
+      categoria_consulta: 'recomendacion_producto',
+      productos_sugeridos: recommendations.map((wine) => wine?.nombre).filter(Boolean).slice(0, 3),
+      tipo_cierre: 'etiquetas',
+      derivo_whatsapp: false,
+    };
+
+    try {
+      const key = 'lombardo_tinder_interactions';
+      const current = JSON.parse(localStorage.getItem(key) || '[]');
+      const next = Array.isArray(current) ? [...current, payload].slice(-80) : [payload];
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch (_error) {
+      // noop
+    }
+  };
+
   const finish = () => {
     const profile = detectProfile();
-    const ranked = [...catalog].map((wine) => ({ ...wine, tinderScore: scoreByLikes(wine) })).sort((a, b) => b.tinderScore - a.tinderScore || sortByPriorityAndPrice(a, b));
+    const context = deriveRecommendationContext(profile);
+    const ranked = [...catalog].map((wine) => ({ ...wine, tinderScore: scoreByRecommendationContext(wine, context) })).sort((a, b) => b.tinderScore - a.tinderScore || sortByPriorityAndPrice(a, b));
     const recommendations = ranked.slice(0, 3);
     const box = ranked.slice(1, 4).length ? ranked.slice(1, 4) : ranked.slice(0, 3);
     if (profileNameNode) profileNameNode.textContent = `Perfil: ${profile.name}`;
@@ -136,6 +189,10 @@
     renderList(recommendationsNode, recommendations);
     renderList(boxNode, box);
     updateShareActions(profile, recommendations);
+    try {
+      localStorage.setItem('lombardo_wine_profile', JSON.stringify(context));
+    } catch (_error) {}
+    logTinderInteraction(profile, context, recommendations);
     swipePanel.hidden = true;
     resultPanel.hidden = false;
   };
