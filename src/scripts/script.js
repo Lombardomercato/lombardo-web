@@ -1913,6 +1913,7 @@ if (sommelierApp) {
 }
 
 const ASSISTANT_STORAGE_KEY = 'lombardo_assistant_history';
+const ASSISTANT_API_URL = '/api/sommelier-chat';
 
 const ARS_CHAT_CURRENCY_FORMATTER = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -2353,62 +2354,50 @@ const initGlobalLombardoAssistant = () => {
       history,
       wine_profile: readStoredWineProfile(),
     };
-    const endpoints = resolveAssistantApiCandidates();
     console.log('[assistant-widget][debug] payload enviado:', payload);
-    console.log('[assistant-widget][debug] endpoints candidatos:', endpoints);
+    console.log('[assistant-widget][debug] endpoint chat:', ASSISTANT_API_URL);
 
     let response;
     let data = {};
     let rawBody = '';
-    let latestError = null;
-
-    for (const endpoint of endpoints) {
-      try {
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      } catch (error) {
-        console.error('[assistant-widget][debug] fetch error:', { endpoint, error });
-        latestError = error;
-        continue;
-      }
-
-      rawBody = await response.text().catch(() => '');
-      try {
-        data = rawBody ? JSON.parse(rawBody) : {};
-      } catch (error) {
-        console.warn('[assistant-widget][debug] respuesta no JSON:', rawBody.slice(0, 300));
-        data = {};
-      }
-
-      console.log('[assistant-widget][debug] status HTTP:', { endpoint, status: response.status });
-      console.log('[assistant-widget][debug] body recibido:', data);
-
-      if (!response.ok) {
-        const endpointUnavailable = [404, 405, 500, 501, 502, 503].includes(response.status);
-        const nonJsonReply = !rawBody || rawBody.trim().startsWith('<!DOCTYPE') || rawBody.trim().startsWith('<html');
-
-        if (endpointUnavailable && (nonJsonReply || !data.error_code)) {
-          latestError = new Error(`Endpoint no disponible en ${endpoint}`);
-          continue;
-        }
-
-        const endpointError = new Error(data.error || 'No se pudo obtener respuesta del asistente.');
-        endpointError.code = data.error_code || 'ENDPOINT_ERROR';
-        endpointError.status = response.status;
-        throw endpointError;
-      }
-
-      latestError = null;
-      break;
+    try {
+      response = await fetch(ASSISTANT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.error('[assistant-widget][debug] fetch error:', {
+        endpoint: ASSISTANT_API_URL,
+        message,
+        error,
+      });
+      const networkError = new Error('No encontramos un backend disponible para Sommelier IA.');
+      networkError.code = 'BACKEND_UNAVAILABLE';
+      throw networkError;
     }
 
-    if (!response || latestError) {
-      const backendError = new Error('No encontramos un backend disponible para Sommelier IA.');
-      backendError.code = 'BACKEND_UNAVAILABLE';
-      throw backendError;
+    rawBody = await response.text().catch(() => '');
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {};
+    } catch (error) {
+      console.warn('[assistant-widget][debug] respuesta no JSON:', rawBody.slice(0, 300));
+      data = {};
+    }
+
+    console.log('[assistant-widget][debug] status HTTP:', { endpoint: ASSISTANT_API_URL, status: response.status });
+    console.log('[assistant-widget][debug] body recibido:', data);
+
+    if (!response.ok) {
+      const endpointError = new Error(data.error || 'No se pudo obtener respuesta del asistente.');
+      endpointError.code = data.error_code || 'ENDPOINT_ERROR';
+      endpointError.status = response.status;
+      console.warn('[assistant-widget][debug] request fallida:', {
+        endpoint: ASSISTANT_API_URL,
+        status: response.status,
+        body: data,
+      });
+      throw endpointError;
     }
 
     if (typeof data.reply !== 'string') {
