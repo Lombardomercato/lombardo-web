@@ -1,6 +1,34 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { INTENTS, normalizeText } = require('./intent-router');
 
+const RECOMMENDATION_ENGINE_DOC_PATH = 'docs/WINE_RECOMMENDATION_ENGINE_LOMBARDO.md';
 const MAX_RECOMMENDATIONS = 3;
+
+let recommendationRulesCache = null;
+const getRecommendationRulesFromDocs = () => {
+  if (recommendationRulesCache) return recommendationRulesCache;
+
+  try {
+    const raw = fs.readFileSync(path.join(process.cwd(), RECOMMENDATION_ENGINE_DOC_PATH), 'utf8');
+    const normalized = normalizeText(raw);
+    recommendationRulesCache = {
+      maxRecommendations: /maximo\s+3\s+vinos/.test(normalized) ? 3 : MAX_RECOMMENDATIONS,
+      useBudget: /presupuesto/.test(normalized),
+      useOccasion: /ocasion/.test(normalized),
+      useStyle: /estilo|perfil/.test(normalized),
+    };
+  } catch {
+    recommendationRulesCache = {
+      maxRecommendations: MAX_RECOMMENDATIONS,
+      useBudget: true,
+      useOccasion: true,
+      useStyle: true,
+    };
+  }
+
+  return recommendationRulesCache;
+};
 
 const parseNumber = (value, fallback = NaN) => {
   const parsed = Number(value);
@@ -39,7 +67,6 @@ const inferStyle = (message = '') => {
   return 'clasico';
 };
 
-
 const extractVarietal = (message = '') => {
   const text = normalizeText(message);
   if (/malbec/.test(text)) return 'malbec';
@@ -55,15 +82,10 @@ const extractVarietal = (message = '') => {
 
 const buildContextualIntro = (context = {}) => {
   const parts = [];
-
   if (context.ocasion && context.ocasion !== 'descubrir') parts.push(`para ${context.ocasion}`);
-  if (Number.isFinite(context.budget)) {
-    parts.push(`con un presupuesto cercano a $${Number(context.budget).toLocaleString('es-AR')}`);
-  }
+  if (Number.isFinite(context.budget)) parts.push(`con un presupuesto cercano a $${Number(context.budget).toLocaleString('es-AR')}`);
   if (context.varietal) parts.push(`en perfil ${context.varietal}`);
-
   if (!parts.length) return 'Te propongo opciones reales de Lombardo que encajan con lo que venís buscando.';
-
   return `Con lo que me contás (${parts.join(', ')}), estas etiquetas de Lombardo pueden encajar muy bien.`;
 };
 
@@ -77,18 +99,7 @@ const inferProfile = ({ wineProfile, message }) => {
 
 const computeScore = (wine, context) => {
   let score = 0;
-  const wineText = normalizeText(
-    [
-      wine?.nombre,
-      wine?.varietal,
-      wine?.tipo_vino,
-      wine?.estilo,
-      wine?.perfil,
-      wine?.descripcion_corta,
-      wine?.maridaje_principal,
-      wine?.ocasion,
-    ].join(' ')
-  );
+  const wineText = normalizeText([wine?.nombre, wine?.varietal, wine?.tipo_vino, wine?.estilo, wine?.perfil, wine?.descripcion_corta, wine?.maridaje_principal, wine?.ocasion].join(' '));
 
   if (context.ocasion && wineText.includes(context.ocasion)) score += 4;
   if (context.style === 'suave' && /(pinot|blanco|rose|rosado)/.test(wineText)) score += 3;
@@ -113,18 +124,17 @@ const computeScore = (wine, context) => {
 };
 
 const shouldRecommendFromCatalog = (intent) =>
-  [INTENTS.CONSULTA_PRODUCTO, INTENTS.CONSULTA_CAJA, INTENTS.CONSULTA_MENSUALIDAD, INTENTS.CONSULTA_GENERAL].includes(
-    intent
-  );
+  [INTENTS.CONSULTA_PRODUCTO, INTENTS.CONSULTA_CAJA, INTENTS.CONSULTA_MENSUALIDAD, INTENTS.CONSULTA_GENERAL].includes(intent);
 
 const recommendWines = ({ wines = [], message = '', intent, wineProfile }) => {
   if (!shouldRecommendFromCatalog(intent)) return { context: null, recommendations: [] };
 
+  const rules = getRecommendationRulesFromDocs();
   const context = {
     profile: inferProfile({ wineProfile, message }),
-    ocasion: inferOccasion(message),
-    budget: extractBudget(message),
-    style: inferStyle(message),
+    ocasion: rules.useOccasion ? inferOccasion(message) : 'descubrir',
+    budget: rules.useBudget ? extractBudget(message) : null,
+    style: rules.useStyle ? inferStyle(message) : 'clasico',
     varietal: extractVarietal(message),
   };
 
@@ -138,11 +148,11 @@ const recommendWines = ({ wines = [], message = '', intent, wineProfile }) => {
   const ranked = [...withinBudget]
     .map((wine) => ({ wine, score: computeScore(wine, context) }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_RECOMMENDATIONS)
+    .slice(0, rules.maxRecommendations)
     .map((item) => item.wine)
     .filter(Boolean);
 
   return { context, recommendations: ranked, intro: buildContextualIntro(context) };
 };
 
-module.exports = { recommendWines, MAX_RECOMMENDATIONS, buildContextualIntro };
+module.exports = { recommendWines, MAX_RECOMMENDATIONS, RECOMMENDATION_ENGINE_DOC_PATH, buildContextualIntro };
