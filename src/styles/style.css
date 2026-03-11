@@ -1308,32 +1308,22 @@ p {
 
 .image-composition {
   display: grid;
-  grid-template-columns: 1.25fr 0.75fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+  align-items: start;
 }
 
 .image-composition figure {
   margin: 0;
 }
 
-.image-main {
-  grid-row: span 2;
-}
-
 .image-side img,
 .image-main img,
 .image-wide img {
   border-radius: 0;
-  min-height: clamp(260px, 32vw, 520px);
+  width: 100%;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
-}
-
-.image-side img {
-  min-height: clamp(220px, 15vw, 260px);
-}
-
-.image-wide img {
-  min-height: clamp(230px, 17vw, 290px);
 }
 
 .editorial-list {
