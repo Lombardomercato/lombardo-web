@@ -426,6 +426,56 @@ const CLOSING_TYPES = {
   WHATSAPP: 'whatsapp',
 };
 
+
+const SOCIAL_REPLY_PATTERNS = {
+  saludo: [/^(hola|holis|buenas|buen dia|buen día|buenas tardes|buenas noches|que tal|cómo va|como va|como andas|cómo andás)[!.\s]*$/i],
+  agradecimiento: [/^(gracias|muchas gracias|genial gracias|ok gracias|mil gracias|graciass+)[!.\s]*$/i],
+  noSeElegir: [/(^|\s)(no se|no sé)\s+que\s+elegir($|\s)/i],
+  ayudaAbierta: [/(^|\s)(ayudame|ayúdame|tengo una duda|necesito ayuda)($|\s)/i],
+  casual: [/^(ok|dale|perfecto|joya|buenisimo|buenísimo|buenisima|buenísima|entiendo)[!.\s]*$/i],
+};
+
+const detectSocialSubtype = (message = '') => {
+  const text = sanitizeMessage(message);
+  if (!text) return null;
+
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.agradecimiento)) return 'agradecimiento';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.noSeElegir)) return 'no_se_que_elegir';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.ayudaAbierta)) return 'ayuda_abierta';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.saludo)) return 'saludo';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.casual)) return 'casual';
+  return null;
+};
+
+const buildSocialReply = ({ message, history }) => {
+  const subtype = detectSocialSubtype(message);
+  const hasRecentAssistant = Array.isArray(history) && history.some((item) => item.role === 'assistant');
+
+  if (subtype === 'agradecimiento') {
+    return 'De nada, encantado. Si querés, seguimos viendo opciones.';
+  }
+
+  if (subtype === 'no_se_que_elegir') {
+    return 'Tranqui, pasa bastante. Decime si lo buscás para comida, regalo o para tomar algo rico y lo vemos juntos.';
+  }
+
+  if (subtype === 'ayuda_abierta') {
+    return 'Obvio, vamos paso a paso. Contame para qué ocasión lo estás pensando y te ayudo a elegir bien.';
+  }
+
+  if (subtype === 'saludo') {
+    return hasRecentAssistant
+      ? '¡Qué bueno seguir por acá! Decime qué estás buscando y lo vemos juntos.'
+      : '¡Hola! ¿Cómo va? Decime qué estás buscando y te doy una mano.';
+  }
+
+  if (subtype === 'casual') {
+    return 'Perfecto. Cuando quieras, lo aterrizamos a algo puntual y lo resolvemos juntos.';
+  }
+
+  return 'Dale, contame un poco más y te ayudo a encontrar algo que te encaje.';
+};
+
 const buildConversationText = ({ message, history }) => {
   const chunks = [sanitizeMessage(message), ...history.map((item) => sanitizeMessage(item.content))].filter(Boolean);
   return normalizeText(chunks.join(' | '));
@@ -483,6 +533,10 @@ const hasNaturalFollowUp = (answer) => {
 const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }) => {
   const trimmed = sanitizeMessage(answer);
   if (!trimmed) return { answer: '', closingType: CLOSING_TYPES.EDUCATIONAL };
+
+  if (intent === INTENTS.CONSULTA_SOCIAL) {
+    return { answer: trimmed, closingType: CLOSING_TYPES.EDUCATIONAL };
+  }
 
   const closingType = detectClosingType({ message, history, pageContext, intent });
   const suggestion = buildClosingSuggestion({ closingType, pageContext });
@@ -555,6 +609,10 @@ ${serializedHistory}`,
 };
 
 const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }) => {
+  if (intent === INTENTS.CONSULTA_SOCIAL) {
+    return buildSocialReply({ message, history });
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   console.log('[sommelier-chat][debug] cargando prompt canónico');
   const canonicalPrompt = await getCanonicalSystemPrompt();
@@ -666,7 +724,11 @@ const appendWhatsAppSuggestion = ({ answer, pageContext }) => {
   return `${trimmed}\n\n${buildWhatsAppSuggestion(pageContext)}`;
 };
 
-const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext, intent, recommendationContext, recommendationIntro }) => {
+const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext, intent, recommendationContext, recommendationIntro, history = [] }) => {
+  if (intent === INTENTS.CONSULTA_SOCIAL) {
+    return buildSocialReply({ message, history });
+  }
+
   if (intent === INTENTS.CONSULTA_EDUCATIVA_VINO) {
     return [
       'Para maridar bien un Malbec conviene ir a platos de intensidad media a alta: carnes rojas, pastas con salsas intensas, empanadas y quesos semiduros suelen funcionar muy bien.',
@@ -883,6 +945,7 @@ module.exports = async (req, res) => {
         intent,
         recommendationContext,
         recommendationIntro,
+        history,
       });
       if (hasOpenAIKey && fallbackMode === 'openai-error-fallback') {
         rawAnswer = buildServiceErrorFallbackReply({ message, wines, recommendedWines, pageContext }) || rawAnswer;

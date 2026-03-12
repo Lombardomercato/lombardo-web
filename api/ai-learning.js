@@ -12,6 +12,7 @@ const CONSULT_CATEGORIES = [
   'temperatura_servicio',
   'experiencias',
   'contacto',
+  'conversacion_social',
 ];
 
 const CLOSING_TYPE_LABELS = {
@@ -87,6 +88,7 @@ const detectConsultCategory = ({ message, intent, pageContext }) => {
   const normalized = normalizeText(message);
   const canonicalContext = canonicalPageContext(pageContext);
 
+  if (intent === 'consulta_social') return 'conversacion_social';
   if (intent === 'consulta_mensualidad') return 'mensualidad';
   if (intent === 'consulta_caja') return 'caja';
   if (intent === 'consulta_club') return 'club';
