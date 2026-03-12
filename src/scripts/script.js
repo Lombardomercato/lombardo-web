@@ -1986,7 +1986,8 @@ const initGlobalLombardoAssistant = () => {
           aria-label="Minimizar chat"
           data-assistant-close
         >
-          −
+          <span aria-hidden="true">✕</span>
+          <span class="assistant-close-label">Cerrar</span>
         </button>
       </div>
       <div class="assistant-prompts" data-assistant-prompts>
@@ -2097,6 +2098,7 @@ const initGlobalLombardoAssistant = () => {
       trigger.setAttribute('aria-expanded', 'true');
       trigger.setAttribute('aria-label', 'Minimizar chat');
       container.classList.add('is-open');
+      document.body.classList.add('assistant-open');
       window.setTimeout(() => {
         input?.focus();
       }, prefersReducedMotion ? 0 : 160);
@@ -2110,6 +2112,7 @@ const initGlobalLombardoAssistant = () => {
     trigger.setAttribute('aria-expanded', 'false');
     trigger.setAttribute('aria-label', 'Abrir chat');
     container.classList.remove('is-open');
+    document.body.classList.remove('assistant-open');
     window.setTimeout(() => {
       panel.hidden = true;
       panel.classList.remove('is-closing');
