@@ -480,6 +480,21 @@ const hasNaturalFollowUp = (answer) => {
   return /\?/.test(tail) || /(preferis|preferís|buscas|buscás|queres|querés|te sirve|te va)/i.test(tail);
 };
 
+const limitQuestionsInAnswer = (answer = '') => {
+  const trimmed = sanitizeMessage(answer);
+  if (!trimmed) return '';
+
+  const questions = trimmed.match(/\?/g) || [];
+  if (questions.length <= 1) return trimmed;
+
+  const lastQuestionIndex = trimmed.lastIndexOf('?');
+  if (lastQuestionIndex === -1) return trimmed;
+
+  const beforeQuestion = trimmed.slice(0, lastQuestionIndex + 1);
+  const cleanedBeforeQuestion = beforeQuestion.replace(/\?/g, '.').replace(/\.\s*\?/g, '?');
+  return `${cleanedBeforeQuestion}${trimmed.slice(lastQuestionIndex + 1)}`.replace(/\s{2,}/g, ' ').trim();
+};
+
 const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }) => {
   const trimmed = sanitizeMessage(answer);
   if (!trimmed) return { answer: '', closingType: CLOSING_TYPES.EDUCATIONAL };
@@ -507,14 +522,44 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }
     return { answer: trimmed, closingType };
   }
 
-  if (closingType !== CLOSING_TYPES.WHATSAPP && trimmed.length > 220) {
+  if (closingType !== CLOSING_TYPES.WHATSAPP && trimmed.length > 180) {
     return { answer: trimmed, closingType };
   }
 
-  const shouldAppend = closingType === CLOSING_TYPES.WHATSAPP || trimmed.length < 160;
+  const shouldAppend = closingType === CLOSING_TYPES.WHATSAPP || trimmed.length < 110;
   if (!shouldAppend) return { answer: trimmed, closingType };
 
   return { answer: `${trimmed}\n\n${suggestion}`, closingType };
+};
+
+const extractConversationHints = ({ message, history }) => {
+  const recentTurns = history.slice(-4);
+  const text = [
+    ...recentTurns.map((item) => `${item.role}: ${sanitizeMessage(item.content)}`),
+    `user: ${sanitizeMessage(message)}`,
+  ]
+    .filter(Boolean)
+    .join(' | ')
+    .toLowerCase();
+
+  const emotionalSignals = [];
+  if (/(regalo|regalar)/.test(text)) emotionalSignals.push('modo_regalo');
+  if (/(asado|cena|comida|maridar|maridaje)/.test(text)) emotionalSignals.push('modo_comida');
+  if (/(hoy|ahora|ya|urgente|para esta noche)/.test(text)) emotionalSignals.push('urgencia_suave');
+  if (/(cumple|aniversario|festejo|celebr)/.test(text)) emotionalSignals.push('ocasion_especial');
+
+  const continuityTopics = [];
+  if (/malbec/.test(text)) continuityTopics.push('malbec');
+  if (/cabernet/.test(text)) continuityTopics.push('cabernet');
+  if (/blanco|chardonnay|sauvignon|torrontes/.test(text)) continuityTopics.push('blancos');
+  if (/cata|experiencia/.test(text)) continuityTopics.push('catas_y_experiencias');
+  if (/club|mensualidad/.test(text)) continuityTopics.push('club');
+
+  return {
+    recentTurns,
+    emotionalSignals,
+    continuityTopics,
+  };
 };
 
 const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }) => {
@@ -531,6 +576,7 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
   const serializedHistory = history.length
     ? history.map((item) => `${item.role === 'assistant' ? 'Asistente' : 'Cliente'}: ${item.content}`).join('\n')
     : 'Sin historial previo en esta sesión.';
+  const conversationHints = extractConversationHints({ message, history });
 
   const requestContext = {
     pagina_actual: pageContext,
@@ -542,10 +588,20 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
 
   return [
     'Usá como fuente principal las instrucciones canónicas del system prompt cargado desde docs.',
+    [
+      'Objetivo conversacional prioritario para este turno:',
+      '1) Respondé directo y natural, como continuidad del hilo actual.',
+      '2) Ampliá solo lo necesario (sin formato rígido ni estructura repetitiva).',
+      '3) Recomendá recién después de responder, solo si aporta.',
+      '4) Evitá cierres comerciales automáticos (caja, club, WhatsApp) salvo pedido explícito o intención comercial clara.',
+      '5) Cerrá con una sola pregunta breve y útil únicamente si realmente hace falta para avanzar.',
+      '6) Soná premium pero relajado: asesor humano de vinoteca boutique, cero tono corporativo.',
+    ].join('\n'),
     buildPageContextGuidance(pageContext),
     `Mensaje actual del cliente: ${message}`,
     `Historial de conversación:
 ${serializedHistory}`,
+    `Señales conversacionales recientes: ${JSON.stringify(conversationHints)}`,
     `Contexto estructurado de esta consulta: ${JSON.stringify(requestContext)}`,
     `Catálogo Lombardo disponible (JSON): ${JSON.stringify(compactCatalog)}`,
     [INTENTS.CONSULTA_PRODUCTO, INTENTS.CONSULTA_CAJA, INTENTS.CONSULTA_MENSUALIDAD].includes(intent)
@@ -914,9 +970,10 @@ module.exports = async (req, res) => {
       pageContext,
       intent,
     });
+    const polishedAnswer = limitQuestionsInAnswer(answer);
     const suggestWhatsApp = closingType === CLOSING_TYPES.WHATSAPP;
     const canonicalResponse = {
-      reply: answer,
+      reply: polishedAnswer,
       suggestions: suggestWhatsApp ? [buildWhatsAppSuggestion(pageContext)] : [],
       whatsappUrl: suggestWhatsApp ? buildWhatsAppUrl(message) : '',
       fallback: {
