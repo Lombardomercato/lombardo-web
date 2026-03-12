@@ -4,6 +4,7 @@ const path = require('node:path');
 const INTENT_RULES_DOC_PATH = 'docs/AI_INTENT_RULES_LOMBARDO.md';
 
 const INTENTS = {
+  CONSULTA_SOCIAL: 'consulta_social',
   CONSULTA_PRODUCTO: 'consulta_producto',
   CONSULTA_EDUCATIVA_VINO: 'consulta_educativa_vino',
   CONSULTA_CAJA: 'consulta_caja',
@@ -72,7 +73,25 @@ const getIntentSignalsFromDocs = () => {
 
 const DIRECT_PRODUCT_PATTERNS = [/(quiero|busco|dame)\s+algo\s+para/, /vino\s+para/, /(recomend|suger).*(vino|etiqueta)/, /quiero\s+un\s+vino/];
 
+const SOCIAL_PATTERNS = {
+  saludo: [/^(hola|holis|buenas|buen dia|buen dia|buenas tardes|buenas noches|que tal|como va|como andas)[!.\s]*$/],
+  agradecimiento: [/^(gracias|muchas gracias|genial gracias|ok gracias|mil gracias)[!.\s]*$/],
+  casual: [/^(ok|dale|perfecto|joya|buenisimo|buenisima|entiendo)[!.\s]*$/],
+  apertura: [/(no se|nos[eé])\s+que\s+elegir/, /ayudame/, /tengo\s+una\s+duda/],
+};
+
 const isDirectProductIntent = (text) => containsKeyword(text, DIRECT_PRODUCT_PATTERNS);
+
+const hasSocialSignal = (text) =>
+  Object.values(SOCIAL_PATTERNS).some((patterns) => containsKeyword(text, patterns));
+
+const hasStrongFunctionalSignal = (text) =>
+  containsKeyword(text, [
+    /(vino|malbec|cabernet|blanco|tinto|maridaje|varietal)/,
+    /(caja|box|club|mensualidad|suscrip|membres)/,
+    /(cata|experiencia|evento|degustacion|caf[eé])/,
+    /(whatsapp|comprar|reservar|pagar|pedido)/,
+  ]);
 
 const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
   const rulesEnabled = getIntentSignalsFromDocs();
@@ -83,6 +102,10 @@ const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
     .join(' ');
   const combined = `${context} ${normalized}`.trim();
   const page = canonicalPageContext(pageContext);
+
+  if (hasSocialSignal(normalized) && !hasStrongFunctionalSignal(normalized)) {
+    return INTENTS.CONSULTA_SOCIAL;
+  }
 
   if (rulesEnabled.producto && isDirectProductIntent(normalized)) return INTENTS.CONSULTA_PRODUCTO;
 

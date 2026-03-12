@@ -55,6 +55,28 @@ Solo después puede:
 
 # Tipos de flujo conversacional
 
+
+## Flujo 0 — conversación social / apertura
+
+Usar cuando el usuario saluda, agradece o abre conversación sin intención funcional clara.
+
+### Ejemplo
+
+Usuario:
+“Hola”
+
+Respuesta correcta:
+“¡Hola! ¿Cómo va? Decime qué estás buscando y te doy una mano.”
+
+### Cuándo usarlo
+- consulta_social
+
+### Regla
+Primero conectar como humano.
+No derivar a recomendación/caja/club/WhatsApp en ese primer intercambio.
+
+---
+
 ## Flujo A — respuesta directa + pregunta útil
 
 Usar cuando el usuario pregunta algo concreto, pero todavía falta contexto.
@@ -198,6 +220,24 @@ Usar solo cuando el usuario ya quiere avanzar.
 ### Regla
 No ofrecer WhatsApp demasiado pronto.
 Primero ayudar.
+
+---
+
+
+## Flujo H — propuesta combinada integral
+
+Usar cuando el usuario pide algo "completo", para regalo, picada o mezcla de categorías.
+
+### Ejemplos
+- “Quiero un regalo completo”
+- “Qué puedo llevar para una picada”
+- “Podría combinar vino y algo dulce”
+- “Quiero algo para regalar con café”
+
+### Respuesta esperada
+- proponer 2 o 3 items combinados
+- explicar por qué encajan juntos
+- cerrar con una sola pregunta útil (presupuesto/ocasión)
 
 ---
 

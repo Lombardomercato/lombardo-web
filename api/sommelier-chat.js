@@ -125,7 +125,7 @@ const parseBooleanStock = (value, fallback = false) => {
   return fallback;
 };
 
-const normalizeStockWine = (wine, index) => {
+const normalizeCatalogItem = (wine, index) => {
   if (!wine || typeof wine !== 'object') return null;
 
   const stock = parseNumericStock(wine.stock_actual, 0);
@@ -159,6 +159,10 @@ const normalizeStockWine = (wine, index) => {
     recomendado_para_club: parseBooleanStock(wine.recomendado_para_club, false),
     nivel: wine.nivel || 'clasico',
     descripcion_corta: wine.descripcion_corta || '',
+    recomendado_para: Array.isArray(wine.recomendado_para) ? wine.recomendado_para : [],
+    combina_con: Array.isArray(wine.combina_con) ? wine.combina_con : [],
+    tags: Array.isArray(wine.tags) ? wine.tags : [],
+    destacado: Boolean(wine.destacado),
     // Compatibilidad con la lógica de recomendaciones actual:
     precio: parseNumericStock(wine.precio_venta, 0),
     ocasion: wine.recomendado_para_regalo ? 'regalo' : '',
@@ -175,12 +179,41 @@ const readCatalogFile = async (fileName) => {
   return { filePath, data };
 };
 
-const readWineCatalog = async () => {
-  console.log('[sommelier-chat][debug] intentando leer catálogo principal lombardo_stock_ai.json');
+const readProductCatalog = async () => {
+  console.log('[sommelier-chat][debug] intentando leer catálogo principal lombardo_stock_ai.json + lombardo_productos_ai.json');
   try {
     const { data } = await readCatalogFile('lombardo_stock_ai.json');
     if (!Array.isArray(data)) return [];
-    return data.map(normalizeStockWine).filter(Boolean);
+    const stockItems = data.map(normalizeCatalogItem).filter(Boolean);
+
+    let extraItems = [];
+    try {
+      const extra = await readCatalogFile('lombardo_productos_ai.json');
+      extraItems = Array.isArray(extra.data)
+        ? extra.data.map((item, index) => normalizeCatalogItem({
+            id_producto: item.id,
+            nombre: item.nombre,
+            categoria: item.categoria,
+            subcategoria: item.subcategoria,
+            precio_venta: item.precio,
+            stock_actual: item.stock,
+            disponible: item.disponible,
+            descripcion_corta: item.descripcion_corta,
+            recomendado_para: item.recomendado_para,
+            combina_con: item.combina_con,
+            tags: item.tags,
+            nivel: item.nivel,
+            destacado: item.destacado,
+            tipo_vino: item.subcategoria,
+          }, index)).filter(Boolean)
+        : [];
+    } catch (extraError) {
+      if (extraError.code !== 'ENOENT') {
+        console.warn('[sommelier-chat][debug] catálogo extendido con error de parseo', { message: extraError?.message || '' });
+      }
+    }
+
+    return [...stockItems, ...extraItems];
   } catch (error) {
     if (error.code !== 'ENOENT') {
       console.error('[sommelier-chat][debug] error leyendo/parsing catálogo principal', {
@@ -198,7 +231,7 @@ const readWineCatalog = async () => {
     const raw = await fs.readFile(fallbackPath, 'utf-8');
     const data = JSON.parse(raw);
     return Array.isArray(data)
-      ? data.filter((wine) => wine && wine.activo !== false && parseNumericStock(wine.stock_actual, 1) > 0)
+      ? data.map(normalizeCatalogItem).filter((wine) => wine && wine.activo !== false && parseNumericStock(wine.stock_actual, 1) > 0)
       : [];
   } catch (error) {
     console.error('[sommelier-chat][debug] error leyendo/parsing catálogo fallback', {
@@ -426,6 +459,56 @@ const CLOSING_TYPES = {
   WHATSAPP: 'whatsapp',
 };
 
+
+const SOCIAL_REPLY_PATTERNS = {
+  saludo: [/^(hola|holis|buenas|buen dia|buen día|buenas tardes|buenas noches|que tal|cómo va|como va|como andas|cómo andás)[!.\s]*$/i],
+  agradecimiento: [/^(gracias|muchas gracias|genial gracias|ok gracias|mil gracias|graciass+)[!.\s]*$/i],
+  noSeElegir: [/(^|\s)(no se|no sé)\s+que\s+elegir($|\s)/i],
+  ayudaAbierta: [/(^|\s)(ayudame|ayúdame|tengo una duda|necesito ayuda)($|\s)/i],
+  casual: [/^(ok|dale|perfecto|joya|buenisimo|buenísimo|buenisima|buenísima|entiendo)[!.\s]*$/i],
+};
+
+const detectSocialSubtype = (message = '') => {
+  const text = sanitizeMessage(message);
+  if (!text) return null;
+
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.agradecimiento)) return 'agradecimiento';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.noSeElegir)) return 'no_se_que_elegir';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.ayudaAbierta)) return 'ayuda_abierta';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.saludo)) return 'saludo';
+  if (containsKeyword(text, SOCIAL_REPLY_PATTERNS.casual)) return 'casual';
+  return null;
+};
+
+const buildSocialReply = ({ message, history }) => {
+  const subtype = detectSocialSubtype(message);
+  const hasRecentAssistant = Array.isArray(history) && history.some((item) => item.role === 'assistant');
+
+  if (subtype === 'agradecimiento') {
+    return 'De nada, encantado. Si querés, seguimos viendo opciones.';
+  }
+
+  if (subtype === 'no_se_que_elegir') {
+    return 'Tranqui, pasa bastante. Decime si lo buscás para comida, regalo o para llevar algo rico y lo vemos juntos.';
+  }
+
+  if (subtype === 'ayuda_abierta') {
+    return 'Obvio, vamos paso a paso. Contame para qué ocasión lo estás pensando y te ayudo a elegir bien.';
+  }
+
+  if (subtype === 'saludo') {
+    return hasRecentAssistant
+      ? '¡Qué bueno seguir por acá! Decime qué estás buscando y lo vemos juntos.'
+      : '¡Hola! ¿Cómo va? Decime qué estás buscando y te doy una mano.';
+  }
+
+  if (subtype === 'casual') {
+    return 'Perfecto. Cuando quieras, lo aterrizamos a algo puntual y lo resolvemos juntos.';
+  }
+
+  return 'Dale, contame un poco más y te ayudo a encontrar algo que te encaje.';
+};
+
 const buildConversationText = ({ message, history }) => {
   const chunks = [sanitizeMessage(message), ...history.map((item) => sanitizeMessage(item.content))].filter(Boolean);
   return normalizeText(chunks.join(' | '));
@@ -484,6 +567,10 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }
   const trimmed = sanitizeMessage(answer);
   if (!trimmed) return { answer: '', closingType: CLOSING_TYPES.EDUCATIONAL };
 
+  if (intent === INTENTS.CONSULTA_SOCIAL) {
+    return { answer: trimmed, closingType: CLOSING_TYPES.EDUCATIONAL };
+  }
+
   const closingType = detectClosingType({ message, history, pageContext, intent });
   const suggestion = buildClosingSuggestion({ closingType, pageContext });
 
@@ -517,14 +604,19 @@ const appendAdaptiveClosing = ({ answer, message, history, pageContext, intent }
   return { answer: `${trimmed}\n\n${suggestion}`, closingType };
 };
 
-const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }) => {
+const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro, combinationProposal }) => {
   const compactCatalog = wines.map((wine) => ({
     nombre: wine.nombre,
+    categoria: wine.categoria,
+    subcategoria: wine.subcategoria,
     precio: wine.precio,
     tipo_vino: wine.tipo_vino,
     varietal: wine.varietal,
     maridaje_principal: wine.maridaje_principal,
     ocasion: wine.ocasion,
+    recomendado_para: wine.recomendado_para || [],
+    combina_con: wine.combina_con || [],
+    tags: wine.tags || [],
     nivel_precio: wine.nivel_precio,
   }));
 
@@ -538,6 +630,7 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     recomendacion_contexto: recommendationContext || null,
     recomendacion_intro: recommendationIntro || null,
     max_recomendaciones: MAX_RECOMMENDATIONS,
+    propuesta_combinada: combinationProposal || null,
   };
 
   return [
@@ -547,14 +640,18 @@ const buildUserPrompt = ({ message, wines, pageContext, history, recommendedWine
     `Historial de conversación:
 ${serializedHistory}`,
     `Contexto estructurado de esta consulta: ${JSON.stringify(requestContext)}`,
-    `Catálogo Lombardo disponible (JSON): ${JSON.stringify(compactCatalog)}`,
+    `Catálogo Lombardo disponible (vino, café, gourmet, cajas, club y experiencias) (JSON): ${JSON.stringify(compactCatalog)}`,
     [INTENTS.CONSULTA_PRODUCTO, INTENTS.CONSULTA_CAJA, INTENTS.CONSULTA_MENSUALIDAD].includes(intent)
       ? `Preselección sugerida para esta consulta: ${JSON.stringify(recommendedWines)}`
       : 'Sin preselección forzada para esta consulta.',
   ].join('\n\n');
 };
 
-const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }) => {
+const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro, combinationProposal }) => {
+  if (intent === INTENTS.CONSULTA_SOCIAL) {
+    return buildSocialReply({ message, history });
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   console.log('[sommelier-chat][debug] cargando prompt canónico');
   const canonicalPrompt = await getCanonicalSystemPrompt();
@@ -587,7 +684,7 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
           { role: 'system', content: canonicalPrompt.prompt },
           {
             role: 'user',
-            content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }),
+            content: buildUserPrompt({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro, combinationProposal }),
           },
         ],
         max_output_tokens: 350,
@@ -666,7 +763,11 @@ const appendWhatsAppSuggestion = ({ answer, pageContext }) => {
   return `${trimmed}\n\n${buildWhatsAppSuggestion(pageContext)}`;
 };
 
-const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext, intent, recommendationContext, recommendationIntro }) => {
+const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, pageContext, intent, recommendationContext, recommendationIntro, combinationProposal, history = [] }) => {
+  if (intent === INTENTS.CONSULTA_SOCIAL) {
+    return buildSocialReply({ message, history });
+  }
+
   if (intent === INTENTS.CONSULTA_EDUCATIVA_VINO) {
     return [
       'Para maridar bien un Malbec conviene ir a platos de intensidad media a alta: carnes rojas, pastas con salsas intensas, empanadas y quesos semiduros suelen funcionar muy bien.',
@@ -740,18 +841,20 @@ const buildFallbackRecommendationAnswer = ({ message, wines, recommendedWines, p
 
   const listed = options
     .map((wine) => {
-      const parts = [wine.nombre, wine.varietal, wine.tipo_vino, wine.precio]
+      const parts = [wine.nombre, wine.categoria, wine.subcategoria || wine.varietal || wine.tipo_vino, wine.precio]
         .map((part) => sanitizeMessage(String(part || '')))
         .filter(Boolean);
       return `• ${parts.join(' · ')}`;
     })
     .join('\n');
 
-  const closing = hasRecommendationIntent(message)
-    ? '¿Lo buscás para comida, regalo o para tomar solo?'
-    : '¿Preferís algo más suave o con más cuerpo?';
+  const comboHint = combinationProposal?.pitch ? `Propuesta combinada: ${combinationProposal.pitch}` : '';
 
-  return [intro, contextHint, listed, closing].filter(Boolean).join('\n');
+  const closing = hasRecommendationIntent(message)
+    ? '¿Lo buscás para comida, regalo o para llevar algo rico?'
+    : '¿Preferís que te arme una propuesta más clásica o más jugada?';
+
+  return [intro, contextHint, listed, comboHint, closing].filter(Boolean).join('\n');
 };
 
 const buildServiceErrorFallbackReply = ({ message, wines = [], recommendedWines = [], pageContext = 'sommelier' }) => {
@@ -772,6 +875,7 @@ const buildServiceErrorFallbackReply = ({ message, wines = [], recommendedWines 
     intent: detectIntentByRules({ message, pageContext, history: [] }),
     recommendationContext: null,
     recommendationIntro: null,
+    combinationProposal: null,
   });
 
   return sanitizeMessage(recommendationFallback || educationalWineFallback) || educationalWineFallback;
@@ -837,10 +941,15 @@ module.exports = async (req, res) => {
     }
 
     console.log('[sommelier-chat][debug] cargando catálogo');
-    const wines = await readWineCatalog();
+    const wines = await readProductCatalog();
     console.log('[sommelier-chat][debug] catálogo cargado', { wines: wines.length });
 
-    const { recommendations: recommendedWines, context: recommendationContext, intro: recommendationIntro } = recommendWines({ wines, message, intent, wineProfile: req.body?.wine_profile });
+    const {
+      recommendations: recommendedWines,
+      context: recommendationContext,
+      intro: recommendationIntro,
+      combinationProposal,
+    } = recommendWines({ wines, message, intent, wineProfile: req.body?.wine_profile });
     console.log('[sommelier-chat][debug] preselección', { recommended: recommendedWines.length });
     const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
     console.log('[sommelier-chat][debug] OpenAI key disponible:', hasOpenAIKey);
@@ -860,6 +969,7 @@ module.exports = async (req, res) => {
           intent,
           recommendationContext,
           recommendationIntro,
+          combinationProposal,
         });
       } catch (openAIError) {
         fallbackMode = 'openai-error-fallback';
@@ -883,6 +993,8 @@ module.exports = async (req, res) => {
         intent,
         recommendationContext,
         recommendationIntro,
+        combinationProposal,
+        history,
       });
       if (hasOpenAIKey && fallbackMode === 'openai-error-fallback') {
         rawAnswer = buildServiceErrorFallbackReply({ message, wines, recommendedWines, pageContext }) || rawAnswer;
@@ -923,6 +1035,7 @@ module.exports = async (req, res) => {
         used: fallbackMode !== 'openai',
         mode: fallbackMode,
       },
+      combination_proposal: combinationProposal || null,
     };
 
     const interactionRecord = buildInteractionRecord({
