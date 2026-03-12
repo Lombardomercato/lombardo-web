@@ -482,15 +482,12 @@ if (sommelierApp) {
     };
 
     const params = new URLSearchParams(window.location.search);
-    const explicit = document.querySelector('meta[name="assistant-api-url"]')?.content?.trim();
+    const explicit = ASSISTANT_API_URL;
     const base = document.querySelector('meta[name="assistant-api-base"]')?.content?.trim();
     const queryUrl = params.get('assistant_api_url')?.trim();
     const queryBase = params.get('assistant_api_base')?.trim();
     const localUrl = safeReadStorage('assistant-api-url');
     const localBase = safeReadStorage('assistant-api-base');
-
-    const fallbackDomain =
-      window.location.hostname === 'www.lombardomercato.com' ? 'https://lombardo-web.vercel.app' : '';
 
     const candidates = [
       normalizeEndpoint(explicit),
@@ -499,8 +496,7 @@ if (sommelierApp) {
       normalizeEndpoint(queryBase),
       normalizeEndpoint(localUrl),
       normalizeEndpoint(localBase),
-      '/api/sommelier-chat',
-      normalizeEndpoint(fallbackDomain),
+      DEFAULT_ASSISTANT_API_URL,
     ].filter(Boolean);
 
     return [...new Set(candidates)];
@@ -1913,7 +1909,9 @@ if (sommelierApp) {
 }
 
 const ASSISTANT_STORAGE_KEY = 'lombardo_assistant_history';
-const ASSISTANT_API_URL = '/api/sommelier-chat';
+const DEFAULT_ASSISTANT_API_URL = 'https://lombardo-web.vercel.app/api/sommelier-chat';
+const assistantApiMeta = document.querySelector('meta[name="assistant-api-url"]');
+const ASSISTANT_API_URL = assistantApiMeta?.getAttribute('content') || DEFAULT_ASSISTANT_API_URL;
 
 const ARS_CHAT_CURRENCY_FORMATTER = new Intl.NumberFormat('es-AR', {
   style: 'currency',
