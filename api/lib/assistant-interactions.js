@@ -27,6 +27,7 @@ const inferProfile = (message = '') => {
 
 const intentToCategory = (intent = '') => {
   const map = {
+    consulta_social: 'conversación social',
     consulta_producto: 'recomendación de vino',
     consulta_educativa_vino: 'maridaje',
     consulta_caja: 'caja',
