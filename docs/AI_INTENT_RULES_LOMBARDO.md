@@ -59,7 +59,7 @@ No sé qué elegir
 
 Respuesta esperada:
 
-Tranqui, pasa bastante. Decime si lo buscás para comida, regalo o para tomar algo rico y lo vemos juntos.
+Tranqui, pasa bastante. Decime si lo buscás para comida, regalo o para llevar algo rico y lo vemos juntos.
 
 ---
 
@@ -77,13 +77,16 @@ Esta intención corresponde a preguntas donde el usuario quiere que le recomiend
 - Vino para carne
 - Vino para sushi
 - Algo para una cena
+- Qué puedo llevar para una picada
+- Podría combinar vino y algo dulce
+- Quiero algo para regalar con café
 
 ### Comportamiento
 
 1. Detectar presupuesto si existe
 2. Detectar ocasión
 3. Detectar estilo o varietal si aparece
-4. Sugerir máximo 3 vinos
+4. Sugerir máximo 3 opciones (pueden ser mixtas cuando el pedido lo requiera)
 
 Formato recomendado:
 

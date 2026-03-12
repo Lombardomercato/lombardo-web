@@ -51,3 +51,16 @@ Cuando la intención es `consulta_mensualidad` o `consulta_club`:
 - explicar lógica de selección mensual
 - proponer composición orientativa alineada al perfil
 - mantener foco en beneficios y utilidad concreta
+
+
+## Scoring multi-categoría
+
+Además de señales vínicas, el scoring considera:
+
+- match por categoría/subcategoría (vino/café/gourmet/etc.)
+- match por `recomendado_para`
+- match por `combina_con`
+- proximidad a presupuesto
+- destacado y prioridad comercial
+
+Esto permite sugerencias integrales y no solo de vino.
