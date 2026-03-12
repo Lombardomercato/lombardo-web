@@ -18,6 +18,11 @@ const MAX_RECOMMENDATIONS = 3;
 const MAX_HISTORY_ITEMS = 14;
 const WHATSAPP_PHONE = '543412762319';
 const WHATSAPP_BASE_MESSAGE = 'Hola Lombardo, quiero continuar esta consulta.';
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 const PAGE_CONTEXT_ROLES = {
   home: {
@@ -772,7 +777,17 @@ const buildServiceErrorFallbackReply = ({ message, wines = [], recommendedWines 
   return sanitizeMessage(recommendationFallback || educationalWineFallback) || educationalWineFallback;
 };
 
+const applyCorsHeaders = (res) => {
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => res.setHeader(key, value));
+};
+
 module.exports = async (req, res) => {
+  applyCorsHeaders(res);
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({
