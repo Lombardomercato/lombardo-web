@@ -117,3 +117,7 @@ Legado archivado:
 - JS movido de `js/` a `src/scripts/`.
 - Se actualizaron referencias en HTML para usar las nuevas rutas.
 - Los assets binarios quedan fuera de este patch de reorganización.
+
+## Operación en Vercel
+
+- Ver checklist de diagnóstico del chat IA: `docs/VERCEL_CHECKLIST_SOMMELIER_CHAT.md`.

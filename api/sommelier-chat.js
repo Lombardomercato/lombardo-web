@@ -171,15 +171,21 @@ const readCatalogFile = async (fileName) => {
 };
 
 const readWineCatalog = async () => {
+  console.log('[sommelier-chat][debug] intentando leer catálogo principal lombardo_stock_ai.json');
   try {
     const { data } = await readCatalogFile('lombardo_stock_ai.json');
     if (!Array.isArray(data)) return [];
     return data.map(normalizeStockWine).filter(Boolean);
   } catch (error) {
     if (error.code !== 'ENOENT') {
+      console.error('[sommelier-chat][debug] error leyendo/parsing catálogo principal', {
+        code: error?.code || '',
+        message: error?.message || '',
+      });
       error.code = 'WINE_CATALOG_PARSE_ERROR';
       throw error;
     }
+    console.warn('[sommelier-chat][debug] catálogo principal no encontrado, usando fallback vinos_lombardo_base.json');
   }
 
   const fallbackPath = path.join(process.cwd(), 'vinos_lombardo_base.json');
@@ -190,6 +196,11 @@ const readWineCatalog = async () => {
       ? data.filter((wine) => wine && wine.activo !== false && parseNumericStock(wine.stock_actual, 1) > 0)
       : [];
   } catch (error) {
+    console.error('[sommelier-chat][debug] error leyendo/parsing catálogo fallback', {
+      code: error?.code || '',
+      message: error?.message || '',
+      path: fallbackPath,
+    });
     error.code = error.code === 'ENOENT' ? 'WINE_CATALOG_NOT_FOUND' : 'WINE_CATALOG_PARSE_ERROR';
     throw error;
   }
@@ -540,9 +551,11 @@ ${serializedHistory}`,
 
 const createOpenAIResponse = async ({ message, wines, pageContext, history, recommendedWines, intent, recommendationContext, recommendationIntro }) => {
   const apiKey = process.env.OPENAI_API_KEY;
+  console.log('[sommelier-chat][debug] cargando prompt canónico');
   const canonicalPrompt = await getCanonicalSystemPrompt();
 
   if (!apiKey) {
+    console.error('[sommelier-chat][debug] OPENAI_API_KEY faltante');
     const configError = new Error('OPENAI_API_KEY no está configurada en el entorno.');
     configError.code = 'OPENAI_CONFIG_ERROR';
     throw configError;
@@ -589,6 +602,7 @@ const createOpenAIResponse = async ({ message, wines, pageContext, history, reco
   }
 
   const data = await response.json().catch((error) => {
+    console.error('[sommelier-chat][debug] error parseando respuesta OpenAI', { message: error?.message || '' });
     error.code = 'OPENAI_PARSE_ERROR';
     throw error;
   });
@@ -631,7 +645,8 @@ const buildServerErrorPayload = (error) => {
   return {
     status: statusMap[code] || 500,
     payload: {
-      error: publicMessageMap[code] || publicMessageMap.INTERNAL_SERVER_ERROR,
+      error: true,
+      message: publicMessageMap[code] || publicMessageMap.INTERNAL_SERVER_ERROR,
       error_code: code,
     },
   };
@@ -761,7 +776,8 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({
-      error: 'Method not allowed',
+      error: true,
+      message: 'Method not allowed',
       reply: buildServiceErrorFallbackReply({ message: '', pageContext: 'sommelier' }),
       fallback: {
         used: true,
@@ -776,6 +792,8 @@ module.exports = async (req, res) => {
       contentType: req.headers?.['content-type'] || '',
       hasBody: Boolean(req.body),
     });
+
+    console.log('[sommelier-chat][debug] validando payload');
 
     const message = sanitizeMessage(req.body?.message);
     const pageContext = sanitizePageContext(req.body?.pagina_actual);
@@ -793,7 +811,8 @@ module.exports = async (req, res) => {
 
     if (!message) {
       return res.status(400).json({
-        error: 'El campo "message" es obligatorio.',
+        error: true,
+        message: 'El campo "message" es obligatorio.',
         reply: buildServiceErrorFallbackReply({ message: '', pageContext }),
         fallback: {
           used: true,
@@ -802,6 +821,7 @@ module.exports = async (req, res) => {
       });
     }
 
+    console.log('[sommelier-chat][debug] cargando catálogo');
     const wines = await readWineCatalog();
     console.log('[sommelier-chat][debug] catálogo cargado', { wines: wines.length });
 
@@ -814,6 +834,7 @@ module.exports = async (req, res) => {
     let rawAnswer = '';
 
     if (hasOpenAIKey) {
+      console.log('[sommelier-chat][debug] iniciando llamada a OpenAI');
       try {
         rawAnswer = await createOpenAIResponse({
           message,
@@ -832,6 +853,10 @@ module.exports = async (req, res) => {
           message: openAIError?.message || '',
         });
       }
+    }
+
+    if (!hasOpenAIKey) {
+      console.warn('[sommelier-chat][debug] usando fallback local por OPENAI_API_KEY faltante');
     }
 
     if (!rawAnswer) {
@@ -896,18 +921,25 @@ module.exports = async (req, res) => {
       derivoWhatsapp: suggestWhatsApp,
     });
 
-    await logInteractionRecord(interactionRecord);
+    try {
+      await logInteractionRecord(interactionRecord);
 
-    await recordInteraction({
-      mensaje_usuario: message,
-      pagina_actual: pageContext,
-      intencion_detectada: intent,
-      perfil_detectado: profile || inferProfile(message),
-      categoria_consulta: intentToCategory(intent),
-      productos_sugeridos: recommendedWines.map((wine) => wine.nombre).filter(Boolean),
-      tipo_cierre: closingType,
-      derivo_whatsapp: suggestWhatsApp,
-    });
+      await recordInteraction({
+        mensaje_usuario: message,
+        pagina_actual: pageContext,
+        intencion_detectada: intent,
+        perfil_detectado: profile || inferProfile(message),
+        categoria_consulta: intentToCategory(intent),
+        productos_sugeridos: recommendedWines.map((wine) => wine.nombre).filter(Boolean),
+        tipo_cierre: closingType,
+        derivo_whatsapp: suggestWhatsApp,
+      });
+    } catch (learningError) {
+      console.warn('[sommelier-chat][debug] no se pudo persistir aprendizaje, se devuelve respuesta igual', {
+        code: learningError?.code || '',
+        message: learningError?.message || '',
+      });
+    }
 
     return res.status(200).json({
       ...canonicalResponse,
@@ -926,7 +958,11 @@ module.exports = async (req, res) => {
   } catch (error) {
     const { status, payload } = buildServerErrorPayload(error);
     const emergencyReply = buildServiceErrorFallbackReply({ message: sanitizeMessage(req.body?.message), pageContext: sanitizePageContext(req.body?.pagina_actual) });
-    console.error(`[sommelier-chat][${payload.error_code}]`, error);
+    console.error(`[sommelier-chat][${payload.error_code}] error en catch final`, {
+      message: error?.message || '',
+      stack: error?.stack || '',
+      code: error?.code || 'INTERNAL_SERVER_ERROR',
+    });
     return res.status(status).json({
       ...payload,
       reply: emergencyReply,

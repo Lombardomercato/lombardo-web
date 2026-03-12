@@ -2360,6 +2360,7 @@ const initGlobalLombardoAssistant = () => {
     let response;
     let data = {};
     let rawBody = '';
+    let parsedAsJson = false;
     try {
       response = await fetch(ASSISTANT_API_URL, {
         method: 'POST',
@@ -2380,22 +2381,33 @@ const initGlobalLombardoAssistant = () => {
     rawBody = await response.text().catch(() => '');
     try {
       data = rawBody ? JSON.parse(rawBody) : {};
+      parsedAsJson = true;
     } catch (error) {
-      console.warn('[assistant-widget][debug] respuesta no JSON:', rawBody.slice(0, 300));
+      console.warn('[assistant-widget][debug] response body parseado como texto (no JSON):', rawBody.slice(0, 300));
       data = {};
     }
 
-    console.log('[assistant-widget][debug] status HTTP:', { endpoint: ASSISTANT_API_URL, status: response.status });
-    console.log('[assistant-widget][debug] body recibido:', data);
+    console.log('[assistant-widget][debug] status:', response.status);
+    console.log('[assistant-widget][debug] statusText:', response.statusText || '(sin statusText)');
+    console.log(
+      '[assistant-widget][debug] response body:',
+      parsedAsJson ? data : rawBody || '(vacío)'
+    );
 
     if (!response.ok) {
-      const endpointError = new Error(data.error || 'No se pudo obtener respuesta del asistente.');
-      endpointError.code = data.error_code || 'ENDPOINT_ERROR';
+      const backendMessage =
+        (parsedAsJson && typeof data.message === 'string' && data.message.trim()) ||
+        (parsedAsJson && typeof data.error === 'string' && data.error.trim()) ||
+        (typeof rawBody === 'string' && rawBody.trim()) ||
+        'No se pudo obtener respuesta del asistente.';
+      const endpointError = new Error(backendMessage);
+      endpointError.code = (parsedAsJson && data.error_code) || 'ENDPOINT_ERROR';
       endpointError.status = response.status;
       console.warn('[assistant-widget][debug] request fallida:', {
         endpoint: ASSISTANT_API_URL,
         status: response.status,
-        body: data,
+        statusText: response.statusText || '',
+        body: parsedAsJson ? data : rawBody,
       });
       throw endpointError;
     }
