@@ -2095,6 +2095,8 @@ const initGlobalLombardoAssistant = () => {
     }, 120);
   };
 
+  const isMobileAssistantViewport = () => window.matchMedia('(max-width: 760px)').matches;
+
   const setOpenState = (open) => {
     const keepAlwaysOpenOnMobile = mobileAssistantMediaQuery.matches;
     const desiredOpenState = keepAlwaysOpenOnMobile ? true : open;
