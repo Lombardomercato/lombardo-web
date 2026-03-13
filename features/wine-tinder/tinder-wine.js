@@ -11,6 +11,7 @@
   const card = root.querySelector('[data-tinder-card]');
   const stampNope = root.querySelector('[data-tinder-stamp-nope]');
   const stampLike = root.querySelector('[data-tinder-stamp-like]');
+  const cardImage = root.querySelector('[data-tinder-image]');
   const cardName = root.querySelector('[data-tinder-name]');
   const cardVarietal = root.querySelector('[data-tinder-varietal]');
   const cardDescription = root.querySelector('[data-tinder-description]');
@@ -20,6 +21,7 @@
   const progressFillNode = root.querySelector('[data-tinder-progress-fill]');
   const profileNameNode = root.querySelector('[data-tinder-profile-name]');
   const profileDescriptionNode = root.querySelector('[data-tinder-profile-description]');
+  const profileQuoteNode = root.querySelector('[data-tinder-profile-quote]');
   const recommendationsNode = root.querySelector('[data-tinder-recommendations]');
   const boxNode = root.querySelector('[data-tinder-box]');
   const matchNode = root.querySelector('[data-tinder-match]');
@@ -27,19 +29,19 @@
   const shareWhatsAppNode = root.querySelector('[data-tinder-share-whatsapp]');
   const shareXNode = root.querySelector('[data-tinder-share-x]');
   const shareFacebookNode = root.querySelector('[data-tinder-share-facebook]');
+  const shareInstagramNode = root.querySelector('[data-tinder-share-instagram]');
+  const downloadStoryNode = root.querySelector('[data-tinder-download-story]');
+  const storyWrapNode = root.querySelector('[data-tinder-story-wrap]');
+  const storyPreviewNode = root.querySelector('[data-tinder-story-preview]');
   const copyNode = root.querySelector('[data-tinder-copy]');
   const copyFeedbackNode = root.querySelector('[data-tinder-copy-feedback]');
 
   const state = { pool: [], index: 0, likes: [], dislikes: [], threshold: 92 };
   let catalog = [];
+  let storyDataUrl = '';
 
   const formatPrice = (amount) => Number(amount || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
-  const sortByPriorityAndPrice = (a, b) => {
-    const pA = (a?.prioridad_venta || '').toLowerCase() === 'alta' ? 1 : 0;
-    const pB = (b?.prioridad_venta || '').toLowerCase() === 'alta' ? 1 : 0;
-    if (pA !== pB) return pB - pA;
-    return Number(b?.precio || 0) - Number(a?.precio || 0);
-  };
+  const normalize = (v) => String(v || '').trim().toLowerCase();
 
   const loadCatalog = async () => {
     const response = await fetch('/vinos_lombardo_base.json', { cache: 'no-store' });
@@ -56,7 +58,15 @@
   };
 
   const getChips = (wine) => [wine?.tipo_vino, wine?.varietal, wine?.maridaje_principal?.replace('_', ' ')].filter(Boolean).slice(0, 3);
-  const estimateMatchPercent = () => Math.max(73, Math.min(98, 72 + Math.round((state.likes.length / (state.pool.length || 1)) * 24)));
+
+  const sortByPriorityAndPrice = (a, b) => {
+    const pA = (a?.prioridad_venta || '').toLowerCase() === 'alta' ? 1 : 0;
+    const pB = (b?.prioridad_venta || '').toLowerCase() === 'alta' ? 1 : 0;
+    if (pA !== pB) return pB - pA;
+    return Number(b?.precio || 0) - Number(a?.precio || 0);
+  };
+
+  const estimateMatchPercent = () => Math.max(70, Math.min(99, 68 + Math.round((state.likes.length / (state.pool.length || 1)) * 28)));
 
   const updateStampState = (delta = 0) => {
     if (stampLike) stampLike.style.opacity = delta > 16 ? String(Math.min(1, Math.abs(delta) / state.threshold)) : '0';
@@ -67,30 +77,103 @@
     const total = state.pool.length || 1;
     const current = Math.min(state.index + 1, total);
     if (stepCurrentNode) stepCurrentNode.textContent = String(current);
+    if (stepTotalNode) stepTotalNode.textContent = String(total);
     if (progressFillNode) progressFillNode.style.width = `${Math.min(100, (state.index / total) * 100)}%`;
   };
 
-  const scoreByLikes = (wine) => {
+  const buildPool = () => {
+    const active = [...catalog].filter(Boolean);
+    const grouped = active.reduce((acc, wine) => {
+      const key = `${normalize(wine.tipo_vino)}-${normalize(wine.varietal)}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(wine);
+      return acc;
+    }, {});
+
+    const diverse = Object.values(grouped)
+      .map((items) => items.sort(sortByPriorityAndPrice)[0])
+      .filter(Boolean)
+      .sort(sortByPriorityAndPrice);
+
+    state.pool = (diverse.length >= 7 ? diverse : active.sort(sortByPriorityAndPrice)).slice(0, 8);
+  };
+
+  const scoreWine = (wine) => {
     let score = 0;
     state.likes.forEach((liked) => {
-      if (wine.tipo_vino === liked.tipo_vino) score += 7;
-      if (wine.varietal === liked.varietal) score += 6;
-      if (wine.maridaje_principal === liked.maridaje_principal) score += 5;
-      if (wine.ocasion === liked.ocasion) score += 4;
+      if (normalize(wine.tipo_vino) === normalize(liked.tipo_vino)) score += 6;
+      if (normalize(wine.varietal) === normalize(liked.varietal)) score += 8;
+      if (normalize(wine.maridaje_principal) === normalize(liked.maridaje_principal)) score += 5;
+      if (normalize(wine.ocasion) === normalize(liked.ocasion)) score += 4;
+      if (Math.abs(Number(wine.precio || 0) - Number(liked.precio || 0)) <= 5000) score += 3;
     });
+
     state.dislikes.forEach((disliked) => {
-      if (wine.tipo_vino === disliked.tipo_vino) score -= 5;
-      if (wine.varietal === disliked.varietal) score -= 3;
+      if (normalize(wine.tipo_vino) === normalize(disliked.tipo_vino)) score -= 5;
+      if (normalize(wine.varietal) === normalize(disliked.varietal)) score -= 8;
+      if (normalize(wine.maridaje_principal) === normalize(disliked.maridaje_principal)) score -= 4;
+      if (normalize(wine.ocasion) === normalize(disliked.ocasion)) score -= 3;
     });
+
+    if ((wine.prioridad_venta || '').toLowerCase() === 'alta') score += 1;
     return score;
   };
 
   const detectProfile = () => {
-    const top = state.likes[0];
-    if (!top) return { name: 'Explorador Lombardo', description: 'Te gusta descubrir etiquetas distintas con criterio.' };
-    if ((top.tipo_vino || '').toLowerCase() === 'tinto') return { name: 'Clásico Malbec', description: 'Preferís vinos con cuerpo y presencia en mesa.' };
-    if (['blanco', 'rosado', 'espumoso'].includes((top.tipo_vino || '').toLowerCase())) return { name: 'Fresco Social', description: 'Te van los vinos vibrantes y fáciles de compartir.' };
-    return { name: 'Explorador Lombardo', description: 'Te gusta descubrir etiquetas distintas con criterio.' };
+    const likes = state.likes;
+    const count = (pick) => likes.reduce((acc, w) => {
+      const k = normalize(pick(w)) || 'otro';
+      acc[k] = (acc[k] || 0) + 1;
+      return acc;
+    }, {});
+
+    const typeTop = Object.entries(count((w) => w.tipo_vino)).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const varietalTop = Object.entries(count((w) => w.varietal)).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+
+    if (typeTop === 'tinto' && /(malbec|cabernet|blend|syrah)/.test(varietalTop)) {
+      return {
+        name: 'Clásico Malbec',
+        description: 'Te van vinos con estructura, carácter gastronómico y final persistente.',
+        quote: 'Mi perfil de vino es: Clásico Malbec 🍷',
+      };
+    }
+
+    if (/(blanco|rosado|espumoso)/.test(typeTop)) {
+      return {
+        name: 'Fresco Social',
+        description: 'Buscás vinos vibrantes, frescos y versátiles para compartir sin vueltas.',
+        quote: 'Mi perfil de vino es: Fresco Social ✨',
+      };
+    }
+
+    return {
+      name: 'Explorador Lombardo',
+      description: 'Disfrutás alternar estilos y descubrir etiquetas nuevas sin perder equilibrio.',
+      quote: 'Mi perfil de vino es: Explorador Lombardo 🧭',
+    };
+  };
+
+  const pickDiverseTop = (ranked) => {
+    const usedVarietal = new Set();
+    const selected = [];
+
+    ranked.forEach((wine) => {
+      if (selected.length >= 3) return;
+      const key = normalize(wine.varietal) || normalize(wine.tipo_vino);
+      if (!usedVarietal.has(key)) {
+        selected.push(wine);
+        usedVarietal.add(key);
+      }
+    });
+
+    if (selected.length < 3) {
+      ranked.forEach((wine) => {
+        if (selected.length >= 3) return;
+        if (!selected.some((item) => item.nombre === wine.nombre)) selected.push(wine);
+      });
+    }
+
+    return selected.slice(0, 3);
   };
 
   const renderList = (container, wines) => {
@@ -104,20 +187,104 @@
     });
   };
 
+  const buildShareMessage = (profile, recommendations) => {
+    const picks = recommendations.slice(0, 2).map((wine) => wine.nombre).join(' + ');
+    return `${profile.quote}\nMatch: ${estimateMatchPercent()}%\nMis elegidos: ${picks}\nDescubrilo en Lombardo 🍷 #WineTinderLombardo`;
+  };
+
+  const buildStory = (profile, recommendations) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1920;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    const gradient = ctx.createLinearGradient(0, 0, 1080, 1920);
+    gradient.addColorStop(0, '#003A70');
+    gradient.addColorStop(1, '#0B2340');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1080, 1920);
+
+    ctx.fillStyle = 'rgba(255,179,171,0.16)';
+    ctx.beginPath();
+    ctx.arc(920, 260, 280, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#E4D5D3';
+    ctx.font = '700 64px sans-serif';
+    ctx.fillText('LOMBARDO', 80, 140);
+
+    ctx.fillStyle = '#FFB3AB';
+    ctx.font = '700 50px sans-serif';
+    ctx.fillText('WINE TINDER', 80, 230);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '700 78px sans-serif';
+    ctx.fillText(profile.name, 80, 430);
+
+    ctx.fillStyle = 'rgba(228,213,211,0.94)';
+    ctx.font = '500 40px sans-serif';
+    ctx.fillText('Mi perfil de vino es:', 80, 360);
+
+    ctx.fillStyle = '#E4D5D3';
+    ctx.font = '500 36px sans-serif';
+    ctx.fillText(profile.description.slice(0, 90), 80, 520);
+
+    ctx.fillStyle = '#FFB3AB';
+    ctx.font = '700 42px sans-serif';
+    ctx.fillText('Recomendaciones', 80, 700);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '500 36px sans-serif';
+    recommendations.slice(0, 3).forEach((wine, index) => {
+      ctx.fillText(`• ${wine.nombre}`, 90, 780 + index * 70);
+    });
+
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.fillRect(80, 1520, 920, 220);
+    ctx.fillStyle = '#E4D5D3';
+    ctx.font = '600 44px sans-serif';
+    ctx.fillText('Descubrilo en Lombardo', 120, 1640);
+    ctx.font = '500 34px sans-serif';
+    ctx.fillText(`Compatibilidad: ${estimateMatchPercent()}%`, 120, 1710);
+
+    return canvas.toDataURL('image/png');
+  };
+
   const updateShareActions = (profile, recommendations) => {
     if (!shareRoot) return;
     shareRoot.hidden = false;
-    const text = `Hice match con el vino en Wine Tinder de Lombardo: ${profile.name} (${estimateMatchPercent()}% match). Mis elegidos: ${recommendations.slice(0,2).map((w) => w.nombre).join(' + ')}. ¿Cuál te salió a vos? 🍷 #WineTinderLombardo`;
+
+    const text = buildShareMessage(profile, recommendations);
     const encodedText = encodeURIComponent(text);
-    const siteUrl = encodeURIComponent('https://lombardo.com.ar/pages/wine-tinder/');
+    const pageUrl = encodeURIComponent('https://lombardo.com.ar/pages/wine-tinder/');
+
     if (shareWhatsAppNode) shareWhatsAppNode.href = `https://wa.me/?text=${encodedText}`;
-    if (shareXNode) shareXNode.href = `https://twitter.com/intent/tweet?text=${encodedText}&url=${siteUrl}`;
-    if (shareFacebookNode) shareFacebookNode.href = `https://www.facebook.com/sharer/sharer.php?u=${siteUrl}&quote=${encodedText}`;
+    if (shareXNode) shareXNode.href = `https://twitter.com/intent/tweet?text=${encodedText}&url=${pageUrl}`;
+    if (shareFacebookNode) shareFacebookNode.href = `https://www.facebook.com/sharer/sharer.php?u=${pageUrl}&quote=${encodedText}`;
+    if (shareInstagramNode) shareInstagramNode.href = 'https://www.instagram.com/';
+
+    storyDataUrl = buildStory(profile, recommendations);
+    if (storyDataUrl && storyPreviewNode && storyWrapNode) {
+      storyPreviewNode.src = storyDataUrl;
+      storyWrapNode.hidden = false;
+    }
+
+    if (downloadStoryNode) {
+      downloadStoryNode.onclick = () => {
+        if (!storyDataUrl) return;
+        const link = document.createElement('a');
+        link.href = storyDataUrl;
+        link.download = `lombardo-wine-tinder-${Date.now()}.png`;
+        link.click();
+      };
+    }
+
     if (copyNode) {
       copyNode.onclick = async () => {
         try {
           await navigator.clipboard.writeText(text);
-          if (copyFeedbackNode) copyFeedbackNode.textContent = 'Texto copiado. ¡Ahora compartilo en tus redes!';
+          if (copyFeedbackNode) copyFeedbackNode.textContent = 'Texto copiado. Podés pegarlo en Instagram Stories o WhatsApp.';
         } catch (_error) {
           if (copyFeedbackNode) copyFeedbackNode.textContent = 'No se pudo copiar automáticamente.';
         }
@@ -125,74 +292,30 @@
     }
   };
 
-
-  const deriveRecommendationContext = (profile) => {
-    const dominant = state.likes[0] || {};
-    const avgPrice = state.likes.length
-      ? Math.round(state.likes.reduce((acc, wine) => acc + Number(wine.precio || 0), 0) / state.likes.length)
-      : null;
-
-    return {
-      perfil: profile.name,
-      ocasion: dominant.ocasion || 'descubrir',
-      presupuesto: avgPrice,
-      estilo: dominant.varietal || dominant.tipo_vino || 'clasico',
-    };
-  };
-
-  const scoreByRecommendationContext = (wine, context) => {
-    let score = scoreByLikes(wine);
-    const wineText = `${wine.varietal || ''} ${wine.tipo_vino || ''} ${wine.descripcion_corta || ''}`.toLowerCase();
-    if (context.ocasion && String(wine.ocasion || '').toLowerCase().includes(String(context.ocasion).toLowerCase())) score += 5;
-    if (context.estilo && wineText.includes(String(context.estilo).toLowerCase())) score += 3;
-    if (Number.isFinite(context.presupuesto)) {
-      const delta = Math.abs(Number(wine.precio || 0) - context.presupuesto);
-      if (delta <= 3000) score += 5;
-      else if (delta <= 7000) score += 2;
-    }
-    return score;
-  };
-
-
-  const logTinderInteraction = (profile, context, recommendations) => {
-    const payload = {
-      fecha: new Date().toISOString().slice(0, 10),
-      mensaje_usuario: 'Resultado Wine Tinder',
-      pagina_actual: 'wine-tinder',
-      intencion_detectada: 'consulta_producto',
-      perfil_detectado: context?.perfil || profile?.name || 'Perfil Wine Tinder',
-      categoria_consulta: 'recomendacion_producto',
-      productos_sugeridos: recommendations.map((wine) => wine?.nombre).filter(Boolean).slice(0, 3),
-      tipo_cierre: 'etiquetas',
-      derivo_whatsapp: false,
-    };
-
-    try {
-      const key = 'lombardo_tinder_interactions';
-      const current = JSON.parse(localStorage.getItem(key) || '[]');
-      const next = Array.isArray(current) ? [...current, payload].slice(-80) : [payload];
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch (_error) {
-      // noop
-    }
-  };
-
   const finish = () => {
     const profile = detectProfile();
-    const context = deriveRecommendationContext(profile);
-    const ranked = [...catalog].map((wine) => ({ ...wine, tinderScore: scoreByRecommendationContext(wine, context) })).sort((a, b) => b.tinderScore - a.tinderScore || sortByPriorityAndPrice(a, b));
-    const recommendations = ranked.slice(0, 3);
-    const box = ranked.slice(1, 4).length ? ranked.slice(1, 4) : ranked.slice(0, 3);
-    if (profileNameNode) profileNameNode.textContent = `Perfil: ${profile.name}`;
+    const ranked = [...catalog]
+      .map((wine) => ({ ...wine, tinderScore: scoreWine(wine) }))
+      .sort((a, b) => b.tinderScore - a.tinderScore || sortByPriorityAndPrice(a, b));
+
+    const recommendations = pickDiverseTop(ranked);
+    const box = pickDiverseTop(ranked.slice(1).concat(ranked.slice(0, 1)));
+
+    if (profileNameNode) profileNameNode.textContent = profile.name;
     if (profileDescriptionNode) profileDescriptionNode.textContent = profile.description;
+    if (profileQuoteNode) profileQuoteNode.textContent = `${profile.quote} · Descubrilo en Lombardo.`;
     if (matchNode) matchNode.textContent = `Compatibilidad con tu estilo: ${estimateMatchPercent()}%`;
+
     renderList(recommendationsNode, recommendations);
     renderList(boxNode, box);
     updateShareActions(profile, recommendations);
+
     try {
-      localStorage.setItem('lombardo_wine_profile', JSON.stringify(context));
-    } catch (_error) {}
-    logTinderInteraction(profile, context, recommendations);
+      localStorage.setItem('lombardo_wine_profile', JSON.stringify({ perfil: profile.name, descripcion: profile.description, origen: 'wine_tinder' }));
+    } catch (_error) {
+      // noop
+    }
+
     swipePanel.hidden = true;
     resultPanel.hidden = false;
   };
@@ -200,6 +323,7 @@
   const renderCard = () => {
     const wine = state.pool[state.index];
     if (!wine) return finish();
+
     updateProgress();
     if (cardName) cardName.textContent = wine.nombre || 'Etiqueta Lombardo';
     if (cardVarietal) cardVarietal.textContent = wine.varietal || 'Selección especial';
@@ -213,6 +337,12 @@
         chipsNode.appendChild(span);
       });
     }
+
+    if (cardImage) {
+      cardImage.src = wine.imagen_url || '/assets/fotos/vino.jpg';
+      cardImage.alt = wine.nombre || 'Vino recomendado';
+    }
+
     card.style.transform = 'translateX(0) rotate(0deg)';
     card.style.opacity = '1';
     updateStampState(0);
@@ -221,7 +351,8 @@
   const commitSwipe = (liked) => {
     const wine = state.pool[state.index];
     if (!wine) return;
-    if (liked) state.likes.push(wine); else state.dislikes.push(wine);
+    if (liked) state.likes.push(wine);
+    else state.dislikes.push(wine);
     state.index += 1;
     renderCard();
   };
@@ -262,8 +393,9 @@
     if (!dragging) return;
     dragging = false;
     const delta = dragCurrentX - dragStartX;
-    if (Math.abs(delta) >= state.threshold) animateAndCommit(delta > 0);
-    else {
+    if (Math.abs(delta) >= state.threshold) {
+      animateAndCommit(delta > 0);
+    } else {
       card.style.transition = 'transform 200ms ease';
       card.style.transform = 'translateX(0) rotate(0deg)';
       updateStampState(0);
@@ -273,19 +405,28 @@
   likeBtn?.addEventListener('click', () => animateAndCommit(true));
   dislikeBtn?.addEventListener('click', () => animateAndCommit(false));
 
-  if (stepTotalNode) stepTotalNode.textContent = '6';
-
   startBtn?.addEventListener('click', async () => {
-    if (!catalog.length) await loadCatalog();
-    state.pool = [...catalog].sort(sortByPriorityAndPrice).slice(0, 6);
+    if (!catalog.length) {
+      try {
+        await loadCatalog();
+      } catch (_error) {
+        return;
+      }
+    }
+
+    buildPool();
     state.index = 0;
     state.likes = [];
     state.dislikes = [];
+    storyDataUrl = '';
+
     startPanel.hidden = true;
     resultPanel.hidden = true;
     swipePanel.hidden = false;
     if (shareRoot) shareRoot.hidden = true;
+    if (storyWrapNode) storyWrapNode.hidden = true;
     if (copyFeedbackNode) copyFeedbackNode.textContent = '';
+
     renderCard();
   });
 })();

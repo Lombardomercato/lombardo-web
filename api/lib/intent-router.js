@@ -74,7 +74,7 @@ const getIntentSignalsFromDocs = () => {
 const DIRECT_PRODUCT_PATTERNS = [/(quiero|busco|dame)\s+algo\s+para/, /vino\s+para/, /(recomend|suger).*(vino|etiqueta)/, /quiero\s+un\s+vino/];
 
 const SOCIAL_PATTERNS = {
-  saludo: [/^(hola|holis|buenas|buen dia|buen dia|buenas tardes|buenas noches|que tal|como va|como andas)[!.\s]*$/],
+  saludo: [/^(hola|holi|holis|holii|buenas|buen\s*d[ií]a|buenas\s+tardes|buenas\s+noches|que\s+tal|c[oó]mo\s+va|c[oó]mo\s+and[aá]s|todo\s+bien)[!,.?\s\u{1F300}-\u{1FAFF}]*$/u],
   agradecimiento: [/^(gracias|muchas gracias|genial gracias|ok gracias|mil gracias)[!.\s]*$/],
   casual: [/^(ok|dale|perfecto|joya|buenisimo|buenisima|entiendo)[!.\s]*$/],
   apertura: [/(no se|nos[eé])\s+que\s+elegir/, /ayudame/, /tengo\s+una\s+duda/],
@@ -104,6 +104,10 @@ const detectIntent = ({ message, pageContext = 'general', history = [] }) => {
   const page = canonicalPageContext(pageContext);
 
   if (hasSocialSignal(normalized) && !hasStrongFunctionalSignal(normalized)) {
+    return INTENTS.CONSULTA_SOCIAL;
+  }
+
+  if (normalized.split(/\s+/).filter(Boolean).length <= 4 && containsKeyword(normalized, SOCIAL_PATTERNS.saludo)) {
     return INTENTS.CONSULTA_SOCIAL;
   }
 
