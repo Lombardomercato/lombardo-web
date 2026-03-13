@@ -2075,6 +2075,7 @@ const initGlobalLombardoAssistant = () => {
 
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
+    keepInputVisibleOnMobile();
   };
 
   const setLoading = (loading) => {
@@ -2082,6 +2083,15 @@ const initGlobalLombardoAssistant = () => {
     input.disabled = loading;
     submitBtn.disabled = loading;
     submitBtn.textContent = loading ? 'Enviando...' : 'Enviar';
+  };
+
+  const keepInputVisibleOnMobile = () => {
+    if (!panel || !messages) return;
+    if (!window.matchMedia('(max-width: 760px)').matches) return;
+    window.setTimeout(() => {
+      panel.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      messages.scrollTop = messages.scrollHeight;
+    }, 120);
   };
 
   const setOpenState = (open) => {
@@ -2498,6 +2508,18 @@ const initGlobalLombardoAssistant = () => {
   closeBtn?.addEventListener('click', () => {
     setOpenState(false);
   });
+
+  if (window.visualViewport && panel) {
+    const syncViewportOffset = () => {
+      if (!widgetState.isOpen) return;
+      const keyboardOffset = Math.max(0, window.innerHeight - window.visualViewport.height);
+      panel.style.maxHeight = `calc(min(78vh, 620px) - ${Math.min(keyboardOffset, 220)}px)`;
+    };
+    window.visualViewport.addEventListener('resize', syncViewportOffset);
+    window.visualViewport.addEventListener('scroll', syncViewportOffset);
+  }
+
+  input?.addEventListener('focus', keepInputVisibleOnMobile);
 
   form?.addEventListener('submit', (event) => {
     event.preventDefault();

@@ -461,7 +461,7 @@ const CLOSING_TYPES = {
 
 
 const SOCIAL_REPLY_PATTERNS = {
-  saludo: [/^(hola|holis|buenas|buen dia|buen día|buenas tardes|buenas noches|que tal|cómo va|como va|como andas|cómo andás)[!.\s]*$/i],
+  saludo: [/^(hola|holi|holis|holii|buenas|buen\s*d[ií]a|buenas\s+tardes|buenas\s+noches|que\s+tal|c[oó]mo\s+va|c[oó]mo\s+and[aá]s|todo\s+bien)[!,.?\s\u{1F300}-\u{1FAFF}]*$/iu],
   agradecimiento: [/^(gracias|muchas gracias|genial gracias|ok gracias|mil gracias|graciass+)[!.\s]*$/i],
   noSeElegir: [/(^|\s)(no se|no sé)\s+que\s+elegir($|\s)/i],
   ayudaAbierta: [/(^|\s)(ayudame|ayúdame|tengo una duda|necesito ayuda)($|\s)/i],
@@ -498,7 +498,7 @@ const buildSocialReply = ({ message, history }) => {
 
   if (subtype === 'saludo') {
     return hasRecentAssistant
-      ? '¡Qué bueno seguir por acá! Decime qué estás buscando y lo vemos juntos.'
+      ? '¡Qué bueno leerte de nuevo! Contame qué idea tenés y lo vemos juntos.'
       : '¡Hola! ¿Cómo va? Decime qué estás buscando y te doy una mano.';
   }
 

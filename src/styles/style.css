@@ -4217,3 +4217,132 @@ p,
     --space-section: 56px;
   }
 }
+
+/* UX hotfixes: mobile layout + assistant + nav + wine tinder */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@media (max-width: 760px) {
+  .container {
+    width: min(var(--max), calc(100% - 28px));
+  }
+
+  .assistant-widget {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+  }
+
+  .assistant-panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    max-height: min(76svh, 640px);
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .assistant-messages {
+    min-height: 160px;
+    max-height: none;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .assistant-form {
+    position: sticky;
+    bottom: 0;
+    background: rgba(252, 249, 247, 0.96);
+    padding-top: 6px;
+  }
+
+  .hero,
+  .experiencias-hero,
+  .club-hero {
+    min-height: 100dvh;
+  }
+
+  .hero-video {
+    transform: none !important;
+  }
+}
+
+.nav-item > a {
+  position: relative;
+}
+
+.nav-item > a::before {
+  content: 'submenú';
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(228, 213, 211, 0.84);
+  border: 1px solid rgba(228, 213, 211, 0.22);
+}
+
+.nav-submenu {
+  background: rgba(2, 39, 77, 0.99);
+  border-color: rgba(255, 179, 171, 0.35);
+}
+
+.nav-submenu a {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.nav-submenu a:hover,
+.nav-submenu a:focus-visible {
+  background: rgba(255, 179, 171, 0.16);
+  border-color: rgba(255, 179, 171, 0.64);
+  color: #fff;
+}
+
+.wine-tinder-result {
+  text-align: center;
+}
+
+.wine-tinder-result > h3 {
+  font-size: clamp(1.6rem, 4.4vw, 2.3rem);
+  margin-bottom: 10px;
+}
+
+.wine-tinder-result .wine-tinder-profile-quote {
+  margin: 0 auto 20px;
+  max-width: 52ch;
+  font-size: clamp(0.95rem, 2.4vw, 1.08rem);
+  opacity: 0.9;
+}
+
+.wine-tinder-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wine-tinder-share-story {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.wine-tinder-story-preview {
+  width: min(220px, 46vw);
+  aspect-ratio: 9 / 16;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 58, 112, 0.24);
+  display: block;
+  margin: 0 auto 10px;
+  object-fit: cover;
+}
+
+@media (max-width: 760px) {
+  .wine-tinder-list {
+    grid-template-columns: 1fr;
+  }
+}
