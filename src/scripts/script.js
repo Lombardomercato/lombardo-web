@@ -2094,6 +2094,8 @@ const initGlobalLombardoAssistant = () => {
     }, 120);
   };
 
+  const isMobileAssistantViewport = () => window.matchMedia('(max-width: 760px)').matches;
+
   const setOpenState = (open) => {
     const animationDelay = prefersReducedMotion ? 0 : 180;
 
@@ -2508,6 +2510,21 @@ const initGlobalLombardoAssistant = () => {
   closeBtn?.addEventListener('click', () => {
     setOpenState(false);
   });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!widgetState.isOpen || !isMobileAssistantViewport()) return;
+    if (container.contains(event.target)) return;
+    setOpenState(false);
+  });
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!widgetState.isOpen || !isMobileAssistantViewport()) return;
+      setOpenState(false);
+    },
+    { passive: true }
+  );
 
   if (window.visualViewport && panel) {
     const syncViewportOffset = () => {
