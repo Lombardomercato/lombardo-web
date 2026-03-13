@@ -2014,6 +2014,7 @@ const initGlobalLombardoAssistant = () => {
   const submitBtn = form?.querySelector('button[type="submit"]');
   const promptButtons = container.querySelectorAll('[data-assistant-prompts] button');
   const closeBtn = container.querySelector('[data-assistant-close]');
+  const mobileAssistantMediaQuery = window.matchMedia('(max-width: 760px)');
   const widgetState = {
     isOpen: false,
     isMinimized: true,
@@ -2097,9 +2098,11 @@ const initGlobalLombardoAssistant = () => {
   const isMobileAssistantViewport = () => window.matchMedia('(max-width: 760px)').matches;
 
   const setOpenState = (open) => {
+    const keepAlwaysOpenOnMobile = mobileAssistantMediaQuery.matches;
+    const desiredOpenState = keepAlwaysOpenOnMobile ? true : open;
     const animationDelay = prefersReducedMotion ? 0 : 180;
 
-    if (open) {
+    if (desiredOpenState) {
       widgetState.isOpen = true;
       widgetState.isMinimized = false;
       widgetState.isClosed = false;
@@ -2504,27 +2507,39 @@ const initGlobalLombardoAssistant = () => {
   }
 
   trigger?.addEventListener('click', () => {
+    if (mobileAssistantMediaQuery.matches) {
+      setOpenState(true);
+      return;
+    }
     setOpenState(panel.hidden);
   });
 
   closeBtn?.addEventListener('click', () => {
+    if (mobileAssistantMediaQuery.matches) {
+      setOpenState(true);
+      return;
+    }
     setOpenState(false);
   });
 
-  document.addEventListener('pointerdown', (event) => {
-    if (!widgetState.isOpen || !isMobileAssistantViewport()) return;
-    if (container.contains(event.target)) return;
-    setOpenState(false);
-  });
+  const syncAssistantStateByViewport = () => {
+    if (mobileAssistantMediaQuery.matches) {
+      setOpenState(true);
+      return;
+    }
 
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (!widgetState.isOpen || !isMobileAssistantViewport()) return;
+    if (widgetState.isClosed) {
       setOpenState(false);
-    },
-    { passive: true }
-  );
+    }
+  };
+
+  if (typeof mobileAssistantMediaQuery.addEventListener === 'function') {
+    mobileAssistantMediaQuery.addEventListener('change', syncAssistantStateByViewport);
+  } else if (typeof mobileAssistantMediaQuery.addListener === 'function') {
+    mobileAssistantMediaQuery.addListener(syncAssistantStateByViewport);
+  }
+
+  syncAssistantStateByViewport();
 
   if (window.visualViewport && panel) {
     const syncViewportOffset = () => {
