@@ -2098,11 +2098,9 @@ const initGlobalLombardoAssistant = () => {
   const isMobileAssistantViewport = () => window.matchMedia('(max-width: 760px)').matches;
 
   const setOpenState = (open) => {
-    const keepAlwaysOpenOnMobile = mobileAssistantMediaQuery.matches;
-    const desiredOpenState = keepAlwaysOpenOnMobile ? true : open;
     const animationDelay = prefersReducedMotion ? 0 : 180;
 
-    if (desiredOpenState) {
+    if (open) {
       widgetState.isOpen = true;
       widgetState.isMinimized = false;
       widgetState.isClosed = false;
@@ -2507,30 +2505,15 @@ const initGlobalLombardoAssistant = () => {
   }
 
   trigger?.addEventListener('click', () => {
-    if (mobileAssistantMediaQuery.matches) {
-      setOpenState(true);
-      return;
-    }
     setOpenState(panel.hidden);
   });
 
   closeBtn?.addEventListener('click', () => {
-    if (mobileAssistantMediaQuery.matches) {
-      setOpenState(true);
-      return;
-    }
     setOpenState(false);
   });
 
   const syncAssistantStateByViewport = () => {
-    if (mobileAssistantMediaQuery.matches) {
-      setOpenState(true);
-      return;
-    }
-
-    if (widgetState.isClosed) {
-      setOpenState(false);
-    }
+    setOpenState(widgetState.isOpen);
   };
 
   if (typeof mobileAssistantMediaQuery.addEventListener === 'function') {
