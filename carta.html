@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LOMBARDO | Carta</title>
+  <meta name="description" content="Carta digital de Lombardo Mercato de Encuentro. Café de especialidad, desayunos, meriendas, vino y buenos momentos en Pueblo Esther." />
+  <style>
+    :root {
+      --blue: #003A70;
+      --pink: #FFB3AB;
+      --beige: #E4D5D3;
+      --green: #D4EB8E;
+      --red: #E03C31;
+      --white: #ffffff;
+      --text: #11304d;
+      --shadow: 0 18px 40px rgba(0, 58, 112, 0.12);
+      --radius-xl: 40px;
+      --radius-lg: 28px;
+      --radius-md: 18px;
+      --maxw: 1180px;
+    }
+
+    @font-face {
+      font-family: 'Gopher';
+      src: url('/fonts/Gopher-Regular.woff2') format('woff2');
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Articulat';
+      src: url('/fonts/ArticulatCF-Regular.woff2') format('woff2');
+      font-display: swap;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Articulat', Arial, sans-serif;
+      background: linear-gradient(180deg, #f7f2f0 0%, #fffaf8 100%);
+      color: var(--text);
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .container {
+      width: min(calc(100% - 32px), var(--maxw));
+      margin-inline: auto;
+    }
+
+    .gopher {
+      font-family: 'Gopher', 'Articulat', Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .site-hero {
+      position: relative;
+      padding: 28px 0 38px;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(255, 179, 171, 0.42), transparent 22%),
+        radial-gradient(circle at 92% 15%, rgba(228, 213, 211, 0.55), transparent 18%),
+        radial-gradient(circle at 80% 88%, rgba(255, 179, 171, 0.3), transparent 16%);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 26px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      background: var(--blue);
+      color: var(--white);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.4rem;
+      box-shadow: var(--shadow);
+    }
+
+    .brand-copy small {
+      display: block;
+      color: rgba(0, 58, 112, 0.65);
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    .cta-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.78);
+      color: var(--blue);
+      border-color: rgba(0,58,112,0.12);
+    }
+
+    .hero-card {
+      position: relative;
+      background: linear-gradient(135deg, var(--white) 0%, #f8f2ef 100%);
+      border: 1px solid rgba(0, 58, 112, 0.08);
+      border-radius: 42px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 26px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--pink);
+      color: var(--blue);
+      border-radius: 999px;
+      padding: 10px 16px;
+      margin-bottom: 18px;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .hero-title {
+      color: var(--blue);
+      font-size: clamp(2.6rem, 7vw, 5rem);
+      line-height: 0.9;
+      margin-bottom: 16px;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1rem, 2vw, 1.18rem);
+      max-width: 620px;
+      color: rgba(17, 48, 77, 0.86);
+    }
+
+    .hero-notes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: var(--beige);
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .hero-visual {
+      position: relative;
+      min-height: 310px;
+      border-radius: 34px;
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95), rgba(255,255,255,0.55) 18%, transparent 19%),
+        radial-gradient(circle at 73% 22%, rgba(255,179,171,0.55), transparent 24%),
+        radial-gradient(circle at 72% 70%, rgba(228,213,211,0.8), transparent 20%),
+        linear-gradient(160deg, var(--pink), #f7d8d3 44%, #f2ece8 100%);
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .cup {
+      width: min(86%, 320px);
+      aspect-ratio: 1/1.05;
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .cup-body {
+      position: absolute;
+      left: 14%;
+      right: 14%;
+      bottom: 18%;
+      top: 28%;
+      background: rgba(255,255,255,0.9);
+      border: 5px solid var(--blue);
+      border-radius: 0 0 42% 42% / 0 0 28% 28%;
+    }
+
+    .cup-top {
+      position: absolute;
+      inset: 22% 18% auto 18%;
+      height: 18%;
+      background: linear-gradient(180deg, #b27a52 0%, #7d502d 100%);
+      border: 5px solid var(--blue);
+      border-bottom: 0;
+      border-radius: 50% 50% 32% 32%;
+    }
+
+    .latte-art {
+      position: absolute;
+      inset: 27% 27% auto 27%;
+      height: 10%;
+      background: rgba(255,255,255,0.95);
+      border-radius: 50%;
+      transform: rotate(-8deg);
+      filter: blur(0.2px);
+    }
+
+    .cup-handle {
+      position: absolute;
+      right: 5%;
+      top: 40%;
+      width: 20%;
+      height: 20%;
+      border: 5px solid var(--blue);
+      border-left: 0;
+      border-radius: 0 50% 50% 0;
+      background: transparent;
+    }
+
+    .cup-saucer {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: 8%;
+      height: 10%;
+      background: rgba(255,255,255,0.92);
+      border: 5px solid var(--blue);
+      border-radius: 999px;
+    }
+
+    .section {
+      padding: 18px 0 8px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      color: var(--blue);
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      line-height: 0.95;
+    }
+
+    .section-subtitle {
+      margin-top: 8px;
+      color: rgba(17, 48, 77, 0.72);
+      max-width: 720px;
+      font-size: 0.98rem;
+    }
+
+    .badge-note {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 12px 16px;
+      background: var(--beige);
+      color: var(--blue);
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .grid-6 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .combo-card {
+      position: relative;
+      background: var(--white);
+      border-radius: 34px;
+      border: 1px solid rgba(0, 58, 112, 0.08);
+      box-shadow: var(--shadow);
+      padding: 22px 20px 80px;
+      min-height: 245px;
+      overflow: hidden;
+    }
+
+    .combo-card--featured {
+      background: linear-gradient(180deg, #fff7f5, #fff 100%);
+      border-color: rgba(255, 179, 171, 0.6);
+    }
+
+    .combo-card::after {
+      content: '';
+      position: absolute;
+      right: -30px;
+      bottom: -30px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: rgba(255, 179, 171, 0.17);
+    }
+
+    .combo-name {
+      color: var(--blue);
+      font-size: 1.55rem;
+      margin-bottom: 10px;
+    }
+
+    .combo-desc {
+      color: rgba(17, 48, 77, 0.84);
+      font-size: 1rem;
+      max-width: 26ch;
+    }
+
+    .combo-extra {
+      margin-top: 12px;
+      color: rgba(17, 48, 77, 0.66);
+      font-size: 0.9rem;
+    }
+
+    .price-tag {
+      position: absolute;
+      left: 20px;
+      bottom: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 999px;
+      background: var(--beige);
+      color: var(--blue);
+      font-size: 1.12rem;
+      font-weight: 800;
+      z-index: 1;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--white);
+      border: 1px solid rgba(0, 58, 112, 0.08);
+      border-radius: 36px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .panel-pink {
+      background: linear-gradient(180deg, rgba(255, 179, 171, 0.26), rgba(255,255,255,0.96));
+    }
+
+    .panel-blue {
+      background: linear-gradient(180deg, var(--blue) 0%, #0b4d88 100%);
+      color: var(--white);
+      border-color: rgba(255,255,255,0.08);
+    }
+
+    .panel-blue .menu-category,
+    .panel-blue .panel-title,
+    .panel-blue .item-name,
+    .panel-blue .item-note {
+      color: var(--white);
+    }
+
+    .panel-title {
+      color: var(--blue);
+      font-size: 2rem;
+      margin-bottom: 14px;
+    }
+
+    .menu-category {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+      background: var(--blue);
+      color: var(--white);
+      font-size: 0.96rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+    }
+
+    .panel-blue .menu-category {
+      background: var(--pink);
+      color: var(--blue);
+    }
+
+    .menu-list {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .menu-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: start;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(0, 58, 112, 0.08);
+    }
+
+    .panel-blue .menu-item {
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .menu-item:last-child {
+      border-bottom: 0;
+    }
+
+    .item-name {
+      color: var(--blue);
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .item-note {
+      margin-top: 3px;
+      color: rgba(17, 48, 77, 0.68);
+      font-size: 0.9rem;
+    }
+
+    .item-price {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 94px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: rgba(228, 213, 211, 0.9);
+      color: var(--blue);
+      font-weight: 800;
+      white-space: nowrap;
+      font-size: 0.96rem;
+    }
+
+    .panel-blue .item-price {
+      background: rgba(255,255,255,0.15);
+      color: var(--white);
+    }
+
+    .upsell-wrap {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .upsell-card {
+      background: linear-gradient(180deg, rgba(255,179,171,0.2), rgba(255,255,255,1));
+      border: 1px solid rgba(0, 58, 112, 0.08);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .upsell-card h3 {
+      color: var(--blue);
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+    }
+
+    .service-box {
+      margin-top: 20px;
+      background: linear-gradient(135deg, var(--pink) 0%, #ffe6e1 100%);
+      border-radius: 30px;
+      padding: 22px;
+      border: 1px solid rgba(0, 58, 112, 0.08);
+      box-shadow: var(--shadow);
+    }
+
+    .service-box h3 {
+      color: var(--blue);
+      font-size: 1.55rem;
+      margin-bottom: 12px;
+    }
+
+    .service-list {
+      display: grid;
+      gap: 10px;
+      list-style: none;
+    }
+
+    .service-list li {
+      background: rgba(255,255,255,0.72);
+      border-radius: 18px;
+      padding: 12px 14px;
+      font-size: 0.96rem;
+      color: rgba(17, 48, 77, 0.86);
+    }
+
+    .service-list strong {
+      color: var(--blue);
+    }
+
+    .floating-wa {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 30;
+      min-width: 58px;
+      height: 58px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: var(--white);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 18px 35px rgba(0, 58, 112, 0.25);
+      font-size: 0.95rem;
+      font-weight: 800;
+      padding: 0 18px;
+    }
+
+    .footer {
+      padding: 32px 0 86px;
+      text-align: center;
+      color: rgba(0,58,112,0.72);
+    }
+
+    .footer strong {
+      color: var(--blue);
+    }
+
+    @media (max-width: 1060px) {
+      .grid-6 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .menu-grid,
+      .hero-card,
+      .upsell-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-visual {
+        min-height: 250px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .container {
+        width: min(calc(100% - 20px), var(--maxw));
+      }
+
+      .site-hero {
+        padding-top: 18px;
+      }
+
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .cta-group {
+        justify-content: stretch;
+      }
+
+      .cta-group .btn {
+        flex: 1 1 auto;
+      }
+
+      .hero-card,
+      .panel,
+      .upsell-card,
+      .service-box,
+      .combo-card {
+        border-radius: 26px;
+      }
+
+      .hero-card {
+        padding: 20px;
+      }
+
+      .hero-title {
+        font-size: clamp(2.25rem, 12vw, 3.4rem);
+      }
+
+      .grid-6,
+      .upsell-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .combo-card {
+        min-height: auto;
+      }
+
+      .menu-item {
+        grid-template-columns: 1fr;
+      }
+
+      .item-price {
+        justify-self: start;
+      }
+
+      .section-head {
+        flex-direction: column;
+        align-items: start;
+      }
+
+      .floating-wa {
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-hero">
+    <div class="hero-bg"></div>
+    <div class="container">
+      <div class="topbar">
+        <a class="brand" href="/index.html" aria-label="Ir al inicio de Lombardo">
+          <div class="brand-mark gopher">L</div>
+          <div class="brand-copy">
+            <div class="gopher" style="font-size:1.2rem;color:#003A70;line-height:1;">Lombardo</div>
+            <small>MERCATO DE ENCUENTRO · PUEBLO ESTHER</small>
+          </div>
+        </a>
+
+        <div class="cta-group">
+          <a class="btn btn-secondary" href="#desayunos">Ver carta</a>
+          <a class="btn btn-primary" href="https://wa.me/5493410000000?text=Hola%20Lombardo%2C%20quiero%20hacer%20una%20consulta%20o%20reserva." target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <div>
+          <span class="eyebrow gopher">Carta digital</span>
+          <h1 class="hero-title gopher">Lom<br>bar<br>do</h1>
+          <p class="hero-subtitle">
+            Café de especialidad, desayunos, meriendas, vino y buenos momentos.
+            Una carta pensada para elegir fácil, pedir rápido y disfrutar sin vueltas.
+          </p>
+          <div class="hero-notes">
+            <span class="pill">Pedís en caja</span>
+            <span class="pill">Simple, sin vueltas</span>
+            <span class="pill">Café + vino + buen morfi</span>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div class="cup">
+            <div class="cup-top"></div>
+            <div class="latte-art"></div>
+            <div class="cup-body"></div>
+            <div class="cup-handle"></div>
+            <div class="cup-saucer"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="desayunos" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title gopher">Desayunos & meriendas</h2>
+            <p class="section-subtitle">
+              Acá está el corazón de la caja. Primero mostramos combos para empujar ticket,
+              simplificar la elección y aprovechar mejor el margen del café.
+            </p>
+          </div>
+          <div class="badge-note">Todos los combos incluyen café a elección.<br>No incluye bebida de autor.</div>
+        </div>
+
+        <div class="grid-6">
+          <article class="combo-card combo-card--featured">
+            <h3 class="combo-name gopher">La entrada</h3>
+            <p class="combo-desc">Café + 2 medialunas o 1 alfajor de maicena o 1 porción de budín.</p>
+            <span class="price-tag">$ 7.500</span>
+          </article>
+
+          <article class="combo-card combo-card--featured">
+            <h3 class="combo-name gopher">Tentazione</h3>
+            <p class="combo-desc">Café + 3 medialunas o 1 croissant relleno.</p>
+            <p class="combo-extra">Sabores: jamón y queso o dulce de leche.</p>
+            <span class="price-tag">$ 8.500</span>
+          </article>
+
+          <article class="combo-card combo-card--featured">
+            <h3 class="combo-name gopher">Entre panes</h3>
+            <p class="combo-desc">Café + tostada de pan de campo con queso crema, mermelada o dulce de leche.</p>
+            <span class="price-tag">$ 9.500</span>
+          </article>
+
+          <article class="combo-card">
+            <h3 class="combo-name gopher">El tano</h3>
+            <p class="combo-desc">Café + tostado de campo con jamón, queso y manteca.</p>
+            <p class="combo-extra">Opción baguettin.</p>
+            <span class="price-tag">$ 13.000</span>
+          </article>
+
+          <article class="combo-card">
+            <h3 class="combo-name gopher">Milano</h3>
+            <p class="combo-desc">Café + tostón de palta, queso crema y huevo poché.</p>
+            <span class="price-tag">$ 13.000</span>
+          </article>
+
+          <article class="combo-card">
+            <h3 class="combo-name gopher">Vital</h3>
+            <p class="combo-desc">Café + bowl de yogurt con frutas de estación, granola, miel y crema de maní.</p>
+            <span class="price-tag">$ 12.000</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="cafe" class="section">
+      <div class="container menu-grid">
+        <article class="panel panel-pink">
+          <span class="menu-category gopher">Café de especialidad</span>
+          <h2 class="panel-title gopher">Café</h2>
+          <ul class="menu-list">
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Espresso</div>
+                <div class="item-note">90 ml</div>
+              </div>
+              <span class="item-price">$ 3.500</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Doppio</div>
+                <div class="item-note">90 ml</div>
+              </div>
+              <span class="item-price">$ 3.800</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Cortado</div>
+                <div class="item-note">90 ml</div>
+              </div>
+              <span class="item-price">$ 4.200</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Americano</div>
+                <div class="item-note">90 ml</div>
+              </div>
+              <span class="item-price">$ 4.200</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Flat White</div>
+                <div class="item-note">160 ml</div>
+              </div>
+              <span class="item-price">$ 4.800</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Capuccino</div>
+                <div class="item-note">160 ml</div>
+              </div>
+              <span class="item-price">$ 4.800</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Latte</div>
+                <div class="item-note">220 ml</div>
+              </div>
+              <span class="item-price">$ 4.800</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Mocha</div>
+                <div class="item-note">220 ml</div>
+              </div>
+              <span class="item-price">$ 5.200</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Iced Latte</div>
+                <div class="item-note">220 ml</div>
+              </div>
+              <span class="item-price">$ 5.200</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Café irlandés</div>
+                <div class="item-note">Con whisky · 220 ml</div>
+              </div>
+              <span class="item-price">$ 6.000</span>
+            </li>
+          </ul>
+        </article>
+
+        <article class="panel">
+          <span class="menu-category gopher">Café de autor & infusiones</span>
+          <h2 class="panel-title gopher">Algo distinto</h2>
+          <ul class="menu-list">
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Vainilla Latte</div>
+                <div class="item-note">220 ml</div>
+              </div>
+              <span class="item-price">$ 5.400</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Nutella Latte</div>
+                <div class="item-note">220 ml</div>
+              </div>
+              <span class="item-price">$ 5.400</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Té en saquito</div>
+                <div class="item-note">Variedades disponibles en caja</div>
+              </div>
+              <span class="item-price">$ 3.800</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Té en hebras</div>
+                <div class="item-note">Variedades disponibles en caja</div>
+              </div>
+              <span class="item-price">$ 5.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Chocolatada de la casa</div>
+                <div class="item-note">Ideal para acompañar bollería</div>
+              </div>
+              <span class="item-price">$ 4.500</span>
+            </li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="acompanar" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title gopher">Para acompañar</h2>
+            <p class="section-subtitle">
+              Este bloque no se muestra como “anexo”. Se muestra como suma natural al café.
+              La lógica es simple: nadie debería irse con un café solo.
+            </p>
+          </div>
+          <div class="badge-note">Caja sugerida:<br>“¿Le sumamos algo dulce o una medialuna?”</div>
+        </div>
+
+        <div class="upsell-wrap">
+          <article class="upsell-card">
+            <span class="menu-category gopher">Bollería</span>
+            <ul class="menu-list">
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Medialuna</div>
+                </div>
+                <span class="item-price">$ 1.200</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Factura</div>
+                </div>
+                <span class="item-price">$ 1.200</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Chipa</div>
+                </div>
+                <span class="item-price">$ 1.200</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Croissant</div>
+                </div>
+                <span class="item-price">$ 3.000</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Croissant relleno</div>
+                  <div class="item-note">Jamón y queso o dulce de leche</div>
+                </div>
+                <span class="item-price">$ 4.500</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Scon de queso</div>
+                </div>
+                <span class="item-price">$ 4.200</span>
+              </li>
+            </ul>
+          </article>
+
+          <article class="upsell-card">
+            <span class="menu-category gopher">Pastelería</span>
+            <ul class="menu-list">
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Tortas por porción</div>
+                  <div class="item-note">Oreo · Lemon Pie · Chocotorta · Red Velvet · Tres leches · Rogel · Matilda · Pistacho</div>
+                </div>
+                <span class="item-price">$ 9.000</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Cookie</div>
+                  <div class="item-note">Pistacho · Red Velvet · Chips · Doble chocolate</div>
+                </div>
+                <span class="item-price">$ 5.000</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Budín</div>
+                  <div class="item-note">Consultar sabores en caja</div>
+                </div>
+                <span class="item-price">$ 4.500</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Alfajor</div>
+                  <div class="item-note">Consultar variedad del día</div>
+                </div>
+                <span class="item-price">$ 4.000</span>
+              </li>
+              <li class="menu-item">
+                <div>
+                  <div class="item-name">Tarteletas</div>
+                  <div class="item-note">Pistacho · Lemon Pie · Coco</div>
+                </div>
+                <span class="item-price">$ 8.000</span>
+              </li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="salado" class="section">
+      <div class="container menu-grid">
+        <article class="panel">
+          <span class="menu-category gopher">Almuerzos & sandwichería</span>
+          <h2 class="panel-title gopher">Algo salado</h2>
+          <ul class="menu-list">
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Tostado / Carlitos</div>
+                <div class="item-note">Jamón y queso</div>
+              </div>
+              <span class="item-price">$ 11.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Sándwich pan de campo</div>
+              </div>
+              <span class="item-price">$ 12.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Croque Monsieur</div>
+              </div>
+              <span class="item-price">$ 10.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Pan árabe jamón y queso</div>
+              </div>
+              <span class="item-price">$ 10.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Chipanini jamón y queso</div>
+              </div>
+              <span class="item-price">$ 11.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Chipanini solo queso</div>
+              </div>
+              <span class="item-price">$ 9.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Baguettin jamón y queso</div>
+              </div>
+              <span class="item-price">$ 14.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Tostón de palta</div>
+              </div>
+              <span class="item-price">$ 12.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Pizza</div>
+                <div class="item-note">A elección del día</div>
+              </div>
+              <span class="item-price">$ 10.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Empanadas</div>
+              </div>
+              <span class="item-price">$ 3.000</span>
+            </li>
+          </ul>
+        </article>
+
+        <article class="panel panel-blue" id="vino">
+          <span class="menu-category gopher">Happy hour · todos los días</span>
+          <h2 class="panel-title gopher">Vino & tragos</h2>
+          <ul class="menu-list">
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Copa del día</div>
+                <div class="item-note">Selección simple para elegir sin complicarte</div>
+              </div>
+              <span class="item-price">$ 6.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Vermut Lombardo</div>
+                <div class="item-note">Macerado con café</div>
+              </div>
+              <span class="item-price">$ 7.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Espresso Martini</div>
+              </div>
+              <span class="item-price">$ 7.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Espresso Branca</div>
+              </div>
+              <span class="item-price">$ 7.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Espresso Tonic</div>
+              </div>
+              <span class="item-price">$ 7.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Fernet</div>
+              </div>
+              <span class="item-price">$ 6.500</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Gin Tonic</div>
+              </div>
+              <span class="item-price">$ 6.500</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Gancia</div>
+              </div>
+              <span class="item-price">$ 6.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Campari</div>
+              </div>
+              <span class="item-price">$ 6.000</span>
+            </li>
+            <li class="menu-item">
+              <div>
+                <div class="item-name">Whisky Lemon</div>
+              </div>
+              <span class="item-price">$ 6.500</span>
+            </li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="service-box">
+          <h3 class="gopher">Guión de caja</h3>
+          <ul class="service-list">
+            <li><strong>1.</strong> En vez de “¿qué querés?”, arrancá con: “¿vas a tomar algo rápido o querés merendar tranquilo?”</li>
+            <li><strong>2.</strong> Si duda, ofrecé dos caminos: “Tenés La Entrada o Tentazione, ¿cuál te va más?”</li>
+            <li><strong>3.</strong> Si pide café solo, siempre sumá: “¿Le agregamos una medialuna, budín o cookie?”</li>
+            <li><strong>4.</strong> Desde las 18 hs, empujá vino: “Tenemos copa del día, si querés algo tranqui para cerrar.”</li>
+            <li><strong>5.</strong> El objetivo no es despachar pedidos. Es subir ticket sin fricción.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer container">
+    <p><strong>LOMBARDO</strong> · Mercato de encuentro en Pueblo Esther, Santa Fe.</p>
+    <p>Diseñado para mobile, pensado para vender mejor y subir ticket desde caja.</p>
+  </footer>
+
+  <a class="floating-wa" href="https://wa.me/5493410000000?text=Hola%20Lombardo%2C%20quiero%20hacer%20una%20consulta%20o%20reserva." target="_blank" rel="noopener noreferrer">WhatsApp</a>
+</body>
+</html>
