@@ -88,7 +88,7 @@ if (navToggle && mainNav) {
 
 document.querySelectorAll('[data-wa]').forEach((el) => {
   el.addEventListener('click', () => {
-    const phone = '543412762319';
+    const phone = '5493412762319';
     const msg = encodeURIComponent(el.getAttribute('data-wa') || 'Hola Lombardo, quiero info.');
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank', 'noopener');
   });
@@ -1324,7 +1324,7 @@ if (sommelierApp) {
 
     messageLines.push('', 'Quiero consultar disponibilidad.');
 
-    waLink.href = `https://wa.me/543412762319?text=${encodeURIComponent(messageLines.join('\n'))}`;
+    waLink.href = `https://wa.me/5493412762319?text=${encodeURIComponent(messageLines.join('\n'))}`;
   };
 
   const renderResults = () => {
@@ -1420,7 +1420,7 @@ if (sommelierApp) {
           '',
           `Perfil detectado: ${profile.name}`,
         ];
-        membershipWaLink.href = `https://wa.me/543412762319?text=${encodeURIComponent(lines.join('\n'))}`;
+        membershipWaLink.href = `https://wa.me/5493412762319?text=${encodeURIComponent(lines.join('\n'))}`;
       }
     }
 
@@ -1806,7 +1806,7 @@ if (sommelierApp) {
           `Perfil detectado: ${profile.name}`,
           ...recommendations.map((wine) => `- ${wine.nombre}`),
         ].join('\n');
-        waNode.href = `https://wa.me/543412762319?text=${encodeURIComponent(text)}`;
+        waNode.href = `https://wa.me/5493412762319?text=${encodeURIComponent(text)}`;
       }
 
       updateShareActions(profile, recommendations);
@@ -2710,7 +2710,7 @@ if (wineShopApp) {
         ? selected.map((wine) => `${wine.nombre} (${formatPrice(wine.precio)})`).join(', ')
         : 'Necesito ayuda para armar una caja personalizada';
       const msg = encodeURIComponent(`Hola Lombardo, quiero cerrar mi caja con estos vinos: ${list}.`);
-      window.open(`https://wa.me/543412762319?text=${msg}`, '_blank', 'noopener');
+      window.open(`https://wa.me/5493412762319?text=${msg}`, '_blank', 'noopener');
     });
   };
 

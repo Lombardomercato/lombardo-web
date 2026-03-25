@@ -1,0 +1,274 @@
+body[data-page-context="carta"] {
+  overflow-x: hidden;
+}
+
+.carta-main {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(255, 179, 171, 0.26), transparent 34%),
+    radial-gradient(circle at 12% 4%, rgba(212, 235, 142, 0.2), transparent 28%),
+    var(--gris);
+}
+
+.carta-main .section {
+  padding-block: clamp(64px, 8.5vw, 116px);
+}
+
+.carta-hero {
+  padding-top: clamp(92px, 10vw, 132px);
+}
+
+.carta-hero-grid,
+.two-cols {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.carta-hero-copy {
+  background: linear-gradient(165deg, rgba(0, 58, 112, 0.92), rgba(0, 58, 112, 0.78));
+  color: var(--gris);
+  border-color: rgba(228, 213, 211, 0.42);
+}
+
+.carta-hero-copy .eyebrow {
+  color: var(--verde);
+}
+
+.carta-hero-copy h1 {
+  max-width: 12ch;
+}
+
+.carta-lead {
+  color: rgba(228, 213, 211, 0.92);
+  margin-bottom: 0;
+}
+
+.carta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.carta-pills .tag {
+  background: rgba(228, 213, 211, 0.14);
+  border-color: rgba(228, 213, 211, 0.4);
+  color: rgba(228, 213, 211, 0.94);
+}
+
+.carta-hero-note {
+  background: rgba(228, 213, 211, 0.68);
+  border-color: rgba(0, 58, 112, 0.22);
+}
+
+.carta-hero-note h2 {
+  margin-bottom: 12px;
+  max-width: 14ch;
+}
+
+.carta-mini {
+  color: rgba(0, 58, 112, 0.72);
+  margin-top: 12px;
+}
+
+.carta-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.carta-head h2 {
+  margin-bottom: 0;
+  max-width: 24ch;
+}
+
+.carta-aside {
+  margin: 0;
+  max-width: 34ch;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: rgba(228, 213, 211, 0.64);
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 0.94rem;
+}
+
+.cards-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.menu-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 230px;
+}
+
+.menu-card h3 {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+}
+
+.menu-card p {
+  margin: 0;
+  max-width: 30ch;
+  color: rgba(0, 58, 112, 0.84);
+}
+
+.menu-card small {
+  color: rgba(0, 58, 112, 0.7);
+  font-size: 0.88rem;
+}
+
+.menu-card strong {
+  margin-top: auto;
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(0, 58, 112, 0.1);
+  color: var(--azul);
+  font-size: 1.04rem;
+  letter-spacing: 0.02em;
+}
+
+.menu-card.featured {
+  border-color: rgba(255, 179, 171, 0.84);
+  background: linear-gradient(180deg, rgba(255, 179, 171, 0.32), rgba(228, 213, 211, 0.52));
+}
+
+.list-card h2,
+.list-card h3 {
+  margin-bottom: 14px;
+}
+
+.price-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.price-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: flex-start;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.18);
+}
+
+.price-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.price-list span {
+  display: grid;
+  gap: 3px;
+}
+
+.price-list b {
+  font-family: 'Articulat CF', Arial, sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.price-list small {
+  font-family: 'Articulat CF', Arial, sans-serif;
+  color: rgba(0, 58, 112, 0.66);
+  font-size: 0.86rem;
+}
+
+.price-list strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 58, 112, 0.12);
+  white-space: nowrap;
+  font-size: 0.94rem;
+}
+
+.card-blue {
+  background: linear-gradient(170deg, rgba(0, 58, 112, 0.92), rgba(0, 58, 112, 0.84));
+  border-color: rgba(228, 213, 211, 0.34);
+  color: var(--gris);
+}
+
+.card-blue .eyebrow {
+  color: var(--coral);
+}
+
+.card-blue p,
+.card-blue b,
+.card-blue small,
+.card-blue h2 {
+  color: var(--gris);
+}
+
+.card-blue .price-list li {
+  border-color: rgba(228, 213, 211, 0.28);
+}
+
+.card-blue .price-list strong {
+  background: rgba(228, 213, 211, 0.2);
+}
+
+.caja-script {
+  background: linear-gradient(150deg, rgba(255, 179, 171, 0.36), rgba(228, 213, 211, 0.8));
+  border-color: rgba(0, 58, 112, 0.28);
+}
+
+.caja-script ul {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.caja-script li {
+  color: rgba(0, 58, 112, 0.88);
+  font-family: 'Articulat CF', Arial, sans-serif;
+}
+
+@media (max-width: 1024px) {
+  .carta-hero-grid,
+  .two-cols,
+  .cards-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-card {
+    min-height: initial;
+  }
+
+  .carta-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 760px) {
+  .carta-main .section {
+    padding-block: 54px;
+  }
+
+  .price-list li {
+    grid-template-columns: 1fr;
+  }
+
+  .price-list strong {
+    justify-self: flex-start;
+  }
+
+  .carta-aside {
+    border-radius: 16px;
+  }
+}
