@@ -206,6 +206,8 @@ const resolvePageContextFromPath = (pathname = window.location.pathname) => {
     '/pages/tienda': 'club',
     '/contacto.html': 'contacto',
     '/pages/contacto': 'contacto',
+    '/pasteleria.html': 'pasteleria',
+    '/pages/pasteleria': 'pasteleria',
   };
 
   if (directMap[cleanPath]) return directMap[cleanPath];
@@ -215,6 +217,7 @@ const resolvePageContextFromPath = (pathname = window.location.pathname) => {
   if (cleanPath.startsWith('/pages/experiencias')) return 'experiencias';
   if (cleanPath.startsWith('/pages/club') || cleanPath.startsWith('/pages/tienda')) return 'club';
   if (cleanPath.startsWith('/pages/contacto')) return 'contacto';
+  if (cleanPath.startsWith('/pages/pasteleria')) return 'pasteleria';
 
   return 'general';
 };
