@@ -290,6 +290,7 @@ main > .section > .container > h2::after {
   height: 100%;
   object-fit: cover;
   object-position: center center;
+  border-radius: 0;
   z-index: 0;
 }
 
@@ -3685,12 +3686,18 @@ body.assistant-open .float-wa {
 }
 
 /* Experiencias landing */
+.experiencias-hero {
+  min-height: clamp(70vh, 78vh, 85vh);
+}
+
 .experiencias-hero::before {
-  background: linear-gradient(112deg, rgba(8, 23, 36, 0.82), rgba(8, 23, 36, 0.54) 52%, rgba(8, 23, 36, 0.78));
+  background: linear-gradient(rgba(0, 58, 112, 0.28), rgba(0, 58, 112, 0.42));
 }
 
 .experiencias-hero .hero-video {
-  filter: saturate(0.86) contrast(1.08);
+  filter: saturate(0.96) contrast(1.04);
+  object-fit: cover;
+  object-position: center center;
 }
 
 .experiencias-intro {
@@ -3727,12 +3734,32 @@ body.assistant-open .float-wa {
 }
 
 /* Club Lombardo landing */
+.club-hero {
+  min-height: clamp(70vh, 80vh, 85vh);
+}
+
 .club-hero::before {
-  background: linear-gradient(112deg, rgba(10, 23, 36, 0.84), rgba(10, 23, 36, 0.58) 50%, rgba(10, 23, 36, 0.82));
+  background: linear-gradient(rgba(0, 58, 112, 0.28), rgba(0, 58, 112, 0.42));
 }
 
 .club-hero .hero-video {
-  filter: saturate(0.84) contrast(1.06);
+  filter: saturate(0.95) contrast(1.04);
+  object-fit: cover;
+  object-position: center center;
+}
+
+.pasteleria-hero {
+  min-height: clamp(70vh, 76vh, 82vh);
+}
+
+.pasteleria-hero::before {
+  background: linear-gradient(rgba(0, 58, 112, 0.42), rgba(0, 58, 112, 0.58));
+}
+
+.pasteleria-hero .hero-video {
+  filter: brightness(0.82) saturate(0.96) contrast(1.04);
+  object-fit: cover;
+  object-position: center center;
 }
 
 .club-intro {
@@ -3808,25 +3835,28 @@ body.assistant-open .float-wa {
 
 /* Club + Experiencias alignment fixes */
 .experiencias-hero,
-.club-hero {
-  min-height: 100svh;
+.club-hero,
+.pasteleria-hero {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
 }
 
 .experiencias-hero .hero-video,
-.club-hero .hero-video {
+.club-hero .hero-video,
+.pasteleria-hero .hero-video {
   object-position: center center;
 }
 
 .experiencias-hero .hero-layout,
-.club-hero .hero-layout {
+.club-hero .hero-layout,
+.pasteleria-hero .hero-layout {
   align-items: center;
 }
 
 .experiencias-hero .hero-note,
-.club-hero .hero-note {
+.club-hero .hero-note,
+.pasteleria-hero .hero-note {
   align-self: end;
 }
 
@@ -3848,17 +3878,20 @@ body.assistant-open .float-wa {
 
 @media (max-width: 760px) {
   .experiencias-hero,
-  .club-hero {
-    min-height: 100svh;
+  .club-hero,
+  .pasteleria-hero {
+    min-height: 70vh;
   }
 
   .experiencias-hero .hero-video,
-  .club-hero .hero-video {
-    object-position: center top;
+  .club-hero .hero-video,
+  .pasteleria-hero .hero-video {
+    object-position: center center;
   }
 
   .experiencias-hero .hero-note,
-  .club-hero .hero-note {
+  .club-hero .hero-note,
+  .pasteleria-hero .hero-note {
     align-self: start;
   }
 }
@@ -4294,8 +4327,9 @@ body {
 
   .hero,
   .experiencias-hero,
-  .club-hero {
-    min-height: 100dvh;
+  .club-hero,
+  .pasteleria-hero {
+    min-height: 70vh;
   }
 
   .hero-video {
