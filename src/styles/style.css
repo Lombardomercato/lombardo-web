@@ -290,6 +290,7 @@ main > .section > .container > h2::after {
   height: 100%;
   object-fit: cover;
   object-position: center center;
+  border-radius: 0;
   z-index: 0;
 }
 
@@ -3756,11 +3757,11 @@ body.assistant-open .float-wa {
 }
 
 .pasteleria-hero::before {
-  background: linear-gradient(rgba(0, 58, 112, 0.26), rgba(0, 58, 112, 0.4));
+  background: linear-gradient(rgba(0, 58, 112, 0.42), rgba(0, 58, 112, 0.58));
 }
 
 .pasteleria-hero .hero-video {
-  filter: saturate(0.96) contrast(1.04);
+  filter: brightness(0.82) saturate(0.96) contrast(1.04);
   object-fit: cover;
   object-position: center center;
 }
