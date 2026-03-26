@@ -3430,6 +3430,10 @@ main > .section:last-child::after,
   animation: assistantPanelEnter 0.24s ease;
 }
 
+.assistant-panel[hidden] {
+  display: none !important;
+}
+
 .assistant-panel.is-closing {
   animation: assistantPanelLeave 0.18s ease forwards;
 }
