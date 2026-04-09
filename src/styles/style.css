@@ -4482,10 +4482,12 @@ body {
   --shot-object-position: 50% 12%;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .system-shot {
     --shot-padding: 8px;
     --shot-radius: 16px;
+    --shot-object-fit: cover;
+    --shot-object-position: right center;
   }
 
   .system-shot img {
@@ -4494,26 +4496,22 @@ body {
 
   .system-shot--dashboard {
     --shot-height: clamp(320px, 92vw, 390px);
-    --shot-object-fit: cover;
-    --shot-object-position: 26% 0%;
+    --shot-object-position: right center;
   }
 
   .system-shot--signup {
     --shot-height: clamp(360px, 102vw, 440px);
-    --shot-object-fit: cover;
-    --shot-object-position: 50% 10%;
+    --shot-object-position: 80% center;
   }
 
   .system-shot--tournaments {
     --shot-height: clamp(380px, 108vw, 470px);
-    --shot-object-fit: cover;
-    --shot-object-position: 38% 0%;
+    --shot-object-position: right top;
   }
 
   .system-shot--ranking {
     --shot-height: clamp(350px, 100vw, 430px);
-    --shot-object-fit: cover;
-    --shot-object-position: 50% 2%;
+    --shot-object-position: right center;
   }
 }
 
