@@ -553,9 +553,10 @@ main > .section:nth-of-type(even) .grid-2 > img {
 
 .float-wa {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 18px;
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px));
   z-index: 30;
+  opacity: 0.94;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
@@ -689,6 +690,11 @@ main > .section:nth-of-type(even) .grid-2 > img {
   padding-inline: 14px;
 }
 
+.float-wa .btn-whatsapp:hover,
+.float-wa .btn-whatsapp:focus-visible {
+  opacity: 1;
+}
+
 .tienda-hero h1 {
   max-width: 14ch;
   margin-bottom: 10px;
@@ -781,6 +787,32 @@ main > .section:nth-of-type(even) .grid-2 > img {
 
   .gallery { grid-template-columns: 1fr 1fr; }
   .g1, .g2, .g3, .g4, .g5 { grid-column: auto; }
+
+  .float-wa {
+    right: 10px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    opacity: 0.82;
+  }
+
+  .float-wa .btn-whatsapp {
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    min-width: 48px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 999px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+  }
+
+  .float-wa .btn-whatsapp span {
+    display: none;
+  }
+
+  .float-wa .wa-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
 
 
   .section-feature > .container > h2,
