@@ -4402,6 +4402,89 @@ body {
   }
 }
 
+/* --- System screenshots (premium frame + per-screen mobile art direction) --- */
+.system-shot {
+  --shot-padding: clamp(10px, 1.2vw, 14px);
+  --shot-radius: clamp(18px, 2vw, 24px);
+  --shot-height: clamp(420px, 44vw, 560px);
+  --shot-object-fit: cover;
+  --shot-object-position: center top;
+  position: relative;
+  border-radius: var(--shot-radius);
+  border: 1px solid rgba(0, 58, 112, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(243, 247, 255, 0.86)),
+    linear-gradient(130deg, rgba(0, 58, 112, 0.08), rgba(171, 30, 58, 0.08));
+  box-shadow: 0 20px 46px rgba(0, 58, 112, 0.16);
+  padding: var(--shot-padding);
+  overflow: hidden;
+}
+
+.system-shot img {
+  width: 100%;
+  height: var(--shot-height);
+  border-radius: calc(var(--shot-radius) - 8px);
+  object-fit: var(--shot-object-fit);
+  object-position: var(--shot-object-position);
+  display: block;
+}
+
+/* Desktop defaults: keeps current premium look balanced across screenshots. */
+.system-shot--dashboard {
+  --shot-height: clamp(430px, 45vw, 580px);
+  --shot-object-position: 48% top;
+}
+
+.system-shot--signup {
+  --shot-height: clamp(440px, 46vw, 590px);
+  --shot-object-position: 50% 10%;
+}
+
+.system-shot--tournaments {
+  --shot-height: clamp(440px, 47vw, 600px);
+  --shot-object-position: 50% 10%;
+}
+
+.system-shot--ranking {
+  --shot-height: clamp(430px, 45vw, 580px);
+  --shot-object-position: 50% 12%;
+}
+
+@media (max-width: 760px) {
+  .system-shot {
+    --shot-padding: 8px;
+    --shot-radius: 16px;
+  }
+
+  .system-shot img {
+    width: 100%;
+  }
+
+  .system-shot--dashboard {
+    --shot-height: clamp(320px, 92vw, 390px);
+    --shot-object-fit: cover;
+    --shot-object-position: 26% 0%;
+  }
+
+  .system-shot--signup {
+    --shot-height: clamp(360px, 102vw, 440px);
+    --shot-object-fit: cover;
+    --shot-object-position: 50% 10%;
+  }
+
+  .system-shot--tournaments {
+    --shot-height: clamp(380px, 108vw, 470px);
+    --shot-object-fit: cover;
+    --shot-object-position: 38% 0%;
+  }
+
+  .system-shot--ranking {
+    --shot-height: clamp(350px, 100vw, 430px);
+    --shot-object-fit: cover;
+    --shot-object-position: 50% 2%;
+  }
+}
+
 
 /* --- Pastelería by Juli Nedobi --- */
 .juli-hero .hero-layout {
