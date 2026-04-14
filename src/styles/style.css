@@ -1216,11 +1216,27 @@ p {
 }
 
 .hero-editorial::before {
-  background: linear-gradient(115deg, rgba(8, 29, 46, 0.9), rgba(8, 29, 46, 0.64) 50%, rgba(8, 29, 46, 0.86));
+  background: linear-gradient(118deg, rgba(6, 21, 36, 0.95), rgba(6, 21, 36, 0.78) 48%, rgba(6, 21, 36, 0.93));
+}
+
+.hero-editorial::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: clamp(90px, 14vw, 180px);
+  background: linear-gradient(180deg, rgba(6, 21, 36, 0), rgba(6, 21, 36, 0.72) 60%, rgba(232, 217, 214, 0.94));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-editorial .hero-video {
+  filter: brightness(0.56) saturate(0.85) contrast(1.02);
 }
 
 .hero-editorial .container {
   max-width: 1180px;
+  position: relative;
+  z-index: 2;
 }
 
 .hero-layout {
@@ -1266,6 +1282,28 @@ p {
   color: var(--verde);
 }
 
+.hero-showcase-bridge {
+  position: relative;
+  min-height: clamp(56px, 8vw, 120px);
+  background: linear-gradient(180deg, rgba(232, 217, 214, 0.98), rgba(232, 217, 214, 0.88));
+}
+
+.hero-showcase-bridge::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 58, 112, 0), rgba(0, 58, 112, 0.2), rgba(0, 58, 112, 0));
+}
+
+.editorial-showcase {
+  padding-top: clamp(84px, 11vw, 152px);
+}
+
+.editorial-showcase .container {
+  max-width: 1180px;
+}
+
 .editorial-columns {
   display: grid;
   grid-template-columns: 0.75fr 1.25fr;
@@ -1287,6 +1325,7 @@ p {
   font-size: clamp(2.1rem, 5vw, 4.4rem);
   line-height: 0.96;
   margin-bottom: 22px;
+  text-wrap: balance;
 }
 
 .home-editorial p {
@@ -1363,6 +1402,24 @@ p {
   align-items: start;
 }
 
+.editorial-showcase-media {
+  position: relative;
+}
+
+.editorial-showcase-media::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 21, 36, 0.18), rgba(6, 21, 36, 0.34));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.editorial-showcase-media .container {
+  position: relative;
+  z-index: 2;
+}
+
 .image-composition figure {
   margin: 0;
 }
@@ -1374,6 +1431,7 @@ p {
   width: 100%;
   aspect-ratio: 4 / 5;
   object-fit: cover;
+  filter: brightness(0.74) saturate(0.92);
 }
 
 .editorial-list {
@@ -2070,7 +2128,7 @@ main > .section::after {
 }
 
 main > .section:last-child::after,
-.hero::after {
+.hero:not(.hero-editorial)::after {
   display: none;
 }
 
