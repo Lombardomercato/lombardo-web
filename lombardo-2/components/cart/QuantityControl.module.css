@@ -1,0 +1,38 @@
+.control {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: grid;
+  grid-template-columns: 2.75rem 3rem 2.75rem;
+  align-items: center;
+  border: 1px solid rgba(0, 58, 112, 0.35);
+  color: var(--lombardo-blue);
+}
+
+.control button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-family: Arial, sans-serif;
+  font-size: 1.1rem;
+}
+
+.control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.control output {
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.inverse {
+  border-color: rgba(255, 253, 249, 0.38);
+  color: var(--neutral-paper);
+}

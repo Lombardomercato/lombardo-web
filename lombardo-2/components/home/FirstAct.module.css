@@ -1,0 +1,792 @@
+.firstAct {
+  --scene-progress: 0;
+  position: relative;
+  height: 230svh;
+  background: var(--lombardo-blue);
+}
+
+.situationsAnchor {
+  position: absolute;
+  top: 120svh;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.stickyScene {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--lombardo-beige);
+  color: var(--neutral-paper);
+}
+
+.beigeLayer {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background: var(--lombardo-beige);
+  transform: translate3d(0, calc(var(--scene-progress) * -4vh), 0)
+    scale(calc(1 + var(--scene-progress) * 0.025));
+  transform-origin: top;
+}
+
+.blueLayer {
+  position: absolute;
+  inset: -3% -2%;
+  z-index: -2;
+  background: var(--lombardo-blue);
+  box-shadow: 0.9rem 0 0 var(--lombardo-pink);
+  transform: translate3d(
+      calc((1 - var(--scene-progress)) * -106%),
+      0,
+      0
+    )
+    rotate(calc((1 - var(--scene-progress)) * -0.7deg));
+  transform-origin: bottom right;
+}
+
+.heroContent,
+.situations {
+  position: absolute;
+  inset: 0;
+}
+
+.heroContent {
+  z-index: 2;
+  color: var(--lombardo-blue);
+  opacity: clamp(0, calc(1 - (var(--scene-progress) - 0.16) * 5), 1);
+  transform: translate3d(
+      calc(var(--scene-progress) * -8vw),
+      calc(var(--scene-progress) * -12vh),
+      0
+    )
+    scale(calc(1 - var(--scene-progress) * 0.075));
+  transform-origin: 20% 45%;
+  pointer-events: auto;
+}
+
+.firstAct[data-phase="situations"] .heroContent {
+  pointer-events: none;
+}
+
+.heroCopy {
+  width: min(100%, var(--content-max));
+  height: 100%;
+  margin-inline: auto;
+  padding: clamp(8.5rem, 17vh, 12rem) var(--page-gutter)
+    clamp(3rem, 6.5vh, 5rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(16rem, 0.6fr);
+  grid-template-rows: 1fr auto;
+  align-items: start;
+}
+
+.heroTitle {
+  position: relative;
+  z-index: 3;
+  grid-column: 1 / -1;
+  align-self: center;
+  max-width: 10.5ch;
+  font-family: var(--font-display);
+  font-size: clamp(4.8rem, 9.4vw, 10.7rem);
+  font-weight: 700;
+  line-height: 0.78;
+  letter-spacing: -0.065em;
+  text-transform: uppercase;
+}
+
+.heroTitle span {
+  display: block;
+}
+
+.titleLineOne {
+  animation: title-in 470ms 280ms both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.titleLineTwo {
+  margin-left: clamp(2rem, 7vw, 7.5rem);
+  color: var(--lombardo-red);
+  animation: title-in 470ms 390ms both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.intro {
+  position: relative;
+  z-index: 3;
+  grid-column: 1;
+  align-self: end;
+  max-width: 19rem;
+  font-size: var(--step-1);
+  font-weight: 700;
+  line-height: 1.1;
+  animation: content-in 350ms 720ms both ease-out;
+}
+
+.intro span {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.actions {
+  position: relative;
+  z-index: 4;
+  grid-column: 2;
+  align-self: end;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2.25rem);
+  padding-right: clamp(0rem, 2vw, 2rem);
+  animation: content-in 350ms 880ms both ease-out;
+}
+
+.primaryAction,
+.secondaryAction {
+  min-height: 3.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding-inline: 1.35rem;
+  border: 1px solid var(--lombardo-blue);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.primaryAction {
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
+}
+
+.primaryAction:hover {
+  background: var(--lombardo-red);
+  border-color: var(--lombardo-red);
+}
+
+.secondaryAction:hover {
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
+}
+
+.scrollCue {
+  position: absolute;
+  right: var(--page-gutter);
+  bottom: clamp(7rem, 15vh, 10rem);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  animation: content-in 300ms 980ms both ease-out;
+}
+
+.scrollCue span {
+  width: 1px;
+  height: 2.5rem;
+  display: block;
+  background: currentColor;
+}
+
+.productStage {
+  --scene-accent: var(--lombardo-green);
+  position: absolute;
+  z-index: 1;
+  top: clamp(7.25rem, 12vh, 9rem);
+  right: clamp(2.5rem, 7vw, 8rem);
+  width: min(43vw, 42rem);
+  height: min(78vh, 52rem);
+  transform: translate3d(
+      calc(var(--scene-progress) * -4vw),
+      calc(var(--scene-progress) * 9vh),
+      0
+    )
+    scale(calc(1 - var(--scene-progress) * 0.16))
+    rotate(calc(var(--scene-progress) * -2.4deg));
+  transform-origin: center;
+  transition: right 180ms ease;
+}
+
+.productEntrance {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: product-in 650ms 40ms both cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.productImage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--lombardo-pink);
+  box-shadow: 1.5rem 1.7rem 0 rgba(224, 60, 49, 0.98);
+  transition: clip-path 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms ease;
+}
+
+.heroProductLayer,
+.situationProductStack,
+.situationProductLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.heroProductLayer {
+  opacity: clamp(0, calc(1 - (var(--scene-progress) - 0.38) * 8), 1);
+  transform: translate3d(
+      calc(var(--scene-progress) * 5%),
+      calc(var(--scene-progress) * -4%),
+      0
+    )
+    scale(calc(1 + var(--scene-progress) * 0.08));
+}
+
+.situationProductStack {
+  opacity: clamp(0, calc((var(--scene-progress) - 0.46) * 8), 1);
+}
+
+.situationProductLayer {
+  opacity: 0;
+  transform: translate3d(7%, 3%, 0) scale(0.94);
+  transition: opacity 300ms ease,
+    transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.activeProductLayer {
+  opacity: 1;
+  transform: none;
+}
+
+.productImage img {
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.015);
+  transition: object-position 420ms ease;
+}
+
+.situationCaption {
+  position: absolute;
+  right: -1.1rem;
+  bottom: -1.4rem;
+  width: min(16rem, 48%);
+  min-height: 5.3rem;
+  padding: 0.8rem 1rem;
+  display: grid;
+  align-content: space-between;
+  background: var(--scene-accent);
+  color: var(--lombardo-blue);
+  opacity: clamp(0, calc((var(--scene-progress) - 0.5) * 4), 1);
+  transform: translate3d(0, calc((1 - var(--scene-progress)) * 1.6rem), 0);
+  transition: background-color 260ms ease, color 260ms ease;
+}
+
+.situationCaption span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.situationCaption p {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 1.45vw, 1.45rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+}
+
+.tone0 {
+  --scene-accent: var(--lombardo-green);
+}
+
+.tone1 {
+  --scene-accent: var(--lombardo-pink);
+}
+
+.tone2 {
+  --scene-accent: var(--lombardo-red);
+}
+
+.tone2 .situationCaption {
+  color: var(--neutral-paper);
+}
+
+.tone3 {
+  --scene-accent: var(--lombardo-green);
+}
+
+.tone4 {
+  --scene-accent: var(--lombardo-beige);
+}
+
+.tone0 .productImage {
+  clip-path: inset(0 0 0 0);
+  box-shadow: 1.25rem 1.4rem 0 var(--lombardo-green);
+}
+
+.tone1 .productImage {
+  clip-path: inset(2.5% 0 0 3.5%);
+  box-shadow: -1.15rem 1.35rem 0 var(--lombardo-pink);
+}
+
+.tone2 .productImage {
+  clip-path: inset(0 3.5% 3.5% 0);
+  box-shadow: 1.6rem -1.2rem 0 var(--lombardo-red);
+}
+
+.tone3 .productImage {
+  clip-path: inset(3.5% 3.5% 0 0);
+  box-shadow: 1.4rem 1.4rem 0 var(--lombardo-pink);
+}
+
+.tone4 .productImage {
+  clip-path: inset(0 0 4.5% 4.5%);
+  box-shadow: -1.4rem -1.2rem 0 var(--lombardo-green);
+}
+
+.firstAct[data-phase="hero"] .productImage {
+  clip-path: inset(0);
+  box-shadow: 1.5rem 1.7rem 0 var(--lombardo-red);
+}
+
+.situations {
+  z-index: 2;
+  color: var(--neutral-paper);
+  opacity: clamp(0, calc((var(--scene-progress) - 0.32) * 3.4), 1);
+  transform: translate3d(
+      calc((1 - var(--scene-progress)) * 3vw),
+      calc((1 - var(--scene-progress)) * 11vh),
+      0
+    )
+    scale(calc(0.96 + var(--scene-progress) * 0.04));
+  transform-origin: bottom left;
+  pointer-events: none;
+}
+
+.firstAct[data-phase="situations"] .situations {
+  pointer-events: auto;
+}
+
+.situationsInner {
+  width: min(100%, var(--content-max));
+  height: 100%;
+  margin-inline: auto;
+  padding: clamp(8rem, 14vh, 10.5rem) var(--page-gutter)
+    clamp(2rem, 4vh, 3rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+  grid-template-rows: auto 1fr;
+  align-items: start;
+}
+
+.situationsTitle {
+  grid-column: 1;
+  max-width: 8ch;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 5.8vw, 6.7rem);
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+}
+
+.situationsTitle span {
+  display: block;
+}
+
+.situationsTitle span:first-child {
+  color: var(--lombardo-pink);
+}
+
+.reducedSituationProduct {
+  display: none;
+}
+
+.situationList {
+  grid-column: 1;
+  align-self: end;
+  width: min(100%, 47rem);
+}
+
+.situationList button {
+  width: 100%;
+  min-height: clamp(3rem, 6vh, 4.5rem);
+  padding: 0;
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  border-top: 1px solid rgba(255, 253, 249, 0.36);
+  background: transparent;
+  color: rgba(255, 253, 249, 0.5);
+  cursor: pointer;
+  text-align: left;
+  transition: color 180ms ease, padding-left 240ms ease,
+    border-color 180ms ease, opacity 180ms ease;
+}
+
+.situationList button:last-child {
+  border-bottom: 1px solid rgba(255, 253, 249, 0.36);
+}
+
+.situationList button > span:first-child {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.situationList button > span:last-child {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 2.25rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+.situationList .activeSituation {
+  padding-left: clamp(0.5rem, 2vw, 2rem);
+  border-color: var(--lombardo-pink);
+  color: var(--lombardo-pink);
+}
+
+.situationList button:hover,
+.situationList button:focus-visible {
+  color: var(--neutral-paper);
+}
+
+.situationList .activeSituation:hover,
+.situationList .activeSituation:focus-visible {
+  color: var(--lombardo-pink);
+}
+
+@keyframes product-in {
+  from {
+    opacity: 0;
+    transform: translate3d(12%, 7%, 0) rotate(3deg) scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes title-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.7em, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.9rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 63.99rem) {
+  .firstAct {
+    height: 220svh;
+  }
+
+  .heroCopy {
+    padding-top: clamp(7.5rem, 16vh, 9.5rem);
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto auto;
+  }
+
+  .heroTitle {
+    align-self: start;
+    font-size: clamp(3.7rem, 13vw, 7.5rem);
+  }
+
+  .intro,
+  .actions {
+    grid-column: 1;
+  }
+
+  .intro {
+    align-self: end;
+    max-width: 16rem;
+    font-size: var(--step-0);
+  }
+
+  .actions {
+    justify-self: start;
+    margin-top: var(--space-4);
+  }
+
+  .productStage {
+    top: 31vh;
+    right: -4vw;
+    width: min(59vw, 29rem);
+    height: min(55vh, 37rem);
+  }
+
+  .situationsInner {
+    padding-top: clamp(6.75rem, 11vh, 8rem);
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.7fr);
+  }
+}
+
+@media (min-width: 48rem) and (max-width: 63.99rem) {
+  .productStage {
+    right: -4vw;
+    width: min(48vw, 25rem);
+    height: min(54vh, 34rem);
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .firstAct {
+    height: 225svh;
+  }
+
+  .heroCopy {
+    padding-top: clamp(6.7rem, 15vh, 8rem);
+    padding-bottom: 2rem;
+  }
+
+  .heroTitle {
+    max-width: 8.8ch;
+    font-size: clamp(3.25rem, 16.8vw, 5.8rem);
+    line-height: 0.79;
+  }
+
+  .titleLineTwo {
+    margin-left: 0.48em;
+  }
+
+  .intro {
+    position: absolute;
+    top: 34.5%;
+    left: var(--page-gutter);
+    max-width: 10.5rem;
+    font-size: 0.95rem;
+  }
+
+  .actions {
+    align-self: end;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    min-height: 3rem;
+    padding-inline: 0.7rem;
+    gap: 0.45rem;
+    font-size: 0.68rem;
+  }
+
+  .productStage {
+    top: 42%;
+    right: -12vw;
+    width: 76vw;
+    height: 48vh;
+    transform: translate3d(
+        calc(var(--scene-progress) * -12vw),
+        calc(var(--scene-progress) * -4vh),
+        0
+      )
+      scale(calc(1 - var(--scene-progress) * 0.18));
+  }
+
+  .productImage {
+    box-shadow: 0.9rem 1rem 0 var(--lombardo-red);
+  }
+
+  .firstAct[data-phase="hero"] .productImage {
+    box-shadow: 0.9rem 1rem 0 var(--lombardo-red);
+  }
+
+  .tone0 .productImage,
+  .tone3 .productImage {
+    box-shadow: 0.8rem 0.9rem 0 var(--lombardo-green);
+  }
+
+  .tone1 .productImage {
+    box-shadow: -0.7rem 0.9rem 0 var(--lombardo-pink);
+  }
+
+  .tone2 .productImage {
+    box-shadow: 0.8rem -0.7rem 0 var(--lombardo-red);
+  }
+
+  .tone4 .productImage {
+    box-shadow: -0.8rem -0.65rem 0 var(--lombardo-green);
+  }
+
+  .situationCaption {
+    z-index: 4;
+    top: -2.8rem;
+    right: 0;
+    bottom: auto;
+    width: min(14rem, 74vw);
+    min-height: 3.7rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .situationCaption p {
+    font-size: 1rem;
+  }
+
+  .scrollCue {
+    display: none;
+  }
+
+  .situationsInner {
+    padding-top: 5.75rem;
+    padding-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .situationsTitle {
+    position: relative;
+    z-index: 2;
+    font-size: clamp(2.5rem, 11.8vw, 4.1rem);
+    line-height: 0.82;
+  }
+
+  .situationList {
+    position: relative;
+    z-index: 3;
+    margin-top: auto;
+  }
+
+  .situationList button {
+    min-height: clamp(2.9rem, 8.2vh, 3.75rem);
+    background: rgba(0, 58, 112, 0.9);
+    grid-template-columns: 1.9rem 1fr;
+  }
+
+  .situationList button > span:last-child {
+    font-size: clamp(1.08rem, 4.5vw, 1.45rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .firstAct {
+    height: auto;
+  }
+
+  .situationsAnchor {
+    top: 100svh;
+  }
+
+  .stickyScene {
+    position: relative;
+    height: auto;
+    overflow: clip;
+  }
+
+  .beigeLayer {
+    height: 100svh;
+    transform: none;
+  }
+
+  .blueLayer {
+    display: none;
+  }
+
+  .heroContent {
+    position: relative;
+    min-height: 100svh;
+    opacity: 1;
+    transform: none;
+  }
+
+  .productStage {
+    transform: none;
+  }
+
+  .heroProductLayer {
+    opacity: 1;
+    transform: none;
+  }
+
+  .situationProductStack,
+  .situationCaption {
+    display: none;
+  }
+
+  .situations {
+    position: relative;
+    min-height: 100svh;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    background: var(--lombardo-blue);
+  }
+
+  .situationsInner {
+    height: auto;
+    min-height: 100svh;
+    grid-template-rows: auto auto 1fr;
+    gap: 2rem;
+  }
+
+  .reducedSituationProduct {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .reducedSituationProduct > div {
+    position: relative;
+    min-height: 45svh;
+    overflow: hidden;
+  }
+
+  .reducedSituationProduct img {
+    object-fit: cover;
+  }
+
+  .reducedSituationProduct p {
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(255, 253, 249, 0.35);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 700;
+  }
+
+  .situationList {
+    grid-row: 3;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 47.99rem) {
+  .situationsInner {
+    display: flex;
+  }
+
+  .reducedSituationProduct {
+    display: grid;
+  }
+
+  .reducedSituationProduct > div {
+    min-height: 44svh;
+  }
+}

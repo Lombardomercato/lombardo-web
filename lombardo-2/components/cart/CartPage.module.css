@@ -1,0 +1,322 @@
+.page {
+  min-height: 100svh;
+  padding: calc(var(--header-height) + 2rem) var(--page-gutter) clamp(5rem, 10vw, 10rem);
+  background: var(--neutral-paper);
+  color: var(--lombardo-blue);
+}
+
+.hero {
+  min-height: clamp(22rem, 47vw, 43rem);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: auto 1fr auto;
+  gap: 1rem;
+}
+
+.kicker {
+  grid-column: 1 / -1;
+  padding-top: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid currentColor;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.hero h1 {
+  grid-column: 1 / -1;
+  align-self: center;
+  font-family: var(--font-display);
+  font-size: clamp(5.2rem, 11vw, 11rem);
+  font-weight: 700;
+  line-height: 0.73;
+  letter-spacing: -0.065em;
+}
+
+.hero > p {
+  grid-column: 9 / -1;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(0, 58, 112, 0.4);
+  font-size: var(--step-0);
+  font-weight: 700;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(19rem, 0.65fr);
+  gap: clamp(3rem, 7vw, 8rem);
+  align-items: start;
+}
+
+.itemsHeader {
+  min-height: 3.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid currentColor;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.3);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.itemsHeader button,
+.itemActions > button {
+  padding: 0 0 0.2rem;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.item {
+  position: relative;
+  padding-block: 1.25rem;
+  display: grid;
+  grid-template-columns: 1.1rem 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.3);
+}
+
+.index {
+  padding-top: 0.15rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.visualLink {
+  align-self: start;
+}
+
+.itemInfo {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem 2rem;
+  align-items: start;
+}
+
+.itemInfo p {
+  margin-bottom: 0.4rem;
+  color: rgba(0, 58, 112, 0.62);
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.itemInfo h2 {
+  max-width: 18ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.5vw, 2.7rem);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.unitPrice,
+.lineSubtotal,
+.orderSummary strong,
+.orderSummary > div > span:last-child {
+  font-family: Arial, sans-serif;
+}
+
+.unitPrice {
+  font-size: 0.75rem;
+}
+
+.itemActions {
+  align-self: end;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.lineSubtotal {
+  align-self: end;
+  font-size: 1.1rem;
+}
+
+.orderSummary {
+  position: sticky;
+  top: calc(var(--header-height) + 2rem);
+  border-top: 1px solid currentColor;
+}
+
+.orderSummary > p {
+  min-height: 3.2rem;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.3);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.orderSummary > div:not(.nextStage) {
+  min-height: 3.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.22);
+  font-size: 0.75rem;
+}
+
+.total {
+  min-height: 5.2rem !important;
+  font-weight: 700;
+}
+
+.total strong {
+  font-size: clamp(1.8rem, 3vw, 3rem);
+  letter-spacing: -0.04em;
+}
+
+.checkoutLink {
+  width: 100%;
+  min-height: 5rem;
+  padding-inline: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 0;
+  background: var(--lombardo-green);
+  color: var(--lombardo-blue);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.checkoutLink span:last-child {
+  font-size: 1.5rem;
+}
+
+.orderSummary > a {
+  width: fit-content;
+  margin-top: 1.5rem;
+  padding-bottom: 0.25rem;
+  display: block;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.loading {
+  padding-block: 6rem;
+  border-top: 1px solid currentColor;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.empty {
+  min-height: 28rem;
+  padding-block: clamp(3rem, 7vw, 7rem);
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.45fr) 1fr;
+  align-content: center;
+  gap: clamp(2rem, 7vw, 8rem);
+  border-top: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+}
+
+.empty > span {
+  color: var(--lombardo-pink);
+  font-family: var(--font-display);
+  font-size: clamp(7rem, 17vw, 16rem);
+  font-weight: 700;
+  line-height: 0.72;
+}
+
+.empty h2 {
+  max-width: 12ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 6rem);
+  line-height: 0.84;
+  letter-spacing: -0.045em;
+}
+
+.empty p {
+  margin-top: 1rem;
+}
+
+.empty a {
+  width: fit-content;
+  margin-top: 2rem;
+  padding-bottom: 0.3rem;
+  display: block;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+@media (max-width: 63.99rem) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .orderSummary {
+    position: static;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .page {
+    padding-top: calc(var(--header-height-mobile) + 1.5rem);
+  }
+
+  .hero {
+    min-height: 21rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(3.2rem, 13.8vw, 4.2rem);
+    line-height: 0.8;
+    white-space: nowrap;
+  }
+
+  .hero > p {
+    grid-column: 3 / -1;
+    font-size: 0.88rem;
+  }
+
+  .item {
+    grid-template-columns: 0.9rem 4.8rem minmax(0, 1fr);
+    gap: 0.7rem;
+  }
+
+  .itemInfo {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .itemInfo h2 {
+    font-size: 1.35rem;
+  }
+
+  .unitPrice {
+    font-size: 0.68rem;
+  }
+
+  .itemActions {
+    align-items: end;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+
+  .lineSubtotal {
+    justify-self: end;
+  }
+
+  .empty {
+    grid-template-columns: 1fr;
+  }
+}

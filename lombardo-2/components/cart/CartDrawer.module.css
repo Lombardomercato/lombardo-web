@@ -1,0 +1,250 @@
+.layer {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(15, 24, 32, 0.48);
+  cursor: pointer;
+  animation: backdrop-in 180ms ease-out both;
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(100%, 35rem);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
+  box-shadow: -1.5rem 0 4rem rgba(15, 24, 32, 0.18);
+  animation: drawer-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.header {
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 253, 249, 0.3);
+}
+
+.header p,
+.lineInfo p,
+.lineInfo span,
+.summary span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin-top: 0.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4.8rem);
+  line-height: 0.8;
+  letter-spacing: -0.055em;
+}
+
+.closeButton {
+  height: fit-content;
+  padding: 0 0 0.3rem;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.closeButton span {
+  margin-left: 0.4rem;
+  font-family: Arial, sans-serif;
+  font-size: 1rem;
+}
+
+.lines {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.line {
+  padding: 1rem clamp(1.25rem, 4vw, 2.5rem);
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 253, 249, 0.25);
+}
+
+.visualLink {
+  align-self: start;
+}
+
+.lineInfo {
+  min-width: 0;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.lineInfo h3 {
+  margin: 0.35rem 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 0.9;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+}
+
+.lineInfo > div > span,
+.summary strong {
+  font-family: Arial, sans-serif;
+}
+
+.lineActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lineActions > button {
+  padding: 0 0 0.2rem;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.summary {
+  padding: 1.25rem clamp(1.25rem, 4vw, 2.5rem) max(1.25rem, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 253, 249, 0.3);
+  background: var(--lombardo-blue);
+}
+
+.summary > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 0.4rem 1rem;
+}
+
+.summary > div > span:first-child {
+  grid-column: 1 / -1;
+  opacity: 0.68;
+}
+
+.summary strong {
+  font-size: 1.45rem;
+}
+
+.summary > a {
+  min-height: 4.2rem;
+  margin-top: 1.2rem;
+  padding-inline: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--lombardo-green);
+  color: var(--lombardo-blue);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.summary > a span {
+  font-size: 1.2rem;
+}
+
+.empty {
+  padding: clamp(2rem, 7vw, 4rem);
+  display: grid;
+  align-content: center;
+  justify-items: start;
+}
+
+.empty > span {
+  color: var(--lombardo-pink);
+  font-family: var(--font-display);
+  font-size: clamp(6rem, 18vw, 10rem);
+  font-weight: 700;
+  line-height: 0.75;
+}
+
+.empty p {
+  max-width: 12ch;
+  margin-top: 1.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 700;
+  line-height: 0.88;
+}
+
+.empty a {
+  margin-top: 2rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .drawer {
+    top: var(--header-height-mobile);
+    width: 100%;
+  }
+
+  .header {
+    padding-block: 1rem;
+  }
+
+  .header h2 {
+    font-size: 2.6rem;
+  }
+
+  .line {
+    grid-template-columns: 4.7rem minmax(0, 1fr);
+  }
+
+  .lineInfo h3 {
+    font-size: 1.12rem;
+  }
+
+  .lineActions {
+    align-items: end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .drawer {
+    animation: none;
+  }
+}

@@ -1,0 +1,33 @@
+.notFound {
+  min-height: 100svh;
+  padding: calc(var(--header-height) + 5rem) var(--page-gutter) 5rem;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  background: var(--lombardo-beige);
+  color: var(--lombardo-blue);
+}
+
+.notFound > span {
+  color: var(--lombardo-pink);
+  font-family: var(--font-display);
+  font-size: clamp(7rem, 20vw, 17rem);
+  font-weight: 700;
+  line-height: 0.7;
+}
+
+.notFound h1 {
+  max-width: 12ch;
+  margin-top: 2rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 7vw, 6rem);
+  line-height: 0.84;
+}
+
+.notFound a {
+  margin-top: 2rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
