@@ -92,7 +92,7 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <div className={styles.productCopy}>
-            <p>{product.description}</p>
+            {product.description ? <p>{product.description}</p> : null}
             <dl>
               <div>
                 <dt>MARCA</dt>

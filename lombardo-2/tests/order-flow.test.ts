@@ -511,37 +511,82 @@ test("Mercado Pago TEST rechaza el dominio productivo", () => {
   );
 });
 
-test("RuniaCommerceProvider consume sólo el mapping SAFE habilitado", async () => {
-  let requestedUrl = "";
+test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", async () => {
+  const requestedUrls: string[] = [];
   const provider = new RuniaCommerceProvider({
     url: runiaDevEnvironment.RUNIA_SUPABASE_URL,
     secretKey: runiaDevEnvironment.RUNIA_SUPABASE_SECRET_KEY,
     tenantSlug: runiaDevEnvironment.RUNIA_TENANT_SLUG,
     fetcher: async (url) => {
-      requestedUrl = String(url);
-      return Response.json([
-        {
-          public_product_id: "mock-casa-nueve-malbec",
-          runia_product_id: "runia-product-001",
-          runia_sku: "RUNIA-SAFE-001",
-          display_name: "Producto Runia Dev",
-          eligibility_status: "safe",
-          lombardo_sale_price: 17_500,
-          currency: "ARS",
-          available_now: true,
-          sandbox_quantity: 4,
-          enabled_for_sandbox: true,
-        },
-      ]);
+      requestedUrls.push(String(url));
+      if (String(url).includes("/rest/v1/suppliers?")) {
+        return Response.json([
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            name: "VINROS",
+            active: true,
+            tenants: { slug: "lombardo-dev", status: "active" },
+          },
+        ]);
+      }
+      return Response.json(
+        [
+          {
+            runia_product_id: "11111111-1111-4111-8111-111111111111",
+            supplier_sku: "VIN001B",
+            name_raw: "BODEGA RUNIA Malbec x 750 c.c.",
+            presentation_raw: "750cc",
+            normalized_presentation: "750 ml",
+            active: true,
+            eligibility_status: "safe",
+            retail_prices: [{ price_type: "retail", current_price: 17_500 }],
+          },
+        ],
+        { headers: { "Content-Range": "0-0/3265" } },
+      );
     },
   });
-  const products = await provider.getProducts();
-  assert.match(requestedUrl, /eligibility_status=eq\.safe/);
-  assert.match(requestedUrl, /enabled_for_sandbox=is\.true/);
-  assert.equal(products.length, 1);
-  assert.equal(products[0]?.sourceProductId, "runia-product-001");
-  assert.equal(products[0]?.price, 17_500);
-  assert.equal(products[0]?.stock.quantity, 4);
+  const page = await provider.getProductPage();
+  assert.equal(requestedUrls.length, 2);
+  assert.match(requestedUrls[0] ?? "", /\/rest\/v1\/suppliers\?/);
+  assert.equal(
+    new URL(requestedUrls[0] ?? "https://invalid").searchParams.get("code"),
+    "eq.vinros",
+  );
+  assert.match(requestedUrls[1] ?? "", /\/rest\/v1\/supplier_products\?/);
+  assert.match(requestedUrls[1] ?? "", /eligibility_status=eq\.safe/);
+  assert.match(requestedUrls[1] ?? "", /retail_prices\.price_type=eq\.retail/);
+  assert.doesNotMatch(requestedUrls.join("\n"), /commerce_lombardo_dev_product_adapter/);
+  assert.equal(page.total, 3265);
+  assert.equal(page.products.length, 1);
+  assert.equal(
+    page.products[0]?.sourceProductId,
+    "11111111-1111-4111-8111-111111111111",
+  );
+  assert.equal(page.products[0]?.sku, "VIN001B");
+  assert.equal(page.products[0]?.name, "BODEGA RUNIA Malbec x 750 c.c.");
+  assert.equal(page.products[0]?.brand.name, "BODEGA RUNIA");
+  assert.equal(page.products[0]?.category.name, "Vinos");
+  assert.equal(page.products[0]?.presentation, "750 ml");
+  assert.equal(page.products[0]?.price, 17_500);
+  assert.equal(page.products[0]?.availability, "SUPPLIER_AVAILABLE");
+  assert.equal(page.products[0]?.stock.quantity, 0);
+
+  const product = page.products[0];
+  assert.ok(product);
+  const detail = await provider.getProductBySlug(product.slug);
+  const cartProducts = await provider.getProductsByIds([product.id]);
+  assert.equal(detail?.id, product.id);
+  assert.equal(cartProducts[0]?.id, product.id);
+  assert.equal(requestedUrls.length, 4);
+  assert.equal(
+    new URL(requestedUrls[2] ?? "https://invalid").searchParams.get("id"),
+    "eq.11111111-1111-4111-8111-111111111111",
+  );
+  assert.equal(
+    new URL(requestedUrls[3] ?? "https://invalid").searchParams.get("id"),
+    "in.(11111111-1111-4111-8111-111111111111)",
+  );
 });
 
 test("RuniaCommerceProvider rechaza filas no SAFE aunque el backend las entregue", async () => {
@@ -549,24 +594,36 @@ test("RuniaCommerceProvider rechaza filas no SAFE aunque el backend las entregue
     url: runiaDevEnvironment.RUNIA_SUPABASE_URL,
     secretKey: runiaDevEnvironment.RUNIA_SUPABASE_SECRET_KEY,
     tenantSlug: runiaDevEnvironment.RUNIA_TENANT_SLUG,
-    fetcher: async () =>
-      Response.json([
-        {
-          public_product_id: "mock-casa-nueve-malbec",
-          runia_product_id: "runia-product-blocked",
-          runia_sku: "RUNIA-BLOCKED",
-          display_name: "Producto bloqueado",
-          eligibility_status: "blocked",
-          lombardo_sale_price: 17_500,
-          currency: "ARS",
-          available_now: true,
-          sandbox_quantity: 4,
-          enabled_for_sandbox: true,
-        },
-      ]),
+    fetcher: async (url) => {
+      if (String(url).includes("/rest/v1/suppliers?")) {
+        return Response.json([
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            name: "VINROS",
+            active: true,
+            tenants: { slug: "lombardo-dev", status: "active" },
+          },
+        ]);
+      }
+      return Response.json(
+        [
+          {
+            runia_product_id: "33333333-3333-4333-8333-333333333333",
+            supplier_sku: "RUNIABLOCKED",
+            name_raw: "Producto bloqueado",
+            presentation_raw: "750cc",
+            normalized_presentation: "750 ml",
+            active: true,
+            eligibility_status: "blocked",
+            retail_prices: [{ price_type: "retail", current_price: 17_500 }],
+          },
+        ],
+        { headers: { "Content-Range": "0-0/1" } },
+      );
+    },
   });
   await assert.rejects(
-    provider.getProducts(),
+    provider.getProductPage(),
     (error: unknown) =>
       error instanceof ServerOrderError && error.code === "SERVER_NOT_CONFIGURED",
   );

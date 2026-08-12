@@ -61,20 +61,22 @@ if (runiaConfiguration) {
   }
 
   try {
-    const products = await new RuniaCommerceProvider(runiaConfiguration).getProducts();
-    const validCount = products.length >= 1 && products.length <= 5;
+    const page = await new RuniaCommerceProvider(runiaConfiguration).getProductPage({
+      limit: 1,
+    });
+    const validCount = page.total >= 1 && page.products.length === 1;
     checks.push({
       name: "Catálogo Runia Dev",
       ready: validCount,
       detail: validCount
-        ? `${products.length} producto(s) SAFE habilitado(s)`
-        : "se requiere entre 1 y 5 mappings SAFE habilitados",
+        ? `${page.total} producto(s) SAFE de VINROS visibles`
+        : "Runia Dev no devolvió productos SAFE de VINROS",
     });
   } catch {
     checks.push({
       name: "Catálogo Runia Dev",
       ready: false,
-      detail: "aplicar el adapter y completar mappings/pricing/availability DEV",
+      detail: "verificar supplier_products SAFE y precios retail de VINROS",
     });
   }
 } else {

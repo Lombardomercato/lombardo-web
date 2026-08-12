@@ -5,6 +5,18 @@
   color: var(--lombardo-blue);
 }
 
+.empty button {
+  margin-top: 1.5rem;
+  padding: 0 0 0.3rem;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .hero {
   min-height: clamp(22rem, 47vw, 43rem);
   display: grid;

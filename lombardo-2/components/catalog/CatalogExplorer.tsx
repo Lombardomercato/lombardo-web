@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
@@ -9,24 +14,52 @@ import {
   canAddToCart,
   getAddLabel,
 } from "@/lib/commerce/availability";
+import type { ProductPage } from "@/lib/commerce";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import type { Category, Product } from "@/types/commerce";
 import styles from "./CatalogExplorer.module.css";
 
 type CatalogMode = "editorial" | "list";
+type CatalogStatus = "ready" | "filtering" | "loading-more" | "error";
 
 interface CatalogExplorerProps {
-  products: Product[];
+  initialPage: ProductPage;
   categories: Category[];
   initialCategory?: string;
 }
 
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("es-AR")
-    .trim();
+function useDebouncedValue(value: string, delay: number) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timeout);
+  }, [delay, value]);
+
+  return debounced;
+}
+
+async function fetchCatalogPage(input: {
+  offset: number;
+  limit: number;
+  search: string;
+  category: string;
+  signal?: AbortSignal;
+}) {
+  const search = new URLSearchParams({
+    offset: String(input.offset),
+    limit: String(input.limit),
+  });
+  if (input.search.trim()) search.set("q", input.search.trim());
+  if (input.category !== "todos") search.set("category", input.category);
+
+  const response = await fetch(`/api/catalog?${search.toString()}`, {
+    signal: input.signal,
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("catalog unavailable");
+  return (await response.json()) as ProductPage;
+}
 
 function ProductInfo({ product }: { product: Product }) {
   const { addItem } = useCart();
@@ -41,10 +74,7 @@ function ProductInfo({ product }: { product: Product }) {
         <h2>
           <Link href={`/productos/${product.slug}`}>{product.name}</Link>
         </h2>
-        <p
-          className={styles.availability}
-          data-status={product.availability}
-        >
+        <p className={styles.availability} data-status={product.availability}>
           {availabilityLabels[product.availability]}
         </p>
       </div>
@@ -68,30 +98,105 @@ function ProductInfo({ product }: { product: Product }) {
 }
 
 export function CatalogExplorer({
-  products,
+  initialPage,
   categories,
   initialCategory = "todos",
 }: CatalogExplorerProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(initialCategory);
   const [mode, setMode] = useState<CatalogMode>("editorial");
-  const deferredQuery = useDeferredValue(query);
-  const normalizedQuery = normalize(deferredQuery);
+  const [products, setProducts] = useState(initialPage.products);
+  const [total, setTotal] = useState(initialPage.total);
+  const [status, setStatus] = useState<CatalogStatus>("ready");
+  const [retryRequest, setRetryRequest] = useState(0);
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const firstRequest = useRef(true);
+  const activeQuery = `${category}\u0000${debouncedQuery.trim()}`;
+  const activeQueryRef = useRef(activeQuery);
+  const loadMoreTarget = useRef<HTMLDivElement>(null);
 
-  const visibleProducts = products.filter((product) => {
-    if (category !== "todos" && product.category.slug !== category) return false;
-    if (!normalizedQuery) return true;
+  useEffect(() => {
+    activeQueryRef.current = activeQuery;
+  }, [activeQuery]);
 
-    return normalize(
-      [
-        product.name,
-        product.brand.name,
-        product.category.name,
-        product.presentation,
-        ...product.tags,
-      ].join(" "),
-    ).includes(normalizedQuery);
-  });
+  useEffect(() => {
+    if (firstRequest.current) {
+      firstRequest.current = false;
+      return;
+    }
+
+    const controller = new AbortController();
+    const requestQuery = activeQuery;
+    setStatus("filtering");
+    setProducts([]);
+    setTotal(0);
+
+    void fetchCatalogPage({
+      offset: 0,
+      limit: initialPage.limit,
+      search: debouncedQuery,
+      category,
+      signal: controller.signal,
+    })
+      .then((page) => {
+        if (activeQueryRef.current !== requestQuery) return;
+        setProducts(page.products);
+        setTotal(page.total);
+        setStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (activeQueryRef.current === requestQuery) setStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [activeQuery, category, debouncedQuery, initialPage.limit, retryRequest]);
+
+  const loadMore = useCallback(async () => {
+    if (status === "filtering" || status === "loading-more") return;
+    if (products.length >= total) return;
+
+    const requestQuery = activeQueryRef.current;
+    setStatus("loading-more");
+    try {
+      const page = await fetchCatalogPage({
+        offset: products.length,
+        limit: initialPage.limit,
+        search: debouncedQuery,
+        category,
+      });
+      if (activeQueryRef.current !== requestQuery) return;
+      setProducts((current) => {
+        const known = new Set(current.map((product) => product.id));
+        return [
+          ...current,
+          ...page.products.filter((product) => !known.has(product.id)),
+        ];
+      });
+      setTotal(page.total);
+      setStatus("ready");
+    } catch {
+      if (activeQueryRef.current === requestQuery) setStatus("error");
+    }
+  }, [category, debouncedQuery, initialPage.limit, products.length, status, total]);
+
+  useEffect(() => {
+    const target = loadMoreTarget.current;
+    if (!target || products.length >= total || status !== "ready") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMore, products.length, status, total]);
+
+  const filtering = status === "filtering";
+  const loadingMore = status === "loading-more";
+  const hasMore = products.length < total;
 
   return (
     <main className={styles.catalogPage}>
@@ -110,7 +215,11 @@ export function CatalogExplorer({
         </div>
       </header>
 
-      <section className={styles.catalogSection} aria-labelledby="catalog-title">
+      <section
+        className={styles.catalogSection}
+        aria-labelledby="catalog-title"
+        aria-busy={filtering || loadingMore}
+      >
         <div className={styles.controlsTop}>
           <div className={styles.searchField}>
             <label htmlFor="catalog-search">¿Qué estás buscando?</label>
@@ -172,15 +281,15 @@ export function CatalogExplorer({
         <div className={styles.resultsHeading}>
           <h2 id="catalog-title">SELECCIÓN LOMBARDO</h2>
           <p aria-live="polite">
-            {String(visibleProducts.length).padStart(2, "0")} PRODUCTOS
+            {filtering ? "BUSCANDO…" : `${total.toLocaleString("es-AR")} PRODUCTOS`}
           </p>
         </div>
 
-        {visibleProducts.length ? (
+        {products.length ? (
           <div
             className={mode === "editorial" ? styles.editorialGrid : styles.listGrid}
           >
-            {visibleProducts.map((product, index) => (
+            {products.map((product, index) => (
               <article
                 key={product.id}
                 className={`${styles.product} ${
@@ -203,21 +312,53 @@ export function CatalogExplorer({
               </article>
             ))}
           </div>
+        ) : filtering ? (
+          <div className={styles.catalogFeedback} role="status">
+            <span>LOM</span>
+            <p>Estamos buscando en la selección de Runia.</p>
+          </div>
         ) : (
           <div className={styles.emptyState}>
             <span>00</span>
-            <p>No encontramos eso. Probá con otra palabra o categoría.</p>
+            <p>
+              {status === "error"
+                ? "No pudimos actualizar la selección. La navegación sigue disponible."
+                : "No encontramos eso. Probá con otra palabra o categoría."}
+            </p>
             <button
               type="button"
               onClick={() => {
-                setQuery("");
-                setCategory("todos");
+                if (status === "error") {
+                  setRetryRequest((request) => request + 1);
+                } else {
+                  setQuery("");
+                  setCategory("todos");
+                }
               }}
             >
-              VER TODO →
+              {status === "error" ? "REINTENTAR →" : "VER TODO →"}
             </button>
           </div>
         )}
+
+        {products.length ? (
+          <div className={styles.pagination} ref={loadMoreTarget}>
+            {status === "error" ? (
+              <>
+                <p>No pudimos cargar la siguiente parte de la selección.</p>
+                <button type="button" onClick={() => void loadMore()}>
+                  REINTENTAR →
+                </button>
+              </>
+            ) : hasMore ? (
+              <button type="button" disabled={loadingMore} onClick={() => void loadMore()}>
+                {loadingMore ? "CARGANDO…" : "VER MÁS →"}
+              </button>
+            ) : (
+              <p>VISTE TODA LA SELECCIÓN</p>
+            )}
+          </div>
+        ) : null}
       </section>
     </main>
   );

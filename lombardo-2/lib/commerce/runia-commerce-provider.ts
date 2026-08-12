@@ -1,10 +1,23 @@
-import { mockCategories, mockProducts } from "../../data/mock-products.ts";
-import type { Category, Product } from "../../types/commerce.ts";
+import type { Category } from "../../types/commerce.ts";
 import type { ServerProductSource } from "../server/orders/order-dependencies.ts";
 import { ServerOrderError } from "../server/orders/server-order-error.ts";
-import type { CommerceProvider, ProductQuery } from "./provider.ts";
+import {
+  categoryFilterForPostgrest,
+  mapRuniaSupplierProduct,
+  runiaProductIdFromProductSlug,
+  RUNIA_CATALOG_CATEGORIES,
+  type RuniaSupplierProductRow,
+} from "./runia-catalog-mapper.ts";
+import {
+  CATALOG_MAX_PAGE_SIZE,
+  CATALOG_PAGE_SIZE,
+  type CommerceProvider,
+  type ProductPageQuery,
+} from "./provider.ts";
 
-const MAX_SANDBOX_PRODUCTS = 5;
+const VINROS_SUPPLIER_CODE = "vinros";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface RuniaCommerceProviderOptions {
   url: string;
@@ -13,28 +26,40 @@ interface RuniaCommerceProviderOptions {
   fetcher?: typeof fetch;
 }
 
-interface RuniaDevProductRow {
-  public_product_id: string;
-  runia_product_id: string;
-  runia_sku: string;
-  display_name: string;
-  eligibility_status: "safe";
-  lombardo_sale_price: number | string;
-  currency: "ARS";
-  available_now: boolean;
-  sandbox_quantity: number;
-  enabled_for_sandbox: boolean;
+interface SupplierRow {
+  id: string;
+  name: string;
+  active: boolean;
+  tenants:
+    | { slug: string; status: string }
+    | Array<{ slug: string; status: string }>
+    | null;
 }
-
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("es-AR")
-    .trim();
 
 function providerError(message: string): never {
   throw new ServerOrderError("SERVER_NOT_CONFIGURED", message, { status: 503 });
+}
+
+function clampInteger(value: number | undefined, fallback: number, maximum: number) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.trunc(value ?? fallback), 0), maximum);
+}
+
+function sanitizedSearch(value: string | undefined) {
+  return value
+    ?.trim()
+    .slice(0, 80)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-AR")
+    .replace(/[%_*,()"'\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function contentRangeTotal(response: Response, fallback: number) {
+  const total = response.headers.get("content-range")?.match(/\/(\d+)$/)?.[1];
+  return total ? Number(total) : fallback;
 }
 
 export class RuniaCommerceProvider
@@ -44,6 +69,7 @@ export class RuniaCommerceProvider
   private readonly secretKey: string;
   private readonly tenantSlug: string;
   private readonly fetcher: typeof fetch;
+  private supplierPromise: Promise<SupplierRow> | null = null;
 
   constructor(options: RuniaCommerceProviderOptions) {
     this.url = options.url.replace(/\/$/, "");
@@ -52,115 +78,170 @@ export class RuniaCommerceProvider
     this.fetcher = options.fetcher ?? fetch;
   }
 
-  private async loadEligibleProducts(): Promise<Product[]> {
-    const search = new URLSearchParams({
-      select:
-        "public_product_id,runia_product_id,runia_sku,display_name,eligibility_status,lombardo_sale_price,currency,available_now,sandbox_quantity,enabled_for_sandbox",
-      tenant_slug: `eq.${this.tenantSlug}`,
-      eligibility_status: "eq.safe",
-      enabled_for_sandbox: "is.true",
-      order: "created_at.asc",
-      limit: String(MAX_SANDBOX_PRODUCTS + 1),
-    });
+  private headers(preferCount = false) {
+    const headers: Record<string, string> = {
+      apikey: this.secretKey,
+      Accept: "application/json",
+    };
+    if (!this.secretKey.startsWith("sb_secret_")) {
+      headers.Authorization = `Bearer ${this.secretKey}`;
+    }
+    if (preferCount) headers.Prefer = "count=exact";
+    return headers;
+  }
+
+  private async fetchRows<T>(
+    table: string,
+    search: URLSearchParams,
+    preferCount = false,
+  ) {
+    const startedAt = performance.now();
     const response = await this.fetcher(
-      `${this.url}/rest/v1/commerce_lombardo_dev_product_adapter?${search.toString()}`,
-      {
-        headers: {
-          apikey: this.secretKey,
-          Authorization: `Bearer ${this.secretKey}`,
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      },
+      `${this.url}/rest/v1/${table}?${search.toString()}`,
+      { headers: this.headers(preferCount), cache: "no-store" },
     );
+    const queryTimeMs = performance.now() - startedAt;
     if (!response.ok) {
-      providerError("Runia Dev no pudo entregar el catálogo elegible.");
+      providerError("Runia Dev no pudo entregar el catálogo real de VINROS.");
     }
+    return {
+      rows: (await response.json()) as T[],
+      response,
+      queryTimeMs,
+    };
+  }
 
-    const rows = (await response.json()) as RuniaDevProductRow[];
-    if (rows.length > MAX_SANDBOX_PRODUCTS) {
-      providerError("Runia Dev tiene más de cinco productos habilitados para Sandbox.");
+  private async loadSupplier() {
+    const search = new URLSearchParams({
+      select: "id,name,active,tenants:tenant_id!inner(slug,status)",
+      code: `eq.${VINROS_SUPPLIER_CODE}`,
+      "tenants.slug": `eq.${this.tenantSlug}`,
+      "tenants.status": "eq.active",
+      active: "is.true",
+      limit: "2",
+    });
+    const { rows } = await this.fetchRows<SupplierRow>("suppliers", search);
+    if (rows.length !== 1 || !rows[0]?.id || !rows[0].active) {
+      providerError("Runia Dev no tiene un proveedor VINROS activo y unívoco.");
     }
+    return rows[0];
+  }
 
-    const templates = new Map(mockProducts.map((product) => [product.id, product]));
-    return rows.map((row) => {
-      const template = templates.get(row.public_product_id);
-      const price = Number(row.lombardo_sale_price);
-      if (
-        !template ||
-        !row.runia_product_id ||
-        !row.runia_sku ||
-        !row.display_name ||
-        row.eligibility_status !== "safe" ||
-        row.currency !== "ARS" ||
-        !row.enabled_for_sandbox ||
-        !Number.isFinite(price) ||
-        Math.round(price * 100) !== price * 100 ||
-        price <= 0 ||
-        !Number.isSafeInteger(row.sandbox_quantity) ||
-        row.sandbox_quantity < 0
-      ) {
-        providerError("El mapping temporal de productos Runia Dev es inválido.");
-      }
+  private getSupplier() {
+    this.supplierPromise ??= this.loadSupplier().catch((error: unknown) => {
+      this.supplierPromise = null;
+      throw error;
+    });
+    return this.supplierPromise;
+  }
 
-      const available = row.available_now && row.sandbox_quantity > 0;
-      return {
-        ...template,
-        sourceProductId: row.runia_product_id,
-        sku: row.runia_sku,
-        name: row.display_name,
-        price,
-        availability: available ? "AVAILABLE_NOW" : "UNAVAILABLE",
-        stock: { available, quantity: available ? row.sandbox_quantity : 0 },
-        active: true,
-      } satisfies Product;
+  private productSearch(supplierId: string) {
+    return new URLSearchParams({
+      select:
+        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price)",
+      supplier_id: `eq.${supplierId}`,
+      eligibility_status: "eq.safe",
+      active: "is.true",
+      "retail_prices.price_type": "eq.retail",
     });
   }
 
-  async getProducts(query: ProductQuery = {}) {
-    const products = await this.loadEligibleProducts();
-    const { categorySlug, featured, activeOnly = true } = query;
-    return products.filter((product) => {
-      if (activeOnly && !product.active) return false;
-      if (categorySlug && product.category.slug !== categorySlug) return false;
-      if (featured !== undefined && product.featured !== featured) return false;
-      return true;
-    });
+  private mapRows(rows: RuniaSupplierProductRow[]) {
+    try {
+      return rows.map(mapRuniaSupplierProduct);
+    } catch {
+      providerError("Runia Dev devolvió un producto SAFE con datos inválidos.");
+    }
+  }
+
+  async getProductPage(query: ProductPageQuery = {}) {
+    const supplier = await this.getSupplier();
+    const offset = clampInteger(query.offset, 0, 100_000);
+    const limit = clampInteger(
+      query.limit,
+      CATALOG_PAGE_SIZE,
+      CATALOG_MAX_PAGE_SIZE,
+    ) || CATALOG_PAGE_SIZE;
+    const search = this.productSearch(supplier.id);
+    search.set("order", "normalized_name.asc,id.asc");
+    search.set("offset", String(offset));
+    search.set("limit", String(limit));
+
+    const term = sanitizedSearch(query.search);
+    if (term) {
+      search.set(
+        "or",
+        `(normalized_name.ilike.*${term}*,supplier_sku.ilike.*${term}*)`,
+      );
+    }
+
+    const categoryFilter = query.categorySlug
+      ? categoryFilterForPostgrest(query.categorySlug)
+      : null;
+    if (categoryFilter) {
+      if (search.has(categoryFilter.key)) {
+        search.append(categoryFilter.key, categoryFilter.value);
+      } else {
+        search.set(categoryFilter.key, categoryFilter.value);
+      }
+    }
+
+    const { rows, response, queryTimeMs } =
+      await this.fetchRows<RuniaSupplierProductRow>(
+        "supplier_products",
+        search,
+        true,
+      );
+    const products = this.mapRows(rows);
+    const total = contentRangeTotal(response, offset + products.length);
+
+    return {
+      products,
+      total,
+      offset,
+      limit,
+      hasMore: offset + products.length < total,
+      queryTimeMs: Math.round(queryTimeMs * 10) / 10,
+    };
   }
 
   async getProductsByIds(productIds: string[]) {
-    const requested = new Set(productIds);
-    return (await this.loadEligibleProducts()).filter((product) =>
-      requested.has(product.id),
+    const ids = Array.from(new Set(productIds)).filter((id) => UUID_PATTERN.test(id));
+    if (!ids.length) return [];
+
+    const supplier = await this.getSupplier();
+    const search = this.productSearch(supplier.id);
+    search.set("id", `in.(${ids.slice(0, 99).join(",")})`);
+    search.set("order", "normalized_name.asc,id.asc");
+    search.set("limit", "99");
+    const { rows } = await this.fetchRows<RuniaSupplierProductRow>(
+      "supplier_products",
+      search,
     );
+    return this.mapRows(rows);
   }
 
   async getProductBySlug(slug: string) {
-    return (await this.loadEligibleProducts()).find((product) => product.slug === slug) ?? null;
+    const productId = runiaProductIdFromProductSlug(slug);
+    if (!productId) return null;
+
+    const supplier = await this.getSupplier();
+    const search = this.productSearch(supplier.id);
+    search.set("id", `eq.${productId}`);
+    search.set("limit", "2");
+    const { rows } = await this.fetchRows<RuniaSupplierProductRow>(
+      "supplier_products",
+      search,
+    );
+    if (!rows.length) return null;
+    if (rows.length !== 1) {
+      providerError("Runia Dev devolvió más de un producto para el mismo ID.");
+    }
+
+    return this.mapRows(rows)[0] ?? null;
   }
 
   async getCategories(): Promise<Category[]> {
-    const categoryIds = new Set(
-      (await this.loadEligibleProducts()).map((product) => product.category.id),
-    );
-    return mockCategories.filter((category) => categoryIds.has(category.id));
-  }
-
-  async searchProducts(term: string) {
-    const query = normalize(term);
-    const products = await this.loadEligibleProducts();
-    if (!query) return products;
-    return products.filter((product) =>
-      normalize(
-        [
-          product.name,
-          product.description,
-          product.brand.name,
-          product.category.name,
-          ...product.tags,
-          ...product.situations,
-        ].join(" "),
-      ).includes(query),
-    );
+    return [...RUNIA_CATALOG_CATEGORIES];
   }
 }

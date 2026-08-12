@@ -13,11 +13,14 @@ export function CartPage() {
   const {
     items,
     isHydrated,
+    isCatalogLoading,
+    hasCatalogError,
     removeItem,
     updateQuantity,
     clearCart,
     getSubtotal,
     getItemCount,
+    retryCatalog,
   } = useCart();
   const trackedViewRef = useRef(false);
   const subtotal = getSubtotal();
@@ -40,10 +43,21 @@ export function CartPage() {
         <p>Todo lo que elegiste, antes de seguir.</p>
       </header>
 
-      {!isHydrated ? (
+      {!isHydrated || isCatalogLoading ? (
         <p className={styles.loading} role="status">
-          PREPARANDO TU CARRITO…
+          ACTUALIZANDO TU CARRITO CON RUNIA…
         </p>
+      ) : hasCatalogError ? (
+        <section className={styles.empty} role="alert">
+          <span aria-hidden="true">!</span>
+          <div>
+            <h2>NO PUDIMOS ACTUALIZAR TU SELECCIÓN.</h2>
+            <p>Nada se perdió. Probá nuevamente en un momento.</p>
+            <button type="button" onClick={retryCatalog}>
+              REINTENTAR →
+            </button>
+          </div>
+        </section>
       ) : items.length ? (
         <div className={styles.layout}>
           <section className={styles.items} aria-label="Productos en el carrito">

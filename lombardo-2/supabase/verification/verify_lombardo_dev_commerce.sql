@@ -1,4 +1,4 @@
--- Read-only structural verification. Run after both schema files in Runia Dev.
+-- Read-only structural verification for Lombardo order/payment storage in Runia Dev.
 
 do $verify$
 declare
@@ -10,10 +10,6 @@ begin
   if to_regclass('public.commerce_payment_events') is null then
     raise exception 'missing public.commerce_payment_events';
   end if;
-  if to_regclass('public.commerce_lombardo_dev_product_adapter') is null then
-    raise exception 'missing public.commerce_lombardo_dev_product_adapter';
-  end if;
-
   if not exists (
     select 1 from pg_class
     where oid = 'public.commerce_orders'::regclass
@@ -28,14 +24,6 @@ begin
   ) then
     raise exception 'commerce_payment_events RLS/FORCE RLS missing';
   end if;
-  if not exists (
-    select 1 from pg_class
-    where oid = 'public.commerce_lombardo_dev_product_adapter'::regclass
-      and relrowsecurity and relforcerowsecurity
-  ) then
-    raise exception 'DEV product adapter RLS/FORCE RLS missing';
-  end if;
-
   if not exists (
     select 1 from pg_constraint
     where conrelid = 'public.commerce_orders'::regclass
@@ -111,16 +99,6 @@ select
 from pg_class c
 where c.oid in (
   'public.commerce_orders'::regclass,
-  'public.commerce_payment_events'::regclass,
-  'public.commerce_lombardo_dev_product_adapter'::regclass
+  'public.commerce_payment_events'::regclass
 )
 order by c.relname;
-
-select
-  tenant_slug,
-  count(*) filter (
-    where eligibility_status = 'safe' and enabled_for_sandbox
-  ) as sandbox_eligible_products
-from public.commerce_lombardo_dev_product_adapter
-group by tenant_slug
-order by tenant_slug;

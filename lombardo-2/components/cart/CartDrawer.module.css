@@ -248,3 +248,35 @@
     animation: none;
   }
 }
+.providerState {
+  min-height: 18rem;
+  padding: 3rem var(--page-gutter);
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 1rem;
+}
+
+.providerState span {
+  color: var(--lombardo-pink);
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 700;
+  line-height: 0.8;
+}
+
+.providerState p {
+  max-width: 25rem;
+  font-weight: 700;
+}
+
+.providerState button {
+  padding: 0 0 0.25rem;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 700;
+}

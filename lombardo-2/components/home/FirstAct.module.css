@@ -561,9 +561,11 @@
   .heroCopy {
     padding-top: clamp(6.7rem, 15vh, 8rem);
     padding-bottom: 2rem;
+    grid-template-rows: auto 1fr auto;
   }
 
   .heroTitle {
+    grid-row: 1;
     max-width: 8.8ch;
     font-size: clamp(3.25rem, 16.8vw, 5.8rem);
     line-height: 0.79;
@@ -574,14 +576,16 @@
   }
 
   .intro {
-    position: absolute;
-    top: 34.5%;
-    left: var(--page-gutter);
+    position: relative;
+    grid-row: 2;
+    align-self: start;
     max-width: 10.5rem;
+    margin-top: clamp(0.85rem, 2.4svh, 1.25rem);
     font-size: 0.95rem;
   }
 
   .actions {
+    grid-row: 3;
     align-self: end;
     display: grid;
     grid-template-columns: 1fr 1fr;

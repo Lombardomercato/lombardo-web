@@ -18,6 +18,8 @@ const STORAGE_VERSION = 1;
 interface CartState {
   items: CartItem[];
   hydrated: boolean;
+  catalogStatus: "idle" | "loading" | "ready" | "error";
+  catalogRequest: number;
   drawerOpen: boolean;
   announcement: string;
 }
@@ -28,6 +30,10 @@ type CartAction =
   | { type: "remove"; productId: string }
   | { type: "update"; productId: string; quantity: number }
   | { type: "sync-prices"; prices: Record<string, number> }
+  | { type: "catalog-loading" }
+  | { type: "catalog-ready"; products: Product[] }
+  | { type: "catalog-error" }
+  | { type: "retry-catalog" }
   | { type: "clear" }
   | { type: "open" }
   | { type: "close" };
@@ -40,6 +46,8 @@ interface StoredCart {
 interface CartContextValue {
   items: CartItem[];
   isHydrated: boolean;
+  isCatalogLoading: boolean;
+  hasCatalogError: boolean;
   isDrawerOpen: boolean;
   announcement: string;
   addItem: (product: Product, quantity?: number) => void;
@@ -51,11 +59,14 @@ interface CartContextValue {
   getItemCount: () => number;
   openCart: () => void;
   closeCart: () => void;
+  retryCatalog: () => void;
 }
 
 const initialState: CartState = {
   items: [],
   hydrated: false,
+  catalogStatus: "idle",
+  catalogRequest: 0,
   drawerOpen: false,
   announcement: "",
 };
@@ -123,6 +134,34 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         }),
         announcement: "Actualizamos los precios del carrito.",
       };
+    case "catalog-loading":
+      return { ...state, catalogStatus: "loading" };
+    case "catalog-ready": {
+      const products = new Map(
+        action.products.map((product) => [product.id, product]),
+      );
+      const items = state.items.flatMap((item) => {
+        const product = products.get(item.product.id);
+        return product ? [{ ...item, product }] : [];
+      });
+      const removed = state.items.length - items.length;
+      return {
+        ...state,
+        items,
+        catalogStatus: "ready",
+        announcement: removed
+          ? "Quitamos del carrito productos que ya no están disponibles."
+          : state.announcement,
+      };
+    }
+    case "catalog-error":
+      return { ...state, catalogStatus: "error" };
+    case "retry-catalog":
+      return {
+        ...state,
+        catalogStatus: "idle",
+        catalogRequest: state.catalogRequest + 1,
+      };
     case "clear":
       return { ...state, items: [], announcement: "Carrito vaciado" };
     case "open":
@@ -164,6 +203,37 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const storedCart: StoredCart = { version: STORAGE_VERSION, items: state.items };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(storedCart));
   }, [state.hydrated, state.items]);
+
+  const productIds = useMemo(
+    () => state.items.map((item) => item.product.id).sort().join(","),
+    [state.items],
+  );
+
+  useEffect(() => {
+    if (!state.hydrated) return;
+    if (!productIds) {
+      dispatch({ type: "catalog-ready", products: [] });
+      return;
+    }
+
+    const controller = new AbortController();
+    dispatch({ type: "catalog-loading" });
+    void fetch(`/api/catalog?ids=${encodeURIComponent(productIds)}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("catalog unavailable");
+        return (await response.json()) as { products: Product[] };
+      })
+      .then(({ products }) => dispatch({ type: "catalog-ready", products }))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        dispatch({ type: "catalog-error" });
+      });
+
+    return () => controller.abort();
+  }, [productIds, state.catalogRequest, state.hydrated]);
 
   const addItem = useCallback((product: Product, quantity = 1) => {
     dispatch({ type: "add", product, quantity });
@@ -208,6 +278,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = useCallback(() => dispatch({ type: "clear" }), []);
   const openCart = useCallback(() => dispatch({ type: "open" }), []);
   const closeCart = useCallback(() => dispatch({ type: "close" }), []);
+  const retryCatalog = useCallback(
+    () => dispatch({ type: "retry-catalog" }),
+    [],
+  );
   const getSubtotal = useCallback(
     () =>
       state.items.reduce(
@@ -225,6 +299,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => ({
       items: state.items,
       isHydrated: state.hydrated,
+      isCatalogLoading: state.catalogStatus === "loading",
+      hasCatalogError: state.catalogStatus === "error",
       isDrawerOpen: state.drawerOpen,
       announcement: state.announcement,
       addItem,
@@ -236,10 +312,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       getItemCount,
       openCart,
       closeCart,
+      retryCatalog,
     }),
     [
       state.items,
       state.hydrated,
+      state.catalogStatus,
       state.drawerOpen,
       state.announcement,
       addItem,
@@ -251,6 +329,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       getItemCount,
       openCart,
       closeCart,
+      retryCatalog,
     ],
   );
 

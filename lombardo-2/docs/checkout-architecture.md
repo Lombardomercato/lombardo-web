@@ -22,11 +22,9 @@ El esquema está en `supabase/schema/lombardo_commerce_orders.sql`. Las tablas t
 RLS forzado, no poseen políticas públicas y revocan acceso a `anon` y `authenticated`.
 La secret key de Runia sólo vive en el servidor.
 
-En Sandbox, `RuniaCommerceProvider` consume
-`commerce_lombardo_dev_product_adapter`. Sólo entrega filas `safe` y habilitadas,
-reemplaza precio y disponibilidad de los templates visuales y conserva el
-`runia_product_id` en el snapshot. La tabla es una capa temporal DEV explícita; no es
-el mapping productivo definitivo.
+`RuniaCommerceProvider` consulta directamente los `supplier_products` activos y
+`safe` de VINROS con su precio `retail`, y conserva el `runia_product_id` en el
+snapshot. No existe una fuente local ni un adapter de catálogo intermedio.
 
 ## Mercado Pago
 

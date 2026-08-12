@@ -9,10 +9,9 @@ un modo de Mercado Pago distinto de `TEST` y el dominio productivo de Lombardo c
 
 - [ ] Proyecto Supabase exclusivo de Runia Dev, activo y con acceso administrativo.
 - [ ] `supabase/schema/lombardo_commerce_orders.sql` aplicado.
-- [ ] `supabase/schema/lombardo_dev_catalog_adapter.sql` aplicado después del anterior.
 - [ ] `supabase/verification/verify_lombardo_dev_commerce.sql` ejecutado sin excepciones.
-- [ ] Entre 1 y 5 productos Runia reales con estado `safe`, mapping explícito, precio
-      Lombardo DEV, `available_now=true`, cantidad DEV y `enabled_for_sandbox=true`.
+- [ ] VINROS sincronizado en `supplier_products`, con productos `safe` activos y su
+      precio `retail` vigente.
 - [ ] Proyecto Vercel de Preview con Root Directory `lombardo-2`.
 - [ ] Alias HTTPS estable de Preview reservado para `APP_URL`.
 - [ ] Aplicación Checkout Pro TEST y Access Token TEST.
@@ -45,11 +44,10 @@ Checkout Pro redirect no usa Public Key en esta implementación: el servidor cre
 preferencia y el navegador abre el `sandbox_init_point` devuelto. El adapter TEST no
 acepta `init_point` como fallback y el webhook rechaza cualquier pago `live_mode=true`.
 
-## Runia Dev y mapping temporal
+## Runia Dev y catálogo
 
-Seguir `docs/runia-dev-setup.md`. No cargar `cost`, `wholesale`, `business_price` ni
-disponibilidad del proveedor como precio o stock público. El adapter DEV exige precio
-de venta manual, disponibilidad explícita y elegibilidad `safe` antes de habilitar.
+Seguir `docs/runia-dev-setup.md`. El catálogo consulta directamente la capa supplier
+de VINROS y nunca publica `blocked`, `pending_review` o `supplier_only_cost`.
 
 Validación automática, después de cargar `.env.local`:
 

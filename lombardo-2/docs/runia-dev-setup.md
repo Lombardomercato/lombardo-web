@@ -1,84 +1,35 @@
-# Runia Dev: esquema y catálogo temporal Lombardo
+# Runia Dev: lectura del catálogo real de VINROS
 
-## Aplicación del esquema
+Lombardo usa exclusivamente el proyecto Runia Dev configurado en variables
+server-only. `RuniaCommerceProvider` resuelve el proveedor `VINROS` del tenant
+`lombardo-dev` y consulta directamente:
 
-Usar únicamente el proyecto Supabase de Runia Dev identificado explícitamente.
-Aplicar en este orden:
+- `supplier_products`, con `active = true` y `eligibility_status = safe`;
+- `supplier_prices`, únicamente con `price_type = retail`.
 
-1. `supabase/schema/lombardo_commerce_orders.sql`;
-2. `supabase/schema/lombardo_dev_catalog_adapter.sql`;
-3. ejecutar `supabase/verification/verify_lombardo_dev_commerce.sql`;
-4. ejecutar advisors de seguridad y rendimiento y resolver cualquier aviso nuevo.
+No existe un adapter intermedio, un límite Sandbox, un catálogo local ni un fallback.
+Los estados `blocked`, `pending_review` y `supplier_only_cost` se filtran en la
+consulta y vuelven a validarse al mapear cada fila.
 
-La verificación confirma tablas, constraints de idempotencia, UUID público, RLS
-forzado, índices, acceso exclusivo del `service_role` y la función transaccional del
-webhook. Supabase puede no exponer nuevas tablas al Data API automáticamente; los
-schemas incluyen grants explícitos y mínimos para `service_role`.
+## Datos visibles
 
-## Qué representa el adapter
+El ID de `supplier_products` es el `runia_product_id` estable que viaja también como
+`sourceProductId`. SKU, nombre y presentación salen de la fila supplier; el precio es
+el `current_price` retail. La capa supplier de VINROS todavía no contiene imágenes,
+stock físico, marca ni categoría estructurados:
 
-`commerce_lombardo_dev_product_adapter` es una tabla temporal y explícita de DEV.
-No convierte silenciosamente `supplier_product` en el modelo público definitivo.
-Cada fila enlaza:
+- sin imagen, `ProductVisual` conserva la gráfica editorial de Lombardo;
+- la disponibilidad se comunica como “Disponible por encargo”, sin inventar stock;
+- marca y categoría se normalizan de forma determinista desde nombre y prefijo SKU,
+  sin crear registros de producto manuales.
 
-- un producto real/revisado de Runia (`runia_product_id`, `runia_sku`);
-- uno de los IDs visuales existentes de Lombardo (`public_product_id`);
-- su estado de elegibilidad;
-- un precio de venta Lombardo definido manualmente para Sandbox;
-- disponibilidad y cantidad ficticias controladas para la prueba.
+## Rendimiento
 
-IDs visuales actualmente disponibles para mapear —elegir entre 1 y 5—:
+El catálogo consulta 24 productos por página (máximo 48 por request), incluye conteo
+exacto para navegación progresiva y cachea páginas, fichas y revalidaciones de carrito
+durante cinco minutos. Búsqueda y categoría se ejecutan en Runia, no sobre una copia
+local en el navegador. La respuesta `/api/catalog` expone `Server-Timing` para medir
+la lectura completa y el tramo de Runia.
 
-- `mock-casa-nueve-malbec`;
-- `mock-caja-regalo-mixta`;
-- `mock-caja-noche`;
-- `mock-blanco-criollo`;
-- `mock-aceite-oliva`.
-
-## Alta segura de un mapping
-
-Sustituir todos los valores marcados antes de ejecutar. El precio debe ser una decisión
-manual para Sandbox; no calcularlo desde costo, mayorista o `business_price`.
-
-```sql
-insert into public.commerce_lombardo_dev_product_adapter (
-  tenant_slug,
-  public_product_id,
-  runia_product_id,
-  runia_sku,
-  display_name,
-  eligibility_status,
-  lombardo_sale_price,
-  currency,
-  available_now,
-  sandbox_quantity,
-  enabled_for_sandbox
-) values (
-  'lombardo-dev',
-  'REEMPLAZAR_CON_ID_VISUAL_PERMITIDO',
-  'REEMPLAZAR_CON_ID_REAL_RUNIA_DEV',
-  'REEMPLAZAR_CON_SKU_REAL_RUNIA',
-  'REEMPLAZAR_CON_NOMBRE_REVISADO',
-  'safe',
-  REEMPLAZAR_CON_PRECIO_LOMBARDO_DEV,
-  'ARS',
-  true,
-  REEMPLAZAR_CON_CANTIDAD_DEV_ENTRE_1_Y_100,
-  true
-);
-```
-
-La constraint impide activar filas `blocked`, `pending_review` o
-`supplier_only_cost`; también impide habilitar filas sin precio, disponibilidad o
-cantidad DEV. El provider vuelve a filtrar y validar estas condiciones server-side.
-
-Para retirar inmediatamente un producto de la prueba:
-
-```sql
-update public.commerce_lombardo_dev_product_adapter
-set enabled_for_sandbox = false
-where tenant_slug = 'lombardo-dev'
-  and runia_product_id = 'REEMPLAZAR_CON_ID_REAL_RUNIA_DEV';
-```
-
-No cargar datos personales, tokens ni secretos en esta tabla.
+Las variables requeridas siguen documentadas en `.env.example`. La Secret Key nunca
+debe usar el prefijo `NEXT_PUBLIC_`.

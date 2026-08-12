@@ -12,6 +12,8 @@ interface ProductVisualProps {
 
 const categoryCodes: Record<string, string> = {
   vinos: "VIN",
+  destilados: "DES",
+  cervezas: "CER",
   regalos: "REG",
   gourmet: "GOU",
   "sin-alcohol": "S/A",
@@ -19,6 +21,8 @@ const categoryCodes: Record<string, string> = {
 
 const categoryTones: Record<string, string> = {
   vinos: styles.toneWine,
+  destilados: styles.toneWine,
+  cervezas: styles.toneGift,
   regalos: styles.toneGift,
   gourmet: styles.toneGourmet,
   "sin-alcohol": styles.toneSoft,

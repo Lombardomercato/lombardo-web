@@ -8,14 +8,11 @@ interface ProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
+export const dynamic = "force-dynamic";
+
 const getProduct = cache((slug: string) =>
   commerceProvider.getProductBySlug(slug),
 );
-
-export async function generateStaticParams() {
-  const products = await commerceProvider.getProducts();
-  return products.map((product) => ({ slug: product.slug }));
-}
 
 export async function generateMetadata({
   params,

@@ -46,19 +46,25 @@ Las variables server-only de Runia y Mercado Pago están documentadas en
 
 ## Comercio
 
-El catálogo consume `CommerceProvider`, nunca una fuente concreta. Sin configuración
-Runia, el desarrollo visual continúa con datos locales. Con
-`RUNIA_ENVIRONMENT=development`, `RuniaCommerceProvider` filtra los mappings SAFE de
-Runia Dev y conserva los componentes visuales existentes.
+El catálogo, la ficha y la revalidación del carrito consumen `CommerceProvider`.
+`RuniaCommerceProvider` es la única implementación activa: lee directamente los
+`supplier_products` activos de VINROS cuyo `eligibility_status` es `safe` y une su
+precio `retail` vigente. No existe adapter, fallback ni producto local. Catálogo,
+ficha y carrito usan la misma lectura server-only.
+
+El primer render entrega 24 productos. Las páginas siguientes, la búsqueda y los
+filtros se resuelven en el servidor y se cargan de forma progresiva. Las respuestas
+de catálogo se cachean durante cinco minutos; el navegador nunca recibe la clave de
+Runia. Como la capa supplier actual no contiene imágenes ni stock físico, Lombardo
+usa su gráfica editorial y muestra disponibilidad por encargo.
 
 El checkout crea órdenes mediante `/api/orders`. `RuniaOrderRepository` vuelve a
 consultar productos, recalcula importes y persiste snapshots inmutables mediante
 `SupabaseOrderStore`. La base protege la idempotencia con restricciones únicas por
 tenant, sesión y clave.
 
-La creación de órdenes exige Runia Dev y no tiene fallback al catálogo local. Precio,
-elegibilidad y disponibilidad salen del adapter temporal documentado en
-`docs/runia-dev-setup.md`. Los precios del navegador sólo detectan `PRICE_CHANGED`.
+La creación de órdenes exige Runia Dev y no tiene fallback al catálogo local. Los
+precios del navegador sólo detectan `PRICE_CHANGED`.
 
 Checkout Pro se habilita únicamente con `PAYMENTS_ENABLED=true`, credenciales TEST y
 una `APP_URL` HTTPS pública. La guía completa está en `docs/sandbox-payments.md`.

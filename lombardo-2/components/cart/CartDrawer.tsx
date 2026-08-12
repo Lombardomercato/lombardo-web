@@ -21,12 +21,15 @@ const focusableSelector = [
 export function CartDrawer() {
   const {
     items,
+    isCatalogLoading,
+    hasCatalogError,
     isDrawerOpen,
     closeCart,
     removeItem,
     updateQuantity,
     getSubtotal,
     getItemCount,
+    retryCatalog,
   } = useCart();
   const drawerRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -113,7 +116,20 @@ export function CartDrawer() {
           </button>
         </header>
 
-        {items.length ? (
+        {isCatalogLoading ? (
+          <div className={styles.providerState} role="status">
+            <span>ACTUALIZANDO</span>
+            <p>Estamos confirmando tu selección con Runia.</p>
+          </div>
+        ) : hasCatalogError ? (
+          <div className={styles.providerState} role="alert">
+            <span>PAUSA</span>
+            <p>No pudimos actualizar tu selección. Nada se perdió.</p>
+            <button type="button" onClick={retryCatalog}>
+              REINTENTAR →
+            </button>
+          </div>
+        ) : items.length ? (
           <>
             <div className={styles.lines}>
               {items.map(({ product, quantity }) => (
