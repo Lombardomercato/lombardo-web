@@ -1,7 +1,7 @@
 import { RuniaCommerceProvider } from "../lib/commerce/runia-commerce-provider.ts";
 import {
   readMercadoPagoTestConfiguration,
-  readRuniaDevConfiguration,
+  readRuniaConfiguration,
 } from "../lib/server/environment.ts";
 import { SupabaseOrderStore } from "../lib/server/orders/supabase-order-store.ts";
 
@@ -12,10 +12,13 @@ interface ReadinessCheck {
 }
 
 const checks: ReadinessCheck[] = [];
-let runiaConfiguration: ReturnType<typeof readRuniaDevConfiguration> | null = null;
+let runiaConfiguration: ReturnType<typeof readRuniaConfiguration> | null = null;
 
 try {
-  runiaConfiguration = readRuniaDevConfiguration();
+  runiaConfiguration = readRuniaConfiguration();
+  if (runiaConfiguration.environment !== "development") {
+    throw new Error("El chequeo Sandbox sólo admite Runia Dev.");
+  }
   checks.push({
     name: "Runia Dev",
     ready: true,

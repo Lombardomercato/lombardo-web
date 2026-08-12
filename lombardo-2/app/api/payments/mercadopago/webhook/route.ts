@@ -2,7 +2,12 @@ import { noStoreJson, serverErrorResponse } from "@/lib/server/http-response";
 import { PaymentWebhookService } from "@/lib/server/payments/payment-webhook-service";
 import { verifyMercadoPagoWebhookSignature } from "@/lib/server/payments/webhook-signature";
 import { checkRateLimit, getRequestIp } from "@/lib/server/rate-limit";
-import { logDevCommerce } from "@/lib/server/dev-commerce-logger";
+import {
+  getRequestId,
+  logCommerceError,
+  logDevCommerce,
+} from "@/lib/server/dev-commerce-logger";
+import { readJsonBody } from "@/lib/server/request-body";
 import {
   createOrderServices,
   getWebhookSecret,
@@ -16,10 +21,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function POST(request: Request) {
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > MAX_WEBHOOK_BODY_BYTES) {
-    return noStoreJson({ accepted: false }, { status: 413 });
-  }
+  const requestId = getRequestId(request);
   const rateLimit = checkRateLimit(`mp-webhook:${getRequestIp(request)}`, {
     limit: 180,
     windowMs: 60_000,
@@ -27,7 +29,13 @@ export async function POST(request: Request) {
   if (!rateLimit.allowed) {
     return noStoreJson(
       { accepted: false },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+          "X-Request-ID": requestId,
+        },
+      },
     );
   }
 
@@ -44,26 +52,43 @@ export async function POST(request: Request) {
       ),
     });
     if (!signatureValid) {
-      return noStoreJson({ accepted: false }, { status: 401 });
+      return noStoreJson(
+        { accepted: false },
+        { status: 401, headers: { "X-Request-ID": requestId } },
+      );
     }
 
-    const payload = (await request.json()) as unknown;
+    const payload = await readJsonBody(
+      request,
+      MAX_WEBHOOK_BODY_BYTES,
+      "El webhook recibido es demasiado grande.",
+    );
     if (!isRecord(payload)) {
-      return noStoreJson({ accepted: false }, { status: 400 });
+      return noStoreJson(
+        { accepted: false },
+        { status: 400, headers: { "X-Request-ID": requestId } },
+      );
     }
     if (payload.type !== "payment") {
-      return noStoreJson({ accepted: true, ignored: true }, { status: 202 });
+      return noStoreJson(
+        { accepted: true, ignored: true },
+        { status: 202, headers: { "X-Request-ID": requestId } },
+      );
     }
     const data = isRecord(payload.data) ? payload.data : {};
     const paymentId = queryDataId ?? String(data.id ?? "");
     const eventId = String(payload.id ?? "");
     if (!/^\d{1,40}$/.test(paymentId) || !/^[a-zA-Z0-9_-]{1,160}$/.test(eventId)) {
-      return noStoreJson({ accepted: false }, { status: 400 });
+      return noStoreJson(
+        { accepted: false },
+        { status: 400, headers: { "X-Request-ID": requestId } },
+      );
     }
 
     logDevCommerce("webhook.received", {
       paymentId,
       webhookEventId: eventId,
+      requestId,
     });
 
     const services = createOrderServices();
@@ -75,8 +100,15 @@ export async function POST(request: Request) {
       testMode: true,
     });
     const result = await webhook.process({ eventId, paymentId, payload });
-    return noStoreJson({ accepted: true, duplicate: result.duplicate });
+    return noStoreJson(
+      { accepted: true, duplicate: result.duplicate },
+      { headers: { "X-Request-ID": requestId } },
+    );
   } catch (error) {
-    return serverErrorResponse(error);
+    logCommerceError("webhook.failed", error, {
+      requestId,
+      route: "/api/payments/mercadopago/webhook",
+    });
+    return serverErrorResponse(error, requestId);
   }
 }

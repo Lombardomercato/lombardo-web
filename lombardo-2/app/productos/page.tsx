@@ -5,6 +5,7 @@ import { commerceProvider } from "@/lib/commerce";
 export const metadata: Metadata = {
   title: "Productos",
   description: "Vinos, regalos y cosas buenas seleccionadas por Lombardo.",
+  alternates: { canonical: "/productos" },
 };
 
 export const dynamic = "force-dynamic";

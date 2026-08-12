@@ -3,6 +3,11 @@ import { checkRateLimit, getRequestIp } from "@/lib/server/rate-limit";
 import { ServerOrderError } from "@/lib/server/orders/server-order-error";
 import { createOrderServices } from "@/lib/server/services";
 import { buildWhatsAppCoordinationUrl } from "@/lib/checkout/whatsapp-coordination";
+import {
+  getRequestId,
+  logCommerceError,
+  logDevCommerce,
+} from "@/lib/server/dev-commerce-logger";
 
 const publicIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -10,11 +15,19 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ publicId: string }> },
 ) {
+  const requestId = getRequestId(request);
+  if (request.headers.get("sec-fetch-site") === "cross-site") {
+    return noStoreJson(
+      { code: "INVALID_REQUEST", message: "No pudimos validar la solicitud." },
+      { status: 403, headers: { "X-Request-ID": requestId } },
+    );
+  }
+
   const origin = request.headers.get("origin");
   if (origin && origin !== new URL(request.url).origin) {
     return noStoreJson(
       { code: "INVALID_REQUEST", message: "No pudimos validar la solicitud." },
-      { status: 403 },
+      { status: 403, headers: { "X-Request-ID": requestId } },
     );
   }
 
@@ -25,7 +38,13 @@ export async function POST(
   if (!rateLimit.allowed) {
     return noStoreJson(
       { code: "CREATE_FAILED", message: "Esperá un momento antes de reintentar." },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+          "X-Request-ID": requestId,
+        },
+      },
     );
   }
 
@@ -33,7 +52,7 @@ export async function POST(
   if (!publicIdPattern.test(publicId)) {
     return noStoreJson(
       { code: "ORDER_NOT_FOUND", message: "No encontramos ese pedido." },
-      { status: 404 },
+      { status: 404, headers: { "X-Request-ID": requestId } },
     );
   }
 
@@ -69,8 +88,21 @@ export async function POST(
       order.id,
       "whatsapp_coordination",
     );
-    return noStoreJson({ order: updatedOrder, whatsappUrl });
+    logDevCommerce("payment.whatsapp_coordination_selected", {
+      requestId,
+      orderId: updatedOrder.id,
+      publicId: updatedOrder.publicId,
+      reason: "customer_selected",
+    });
+    return noStoreJson(
+      { order: updatedOrder, whatsappUrl },
+      { headers: { "X-Request-ID": requestId } },
+    );
   } catch (error) {
-    return serverErrorResponse(error);
+    logCommerceError("whatsapp.coordination_failed", error, {
+      requestId,
+      route: "/api/orders/[publicId]/whatsapp-coordination",
+    });
+    return serverErrorResponse(error, requestId);
   }
 }

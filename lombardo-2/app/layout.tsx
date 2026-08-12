@@ -50,9 +50,10 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   applicationName: "LOMBARDO.",
-  alternates: {
-    canonical: "/",
-  },
+  robots:
+    process.env.VERCEL_ENV === "production"
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
   openGraph: {
     type: "website",
     locale: "es_AR",
@@ -67,7 +68,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="es-AR"

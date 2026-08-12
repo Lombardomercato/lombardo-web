@@ -10,8 +10,9 @@ import { getOrderStatusPresentation } from "../lib/order-status/presentation.ts"
 import { logDevCommerce } from "../lib/server/dev-commerce-logger.ts";
 import {
   readMercadoPagoTestConfiguration,
-  readRuniaDevConfiguration,
+  readRuniaConfiguration,
 } from "../lib/server/environment.ts";
+import { readJsonBody } from "../lib/server/request-body.ts";
 import { parseCreateOrderInput } from "../lib/server/orders/order-input.ts";
 import type {
   AtomicInsertResult,
@@ -552,12 +553,36 @@ const runiaDevEnvironment = {
   VERCEL_ENV: "preview",
 };
 
-test("Runia Dev rechaza deployments productivos", () => {
+test("un deployment productivo rechaza Runia Dev", () => {
   assert.throws(
     () =>
-      readRuniaDevConfiguration({
+      readRuniaConfiguration({
         ...runiaDevEnvironment,
         VERCEL_ENV: "production",
+      }),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "SERVER_NOT_CONFIGURED",
+  );
+});
+
+test("Production acepta únicamente una configuración Runia Production server-only", () => {
+  const configuration = readRuniaConfiguration({
+    ...runiaDevEnvironment,
+    RUNIA_ENVIRONMENT: "production",
+    RUNIA_TENANT_SLUG: "lombardo-production",
+    RUNIA_SUPABASE_URL: "https://runia-production.supabase.co",
+    VERCEL_ENV: "production",
+  });
+  assert.equal(configuration.environment, "production");
+  assert.equal(configuration.tenantSlug, "lombardo-production");
+});
+
+test("Preview rechaza credenciales de Runia Production", () => {
+  assert.throws(
+    () =>
+      readRuniaConfiguration({
+        ...runiaDevEnvironment,
+        RUNIA_ENVIRONMENT: "production",
       }),
     (error: unknown) =>
       error instanceof ServerOrderError && error.code === "SERVER_NOT_CONFIGURED",
@@ -574,6 +599,24 @@ test("Mercado Pago TEST rechaza el dominio productivo", () => {
         MERCADO_PAGO_ACCESS_TOKEN: "APP_USR_TEST",
         MERCADO_PAGO_WEBHOOK_SECRET: "webhook-test",
         APP_URL: "https://www.lombardomercato.com",
+      }),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "SERVER_NOT_CONFIGURED",
+  );
+});
+
+test("Mercado Pago TEST no puede habilitarse en Vercel Production", () => {
+  assert.throws(
+    () =>
+      readMercadoPagoTestConfiguration({
+        ...runiaDevEnvironment,
+        RUNIA_ENVIRONMENT: "production",
+        VERCEL_ENV: "production",
+        PAYMENTS_ENABLED: "true",
+        MERCADO_PAGO_MODE: "TEST",
+        MERCADO_PAGO_ACCESS_TOKEN: "APP_USR_TEST",
+        MERCADO_PAGO_WEBHOOK_SECRET: "webhook-test",
+        APP_URL: "https://preview.example.com",
       }),
     (error: unknown) =>
       error instanceof ServerOrderError && error.code === "SERVER_NOT_CONFIGURED",
@@ -698,10 +741,10 @@ test("RuniaCommerceProvider rechaza filas no SAFE aunque el backend las entregue
   );
 });
 
-test("Runia Dev rechaza una publishable key en el servidor", () => {
+test("Runia rechaza una publishable key en el servidor", () => {
   assert.throws(
     () =>
-      readRuniaDevConfiguration({
+      readRuniaConfiguration({
         ...runiaDevEnvironment,
         RUNIA_SUPABASE_SECRET_KEY: "sb_publishable_public_value",
       }),
@@ -710,7 +753,7 @@ test("Runia Dev rechaza una publishable key en el servidor", () => {
   );
 });
 
-test("logging DEV limita la salida a identificadores operativos", () => {
+test("logging estructurado limita la salida a identificadores operativos", () => {
   const lines: string[] = [];
   logDevCommerce(
     "payment.transition",
@@ -728,4 +771,44 @@ test("logging DEV limita la salida a identificadores operativos", () => {
   assert.equal(lines.length, 1);
   assert.doesNotMatch(lines[0] ?? "", /\nforged/);
   assert.doesNotMatch(lines[0] ?? "", /token|email|whatsapp/i);
+});
+
+test("logging estructurado permanece activo en Production sin datos personales", () => {
+  const lines: string[] = [];
+  logDevCommerce(
+    "order.created",
+    { orderId: "42", requestId: "gru1::request", publicId: "public-42" },
+    {
+      env: { RUNIA_ENVIRONMENT: "production", VERCEL_ENV: "production" },
+      sink: (line) => lines.push(line),
+    },
+  );
+  assert.equal(lines.length, 1);
+  assert.match(lines[0] ?? "", /lombardo-commerce/);
+  assert.match(lines[0] ?? "", /production/);
+  assert.doesNotMatch(lines[0] ?? "", /email|whatsapp|secret|token/i);
+});
+
+test("el límite de payload se aplica aunque falte Content-Length", async () => {
+  const request = new Request("https://lombardo.test/api/orders", {
+    method: "POST",
+    body: JSON.stringify({ value: "x".repeat(100) }),
+  });
+  await assert.rejects(
+    readJsonBody(request, 32, "El pedido recibido es demasiado grande."),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.status === 413,
+  );
+});
+
+test("JSON malformado recibe un error controlado", async () => {
+  const request = new Request("https://lombardo.test/api/orders", {
+    method: "POST",
+    body: "{not-json",
+  });
+  await assert.rejects(
+    readJsonBody(request, 1_000, "El pedido recibido es demasiado grande."),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.status === 400,
+  );
 });

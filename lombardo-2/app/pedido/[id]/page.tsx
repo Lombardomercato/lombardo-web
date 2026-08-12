@@ -8,6 +8,7 @@ import { createOrderServices } from "@/lib/server/services";
 export const metadata: Metadata = {
   title: "Estado del pedido",
   description: "Consultá el estado de tu pedido Lombardo.",
+  robots: { index: false, follow: false },
 };
 
 const publicIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

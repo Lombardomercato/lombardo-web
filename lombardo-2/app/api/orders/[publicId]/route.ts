@@ -1,4 +1,5 @@
 import { noStoreJson, serverErrorResponse } from "@/lib/server/http-response";
+import { getRequestId, logCommerceError } from "@/lib/server/dev-commerce-logger";
 import { checkRateLimit, getRequestIp } from "@/lib/server/rate-limit";
 import { createOrderServices } from "@/lib/server/services";
 
@@ -8,6 +9,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ publicId: string }> },
 ) {
+  const requestId = getRequestId(request);
   const rateLimit = checkRateLimit(`order-status:${getRequestIp(request)}`, {
     limit: 60,
     windowMs: 60_000,
@@ -15,7 +17,13 @@ export async function GET(
   if (!rateLimit.allowed) {
     return noStoreJson(
       { code: "CREATE_FAILED", message: "Esperá un momento antes de reintentar." },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+          "X-Request-ID": requestId,
+        },
+      },
     );
   }
 
@@ -23,7 +31,7 @@ export async function GET(
   if (!publicIdPattern.test(publicId)) {
     return noStoreJson(
       { code: "ORDER_NOT_FOUND", message: "No encontramos ese pedido." },
-      { status: 404 },
+      { status: 404, headers: { "X-Request-ID": requestId } },
     );
   }
 
@@ -33,11 +41,17 @@ export async function GET(
     if (!order) {
       return noStoreJson(
         { code: "ORDER_NOT_FOUND", message: "No encontramos ese pedido." },
-        { status: 404 },
+        { status: 404, headers: { "X-Request-ID": requestId } },
       );
     }
-    return noStoreJson(orders.toPublicStatus(order));
+    return noStoreJson(orders.toPublicStatus(order), {
+      headers: { "X-Request-ID": requestId },
+    });
   } catch (error) {
-    return serverErrorResponse(error);
+    logCommerceError("order.request_failed", error, {
+      requestId,
+      route: "/api/orders/[publicId]",
+    });
+    return serverErrorResponse(error, requestId);
   }
 }

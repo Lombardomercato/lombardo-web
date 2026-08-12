@@ -63,11 +63,14 @@ consultar productos, recalcula importes y persiste snapshots inmutables mediante
 `SupabaseOrderStore`. La base protege la idempotencia con restricciones únicas por
 tenant, sesión y clave.
 
-La creación de órdenes exige Runia Dev y no tiene fallback al catálogo local. Los
-precios del navegador sólo detectan `PRICE_CHANGED`.
+La creación de órdenes exige Runia y no tiene fallback al catálogo local. Preview y
+Development sólo admiten Runia Dev; Vercel Production exige credenciales separadas de
+Runia Production. Los precios del navegador sólo detectan `PRICE_CHANGED`.
 
 Checkout Pro se habilita únicamente con `PAYMENTS_ENABLED=true`, credenciales TEST y
-una `APP_URL` HTTPS pública. La guía completa está en `docs/sandbox-payments.md`.
+una `APP_URL` HTTPS pública fuera de Production. La guía completa está en
+`docs/sandbox-payments.md`; la matriz de lanzamiento está en
+`docs/production-readiness.md`.
 Antes de una prueba real, `pnpm sandbox:check` debe terminar con
 `SANDBOX INFRA READY: YES`.
 

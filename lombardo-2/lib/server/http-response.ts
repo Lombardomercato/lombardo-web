@@ -7,18 +7,19 @@ export function noStoreJson(body: unknown, init: ResponseInit = {}) {
   return Response.json(body, { ...init, headers });
 }
 
-export function serverErrorResponse(error: unknown) {
+export function serverErrorResponse(error: unknown, requestId?: string) {
+  const headers = requestId ? { "X-Request-ID": requestId } : undefined;
   if (error instanceof ServerOrderError) {
     const payload: OrderRepositoryErrorPayload = {
       code: error.code,
       message: error.message,
       priceChanges: error.priceChanges,
     };
-    return noStoreJson(payload, { status: error.status });
+    return noStoreJson(payload, { status: error.status, headers });
   }
   const payload: OrderRepositoryErrorPayload = {
     code: "CREATE_FAILED",
     message: "No pudimos completar la operación. Probá nuevamente.",
   };
-  return noStoreJson(payload, { status: 500 });
+  return noStoreJson(payload, { status: 500, headers });
 }

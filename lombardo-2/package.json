@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "sandbox:check": "node --env-file-if-exists=.env.local scripts/check-sandbox-readiness.ts",
+    "production:check": "node --env-file-if-exists=.env.local scripts/check-production-readiness.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.ts"
   },

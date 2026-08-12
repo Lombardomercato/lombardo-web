@@ -4,10 +4,12 @@ import {
   CATALOG_PAGE_SIZE,
   commerceProvider,
 } from "@/lib/commerce";
+import { getRequestId, logCommerceError } from "@/lib/server/dev-commerce-logger";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const requestId = getRequestId(request);
   const searchParams = new URL(request.url).searchParams;
   const ids = searchParams
     .get("ids")
@@ -22,7 +24,13 @@ export async function GET(request: Request) {
       const requestTimeMs = Math.round((performance.now() - startedAt) * 10) / 10;
       return NextResponse.json(
         { products, requestTimeMs },
-        { headers: { "Server-Timing": `catalog;dur=${requestTimeMs}` } },
+        {
+          headers: {
+            "Cache-Control": "private, no-store",
+            "Server-Timing": `catalog;dur=${requestTimeMs}`,
+            "X-Request-ID": requestId,
+          },
+        },
       );
     }
 
@@ -57,13 +65,24 @@ export async function GET(request: Request) {
         headers: {
           "Cache-Control": "private, no-store",
           "Server-Timing": `catalog;dur=${requestTimeMs}, runia;dur=${page.queryTimeMs}`,
+          "X-Request-ID": requestId,
         },
       },
     );
-  } catch {
+  } catch (error) {
+    logCommerceError("catalog.request_failed", error, {
+      requestId,
+      route: "/api/catalog",
+    });
     return NextResponse.json(
       { error: "No pudimos actualizar el catálogo de Runia." },
-      { status: 503 },
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "private, no-store",
+          "X-Request-ID": requestId,
+        },
+      },
     );
   }
 }

@@ -2,7 +2,7 @@ import { RuniaCommerceProvider } from "../commerce/runia-commerce-provider";
 import {
   paymentsEnabled,
   readMercadoPagoTestConfiguration,
-  readRuniaDevConfiguration,
+  readRuniaConfiguration,
 } from "./environment";
 import { RuniaOrderRepository } from "./orders/runia-order-repository";
 import { EnvironmentDeliveryPricing } from "./orders/server-delivery-pricing";
@@ -13,7 +13,7 @@ import { OrderPaymentCoordinator } from "./payments/order-payment-coordinator";
 import type { PaymentGateway } from "./payments/payment-gateway";
 
 export function createOrderServices() {
-  const configuration = readRuniaDevConfiguration();
+  const configuration = readRuniaConfiguration();
   const tenantId = configuration.tenantSlug;
   const store = new SupabaseOrderStore({
     url: configuration.url,

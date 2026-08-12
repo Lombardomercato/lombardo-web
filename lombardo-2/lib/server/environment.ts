@@ -3,8 +3,8 @@ import { ServerOrderError } from "./orders/server-order-error.ts";
 
 type EnvironmentSource = Record<string, string | undefined>;
 
-export interface RuniaDevConfiguration {
-  environment: "development";
+export interface RuniaConfiguration {
+  environment: "development" | "production";
   tenantSlug: string;
   url: string;
   secretKey: string;
@@ -53,18 +53,28 @@ export function isServerOnlySupabaseKey(value: string) {
   );
 }
 
-export function isRuniaDevMode(env: EnvironmentSource = process.env) {
-  return env.RUNIA_ENVIRONMENT?.trim().toLocaleLowerCase("en-US") === "development";
-}
-
-export function readRuniaDevConfiguration(
+export function readRuniaConfiguration(
   env: EnvironmentSource = process.env,
-): RuniaDevConfiguration {
-  if (!isRuniaDevMode(env)) {
-    configurationError("RUNIA_ENVIRONMENT debe ser development para esta etapa.");
+): RuniaConfiguration {
+  const environment = env.RUNIA_ENVIRONMENT
+    ?.trim()
+    .toLocaleLowerCase("en-US");
+  if (environment !== "development" && environment !== "production") {
+    configurationError("RUNIA_ENVIRONMENT debe ser development o production.");
   }
-  if (env.VERCEL_ENV?.trim().toLocaleLowerCase("en-US") === "production") {
-    configurationError("Runia Dev no puede ejecutarse en un deployment de producción.");
+
+  const vercelEnvironment = env.VERCEL_ENV
+    ?.trim()
+    .toLocaleLowerCase("en-US");
+  if (vercelEnvironment === "production" && environment !== "production") {
+    configurationError("Un deployment productivo no puede conectarse a Runia Dev.");
+  }
+  if (
+    vercelEnvironment &&
+    vercelEnvironment !== "production" &&
+    environment === "production"
+  ) {
+    configurationError("Preview y Development no pueden conectarse a Runia Production.");
   }
 
   const tenantSlug = requiredEnvironment(env, "RUNIA_TENANT_SLUG");
@@ -74,7 +84,7 @@ export function readRuniaDevConfiguration(
 
   const url = requiredEnvironment(env, "RUNIA_SUPABASE_URL").replace(/\/$/, "");
   if (!isHttpsUrl(url)) {
-    configurationError("RUNIA_SUPABASE_URL debe ser una URL HTTPS de desarrollo.");
+    configurationError("RUNIA_SUPABASE_URL debe ser una URL HTTPS.");
   }
 
   const secretKey = requiredEnvironment(env, "RUNIA_SUPABASE_SECRET_KEY");
@@ -84,7 +94,7 @@ export function readRuniaDevConfiguration(
     );
   }
 
-  return { environment: "development", tenantSlug, url, secretKey };
+  return { environment, tenantSlug, url, secretKey };
 }
 
 export function paymentsEnabled(env: EnvironmentSource = process.env) {
@@ -94,9 +104,12 @@ export function paymentsEnabled(env: EnvironmentSource = process.env) {
 export function readMercadoPagoTestConfiguration(
   env: EnvironmentSource = process.env,
 ): MercadoPagoTestConfiguration {
-  readRuniaDevConfiguration(env);
+  readRuniaConfiguration(env);
   if (!paymentsEnabled(env)) {
     configurationError("PAYMENTS_ENABLED debe ser true para ejecutar el Sandbox.");
+  }
+  if (env.VERCEL_ENV?.trim().toLocaleLowerCase("en-US") === "production") {
+    configurationError("Mercado Pago TEST no puede habilitarse en Production.");
   }
   if (env.MERCADO_PAGO_MODE?.trim().toUpperCase() !== "TEST") {
     configurationError("MERCADO_PAGO_MODE debe permanecer en TEST.");

@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { RuniaCommerceProvider } from "./runia-commerce-provider";
-import { readRuniaDevConfiguration } from "../server/environment";
+import { readRuniaConfiguration } from "../server/environment";
 import type { CommerceProvider, ProductPageQuery } from "./provider";
 
 export type {
@@ -17,7 +17,7 @@ export { RuniaCommerceProvider } from "./runia-commerce-provider";
 let runiaProvider: RuniaCommerceProvider | null = null;
 
 function getRuniaProvider() {
-  runiaProvider ??= new RuniaCommerceProvider(readRuniaDevConfiguration());
+  runiaProvider ??= new RuniaCommerceProvider(readRuniaConfiguration());
   return runiaProvider;
 }
 
