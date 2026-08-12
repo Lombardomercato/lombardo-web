@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import test from "node:test";
 import { RuniaCommerceProvider } from "../lib/commerce/runia-commerce-provider.ts";
+import {
+  buildWhatsAppCoordinationMessage,
+  buildWhatsAppCoordinationUrl,
+} from "../lib/checkout/whatsapp-coordination.ts";
 import { getOrderStatusPresentation } from "../lib/order-status/presentation.ts";
 import { logDevCommerce } from "../lib/server/dev-commerce-logger.ts";
 import {
@@ -163,6 +167,19 @@ class FakeOrderStore implements RuniaOrderStore {
     return order;
   }
 
+  async savePaymentMethod(
+    tenantId: string,
+    orderId: string,
+    paymentMethod: OrderDraft["paymentMethod"],
+  ) {
+    const order = await this.getById(tenantId, orderId);
+    assert.ok(order);
+    assert.equal(order.orderStatus, "pending_payment");
+    assert.equal(order.paymentStatus, "pending");
+    order.paymentMethod = paymentMethod;
+    return order;
+  }
+
   async applyPaymentEventAtomic(
     inputValue: PaymentEventInput,
     update: PaymentStateUpdate,
@@ -301,6 +318,58 @@ test("un total manipulado del navegador se ignora y se recalcula", async () => {
   const result = await repository.createOrder(parsed);
   assert.equal(result.order.subtotal, 20_000);
   assert.equal(result.order.total, 20_000);
+});
+
+test("sin gateway la orden queda pendiente y pasa a coordinación por WhatsApp", async () => {
+  const { repository } = setup();
+  const coordinator = new OrderPaymentCoordinator({
+    orders: repository,
+    paymentGateway: null,
+  });
+  const result = await coordinator.createOrder(input());
+  assert.equal(result.order.paymentMethod, "whatsapp_coordination");
+  assert.equal(result.order.orderStatus, "pending_payment");
+  assert.equal(result.order.paymentStatus, "pending");
+  assert.equal(result.payment, null);
+  assert.equal(result.paymentError, undefined);
+});
+
+test("el mensaje de coordinación contiene el pedido y omite email y DNI", async () => {
+  const { repository } = setup();
+  const order = (
+    await repository.createOrder(
+      input({
+        customer: {
+          firstName: "Alex",
+          lastName: "Santillán",
+          whatsapp: "+5493415550000",
+          email: "sensible@example.com",
+          dni: "12345678",
+        },
+      }),
+    )
+  ).order;
+  const message = buildWhatsAppCoordinationMessage(order);
+  const url = buildWhatsAppCoordinationUrl(order, "https://wa.me/5493415887708");
+  assert.match(message, new RegExp(order.publicId.slice(0, 8).toUpperCase()));
+  assert.match(message, /2 × Producto uno/);
+  assert.match(message, /\$ 20\.000/);
+  assert.match(message, /Retiro en Lombardo/);
+  assert.match(message, /Alex Santillán/);
+  assert.match(message, /\+5493415550000/);
+  assert.doesNotMatch(message, /sensible@example\.com/);
+  assert.doesNotMatch(message, /12345678/);
+  assert.equal(url ? new URL(url).pathname : "", "/5493415887708");
+});
+
+test("una orden coordinada muestra PAGO A COORDINAR sin confirmarla", async () => {
+  const { repository } = setup();
+  const order = (await repository.createOrder(input())).order;
+  order.paymentMethod = "whatsapp_coordination";
+  const presentation = getOrderStatusPresentation(repository.toPublicStatus(order));
+  assert.equal(presentation.heading, "PAGO A COORDINAR.");
+  assert.equal(order.orderStatus, "pending_payment");
+  assert.equal(order.paymentStatus, "pending");
 });
 
 test("preference retry reutiliza la orden y vuelve a intentar", async () => {

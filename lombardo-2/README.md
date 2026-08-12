@@ -35,7 +35,7 @@ pnpm build
 Copiar `.env.example` a `.env.local` cuando sea necesario.
 
 - `NEXT_PUBLIC_SITE_URL`: URL canónica del sitio.
-- `NEXT_PUBLIC_WHATSAPP_URL`: enlace completo de WhatsApp. Permanece vacío hasta confirmar el número oficial.
+- `NEXT_PUBLIC_WHATSAPP_URL`: enlace completo del WhatsApp oficial usado para coordinar pedidos.
 - `NEXT_PUBLIC_PICKUP_ADDRESS`: dirección configurable del retiro.
 - `NEXT_PUBLIC_PICKUP_HOURS`: horario configurable del retiro.
 - `NEXT_PUBLIC_DELIVERY_COST_MODE`: `FREE`, `FLAT_RATE` o `TO_BE_CONFIRMED`.
@@ -70,3 +70,11 @@ Checkout Pro se habilita únicamente con `PAYMENTS_ENABLED=true`, credenciales T
 una `APP_URL` HTTPS pública. La guía completa está en `docs/sandbox-payments.md`.
 Antes de una prueba real, `pnpm sandbox:check` debe terminar con
 `SANDBOX INFRA READY: YES`.
+
+La modalidad de pago se persiste como un adaptador genérico: `mercado_pago` o
+`whatsapp_coordination`. Mercado Pago sigue siendo la opción principal cuando está
+habilitado. Si no está disponible, o si el cliente lo elige, la orden permanece en
+`pending_payment` / `pending` y se prepara un mensaje al WhatsApp oficial con el
+resumen autoritativo del pedido. Abrir WhatsApp no borra el carrito: sólo lo hace la
+acción explícita `YA ENVIÉ EL MENSAJE. FINALIZAR PEDIDO`; esa acción tampoco confirma
+ni marca como pagada la orden.

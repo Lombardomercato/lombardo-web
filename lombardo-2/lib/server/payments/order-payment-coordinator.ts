@@ -37,6 +37,9 @@ export class OrderPaymentCoordinator {
       publicId: result.order.publicId,
       reused: result.reused,
     });
+    if (result.order.paymentMethod === "whatsapp_coordination") {
+      return { ...result, payment: null };
+    }
     const existingPayment = this.existingPayment(result.order);
     if (existingPayment) {
       logDevCommerce("payment.preference_reused", {
@@ -45,6 +48,18 @@ export class OrderPaymentCoordinator {
         preferenceId: existingPayment.preferenceId,
       });
       return { ...result, payment: existingPayment };
+    }
+    if (!this.paymentGateway) {
+      const order = await this.orders.savePaymentMethod(
+        result.order.id,
+        "whatsapp_coordination",
+      );
+      logDevCommerce("payment.whatsapp_coordination_selected", {
+        orderId: order.id,
+        publicId: order.publicId,
+        reason: "payment_gateway_disabled",
+      });
+      return { order, reused: result.reused, payment: null };
     }
     if (result.order.deliveryCostMode === "TO_BE_CONFIRMED") {
       return {
@@ -56,17 +71,6 @@ export class OrderPaymentCoordinator {
         },
       };
     }
-    if (!this.paymentGateway) {
-      return {
-        ...result,
-        payment: null,
-        paymentError: {
-          code: "PAYMENT_NOT_CONFIGURED",
-          message: "Mercado Pago TEST todavía no está configurado.",
-        },
-      };
-    }
-
     try {
       const payment = await this.paymentGateway.createPreference(result.order);
       const order = await this.orders.savePaymentPreference(

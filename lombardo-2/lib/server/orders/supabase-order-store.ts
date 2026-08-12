@@ -7,6 +7,7 @@ import type {
   OrderDraft,
   OrderItemSnapshot,
   OrderStatus,
+  PaymentMethod,
   PaymentStatus,
 } from "../../../types/checkout.ts";
 import type {
@@ -40,6 +41,7 @@ interface OrderRow {
   delivery_cost_mode: DeliveryCostMode;
   order_status: OrderStatus;
   payment_status: PaymentStatus;
+  payment_method: PaymentMethod;
   checkout_session_id: string;
   idempotency_key: string;
   payment_preference_id: string | null;
@@ -70,6 +72,7 @@ function mapOrder(row: OrderRow): OrderDraft {
     deliveryCostMode: row.delivery_cost_mode,
     orderStatus: row.order_status,
     paymentStatus: row.payment_status,
+    paymentMethod: row.payment_method,
     checkoutSessionId: row.checkout_session_id,
     idempotencyKey: row.idempotency_key,
     paymentPreferenceId: row.payment_preference_id ?? undefined,
@@ -178,6 +181,7 @@ export class SupabaseOrderStore implements RuniaOrderStore {
         delivery_cost_mode: record.deliveryCostMode,
         order_status: record.orderStatus,
         payment_status: record.paymentStatus,
+        payment_method: record.paymentMethod,
         checkout_session_id: record.checkoutSessionId,
         idempotency_key: record.idempotencyKey,
       }),
@@ -254,6 +258,38 @@ export class SupabaseOrderStore implements RuniaOrderStore {
       throw new ServerOrderError("ORDER_NOT_FOUND", "No encontramos el pedido.", {
         status: 404,
       });
+    }
+    return mapOrder(rows[0]);
+  }
+
+  async savePaymentMethod(
+    tenantId: string,
+    orderId: string,
+    paymentMethod: PaymentMethod,
+  ) {
+    const response = await this.request(
+      this.ordersPath({
+        tenant_id: `eq.${tenantId}`,
+        id: `eq.${orderId}`,
+        order_status: "eq.pending_payment",
+        payment_status: "eq.pending",
+      }),
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ payment_method: paymentMethod }),
+      },
+    );
+    if (!response.ok) {
+      return this.readFailure(response, "No pudimos guardar la modalidad de pago.");
+    }
+    const rows = (await response.json()) as OrderRow[];
+    if (!rows[0]) {
+      throw new ServerOrderError(
+        "INVALID_REQUEST",
+        "El pedido ya no admite cambios en la modalidad de pago.",
+        { status: 409 },
+      );
     }
     return mapOrder(rows[0]);
   }

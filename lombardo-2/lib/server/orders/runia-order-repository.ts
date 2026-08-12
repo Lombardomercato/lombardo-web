@@ -3,6 +3,7 @@ import type {
   CreateOrderInput,
   OrderDraft,
   OrderItemSnapshot,
+  PaymentMethod,
   PriceChange,
   PublicOrderStatus,
 } from "../../../types/checkout.ts";
@@ -150,6 +151,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       currency: "ARS",
       orderStatus: "pending_payment",
       paymentStatus: "pending",
+      paymentMethod: "mercado_pago",
     });
   }
 
@@ -174,12 +176,17 @@ export class RuniaOrderRepository implements ServerOrderRepository {
     );
   }
 
+  savePaymentMethod(orderId: string, paymentMethod: PaymentMethod) {
+    return this.store.savePaymentMethod(this.tenantId, orderId, paymentMethod);
+  }
+
   toPublicStatus(order: OrderDraft): PublicOrderStatus {
     return {
       publicId: order.publicId,
       displayId: order.publicId.slice(0, 8).toUpperCase(),
       orderStatus: order.orderStatus,
       paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
       deliveryMethod: order.deliveryMethod,
       deliveryCostMode: order.deliveryCostMode,
       total: order.total,

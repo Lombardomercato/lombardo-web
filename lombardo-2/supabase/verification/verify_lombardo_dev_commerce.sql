@@ -47,6 +47,13 @@ begin
   end if;
   if not exists (
     select 1 from pg_constraint
+    where conrelid = 'public.commerce_orders'::regclass
+      and conname = 'commerce_orders_payment_method_check' and contype = 'c'
+  ) then
+    raise exception 'generic payment method constraint missing';
+  end if;
+  if not exists (
+    select 1 from pg_constraint
     where conrelid = 'public.commerce_payment_events'::regclass
       and conname = 'commerce_payment_events_idempotency_key' and contype = 'u'
   ) then

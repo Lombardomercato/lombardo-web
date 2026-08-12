@@ -87,6 +87,22 @@ o una configuración de branch aislada cuyo Root Directory sea `lombardo-2`.
 9. Abrir `/pedido/[publicId]`: debe mostrar pago confirmado.
 10. Verificar que el carrito se limpia sólo después de leer el estado aprobado desde Runia.
 
+## Fallback temporal por coordinación
+
+Si Checkout Pro TEST no puede crear el pago, el pedido persistido ofrece
+`COORDINAR PAGO POR WHATSAPP`. La selección guarda el adaptador genérico
+`whatsapp_coordination`, conserva `order_status=pending_payment` y
+`payment_status=pending`, y arma el mensaje desde el snapshot autoritativo. No simula
+un pago ni modifica el adapter de Mercado Pago.
+
+Abrir o enviar el mensaje no limpia el carrito. La política temporal exige volver al
+checkout y pulsar explícitamente `YA ENVIÉ EL MENSAJE. FINALIZAR PEDIDO`; sólo esa
+acción local limpia el carrito y abre `/pedido/[publicId]`. La orden continúa pendiente
+hasta que exista un mecanismo real y verificable de confirmación del pago.
+
+La evidencia para escalar el bloqueo externo está en
+`docs/mercado-pago-support-report.md`.
+
 Mercado Pago recomienda la compra en incógnito y un comprador TEST separado. Consultar
 siempre sus [tarjetas y escenarios vigentes](https://www.mercadopago.com.ar/developers/es/docs/checkout-pro/integration-test/test-purchases)
 y la [cuenta comprador TEST](https://www.mercadopago.com.ar/developers/es/docs/checkout-pro/integration-test).
@@ -109,6 +125,7 @@ Los logs JSON usan `scope=lombardo-commerce-dev` y sólo contienen identificador
 
 - `order.created` / `order.reused`;
 - `payment.preference_created` / `reused` / `failed`;
+- `payment.whatsapp_coordination_selected` cuando el gateway está deshabilitado;
 - `webhook.received` / `webhook.duplicate`;
 - `payment.transition` con estados anterior y nuevo.
 

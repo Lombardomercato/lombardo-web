@@ -12,14 +12,21 @@ import styles from "./OrderStatusPage.module.css";
 export function OrderStatusPage({
   order,
   returnHint,
+  whatsappUrl,
 }: {
   order: PublicOrderStatus;
   returnHint?: ReturnHint;
+  whatsappUrl?: string;
 }) {
   const presentation = getOrderStatusPresentation(order, returnHint);
   const paymentCanRetry =
     order.paymentCheckoutUrl &&
+    order.paymentMethod === "mercado_pago" &&
     ["pending", "rejected", "cancelled"].includes(order.paymentStatus);
+  const coordinatingByWhatsApp =
+    order.paymentMethod === "whatsapp_coordination" &&
+    order.orderStatus === "pending_payment" &&
+    order.paymentStatus === "pending";
 
   return (
     <main className={styles.page} data-tone={presentation.tone}>
@@ -38,14 +45,23 @@ export function OrderStatusPage({
         <section>
           <h2>{presentation.message}</h2>
           <p>
-            La página de regreso no cambia el estado del pedido. La confirmación
-            proviene únicamente de la verificación segura con Mercado Pago.
+            {coordinatingByWhatsApp
+              ? "Recibir el pedido no confirma el pago. Lombardo te indicará por WhatsApp cómo continuar."
+              : "La página de regreso no cambia el estado del pedido. La confirmación proviene únicamente de la verificación segura con Mercado Pago."}
           </p>
           <div className={styles.actions}>
             {paymentCanRetry ? (
               <a href={order.paymentCheckoutUrl}>VOLVER A MERCADO PAGO →</a>
             ) : null}
-            {order.paymentStatus === "pending" ? <RefreshOrderStatus /> : null}
+            {coordinatingByWhatsApp && whatsappUrl ? (
+              <a href={whatsappUrl} target="_blank" rel="noreferrer">
+                ABRIR WHATSAPP →
+              </a>
+            ) : null}
+            {order.paymentMethod === "mercado_pago" &&
+            order.paymentStatus === "pending" ? (
+              <RefreshOrderStatus />
+            ) : null}
             <Link href="/productos">VOLVER AL CATÁLOGO</Link>
           </div>
         </section>
@@ -60,6 +76,14 @@ export function OrderStatusPage({
             <div>
               <dt>PAGO</dt>
               <dd>{order.paymentStatus}</dd>
+            </div>
+            <div>
+              <dt>MODALIDAD</dt>
+              <dd>
+                {order.paymentMethod === "whatsapp_coordination"
+                  ? "A coordinar"
+                  : "Mercado Pago"}
+              </dd>
             </div>
             <div>
               <dt>TOTAL</dt>

@@ -404,6 +404,28 @@
   letter-spacing: 0.08em;
 }
 
+.preparedSummary > .whatsappAction {
+  border: 1px solid rgba(255, 253, 249, 0.55);
+  background: transparent;
+  color: var(--neutral-paper);
+}
+
+.preparedSummary > .finalizeCoordination {
+  min-height: 4rem;
+  border: 1px solid var(--lombardo-pink);
+  background: var(--lombardo-pink);
+  color: var(--lombardo-blue);
+  font-size: 0.65rem;
+}
+
+.coordinationError {
+  margin-top: 0.9rem;
+  color: var(--lombardo-pink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .loadingPage,
 .emptyPage {
   min-height: 100svh;

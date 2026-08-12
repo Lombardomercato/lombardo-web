@@ -3,6 +3,7 @@ import type {
   CreateOrderResult,
   OrderRepositoryErrorPayload,
   PublicOrderStatus,
+  WhatsAppCoordinationResult,
 } from "@/types/checkout";
 import {
   OrderRepositoryError,
@@ -48,5 +49,19 @@ export class ApiOrderRepository implements OrderRepository {
       throw new OrderRepositoryError(error.code, error.message);
     }
     return (await response.json()) as PublicOrderStatus;
+  }
+
+  async coordinatePaymentByWhatsApp(
+    publicId: string,
+  ): Promise<WhatsAppCoordinationResult> {
+    const response = await fetch(
+      `/api/orders/${encodeURIComponent(publicId)}/whatsapp-coordination`,
+      { method: "POST" },
+    );
+    if (!response.ok) {
+      const error = await readError(response);
+      throw new OrderRepositoryError(error.code, error.message);
+    }
+    return (await response.json()) as WhatsAppCoordinationResult;
   }
 }

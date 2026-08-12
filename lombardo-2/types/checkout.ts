@@ -9,6 +9,7 @@ export type PaymentStatus =
   | "rejected"
   | "cancelled"
   | "refunded";
+export type PaymentMethod = "mercado_pago" | "whatsapp_coordination";
 export type OrderCurrency = "ARS";
 
 export interface CheckoutCustomer {
@@ -87,6 +88,7 @@ export interface OrderDraft extends CheckoutDraft {
   publicId: string;
   orderStatus: OrderStatus;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   paymentPreferenceId?: string;
   paymentCheckoutUrl?: string;
   paymentProviderId?: string;
@@ -114,6 +116,7 @@ export interface PublicOrderStatus {
   displayId: string;
   orderStatus: OrderStatus;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   deliveryMethod: DeliveryMethod;
   deliveryCostMode: DeliveryCostMode;
   total: number;
@@ -121,6 +124,11 @@ export interface PublicOrderStatus {
   paymentCheckoutUrl?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WhatsAppCoordinationResult {
+  order: OrderDraft;
+  whatsappUrl: string;
 }
 
 export interface PriceChange {

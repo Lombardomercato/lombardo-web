@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { OrderStatusPage } from "@/components/order/OrderStatusPage";
+import { buildWhatsAppCoordinationUrl } from "@/lib/checkout/whatsapp-coordination";
 import type { ReturnHint } from "@/lib/order-status/presentation";
 import { createOrderServices } from "@/lib/server/services";
 
@@ -28,10 +29,18 @@ export default async function OrderPage({
   const returnHint = ["success", "pending", "failure"].includes(query.return ?? "")
     ? (query.return as ReturnHint)
     : undefined;
+  const whatsappUrl =
+    order.paymentMethod === "whatsapp_coordination"
+      ? buildWhatsAppCoordinationUrl(
+          order,
+          process.env.NEXT_PUBLIC_WHATSAPP_URL,
+        ) ?? undefined
+      : undefined;
   return (
     <OrderStatusPage
       order={orders.toPublicStatus(order)}
       returnHint={returnHint}
+      whatsappUrl={whatsappUrl}
     />
   );
 }

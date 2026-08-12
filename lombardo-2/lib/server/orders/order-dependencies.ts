@@ -4,6 +4,7 @@ import type {
   DeliveryMethod,
   DeliveryQuote,
   OrderDraft,
+  PaymentMethod,
   PaymentStatus,
   PublicOrderStatus,
   OrderStatus,
@@ -22,6 +23,7 @@ export interface NewOrderRecord extends CheckoutDraft {
   publicId: string;
   orderStatus: "pending_payment";
   paymentStatus: "pending";
+  paymentMethod: PaymentMethod;
 }
 
 export interface AtomicInsertResult {
@@ -64,6 +66,11 @@ export interface RuniaOrderStore {
     preferenceId: string,
     checkoutUrl: string,
   ): Promise<OrderDraft>;
+  savePaymentMethod(
+    tenantId: string,
+    orderId: string,
+    paymentMethod: PaymentMethod,
+  ): Promise<OrderDraft>;
   applyPaymentEventAtomic(
     input: PaymentEventInput,
     update: PaymentStateUpdate,
@@ -78,6 +85,10 @@ export interface ServerOrderRepository {
     orderId: string,
     preferenceId: string,
     checkoutUrl: string,
+  ): Promise<OrderDraft>;
+  savePaymentMethod(
+    orderId: string,
+    paymentMethod: PaymentMethod,
   ): Promise<OrderDraft>;
   toPublicStatus(order: OrderDraft): PublicOrderStatus;
 }

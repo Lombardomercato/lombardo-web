@@ -4,6 +4,7 @@ type DevCommerceEvent =
   | "payment.preference_created"
   | "payment.preference_reused"
   | "payment.preference_failed"
+  | "payment.whatsapp_coordination_selected"
   | "webhook.received"
   | "webhook.duplicate"
   | "payment.transition";
@@ -20,6 +21,7 @@ interface DevCommerceFields {
   toOrderStatus?: string;
   reused?: boolean;
   duplicate?: boolean;
+  reason?: string;
 }
 
 type EnvironmentSource = Record<string, string | undefined>;

@@ -19,6 +19,7 @@ create table if not exists public.commerce_orders (
   delivery_cost_mode text not null,
   order_status text not null default 'pending_payment',
   payment_status text not null default 'pending',
+  payment_method text not null default 'mercado_pago',
   checkout_session_id text not null,
   idempotency_key text not null,
   payment_preference_id text,
@@ -45,6 +46,9 @@ create table if not exists public.commerce_orders (
   constraint commerce_orders_payment_status_check check (
     payment_status in ('pending', 'approved', 'rejected', 'cancelled', 'refunded')
   ),
+  constraint commerce_orders_payment_method_check check (
+    payment_method in ('mercado_pago', 'whatsapp_coordination')
+  ),
   constraint commerce_orders_items_check check (
     jsonb_typeof(items) = 'array' and jsonb_array_length(items) between 1 and 50
   ),
@@ -55,6 +59,26 @@ create table if not exists public.commerce_orders (
     (delivery_method = 'DELIVERY' and jsonb_typeof(delivery_address) = 'object')
   )
 );
+
+-- Idempotent upgrade for TEST databases created before payment_method existed.
+alter table public.commerce_orders
+  add column if not exists payment_method text not null default 'mercado_pago';
+
+do $migration$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.commerce_orders'::regclass
+      and conname = 'commerce_orders_payment_method_check'
+  ) then
+    alter table public.commerce_orders
+      add constraint commerce_orders_payment_method_check check (
+        payment_method in ('mercado_pago', 'whatsapp_coordination')
+      );
+  end if;
+end;
+$migration$;
 
 create index if not exists commerce_orders_tenant_status_created_idx
   on public.commerce_orders (tenant_id, order_status, created_at desc);
@@ -220,5 +244,7 @@ grant usage, select on sequence public.commerce_payment_events_id_seq to service
 
 comment on table public.commerce_orders is
   'Server-only Lombardo order snapshots. Never trust browser totals.';
+comment on column public.commerce_orders.payment_method is
+  'Selected payment adapter. Coordination never implies payment approval.';
 comment on table public.commerce_payment_events is
   'Idempotency and audit trail for verified Mercado Pago webhooks.';

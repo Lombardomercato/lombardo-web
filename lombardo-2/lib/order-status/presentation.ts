@@ -37,6 +37,15 @@ export function getOrderStatusPresentation(
       tone: "problem",
     };
   }
+  if (order.paymentMethod === "whatsapp_coordination") {
+    return {
+      kicker: "PEDIDO RECIBIDO.",
+      heading: "PAGO A COORDINAR.",
+      message:
+        "Tu pedido quedó guardado. Escribinos por WhatsApp para coordinar el pago.",
+      tone: "pending",
+    };
+  }
   return {
     kicker: returnHint === "success" ? "VOLVISTE DE MERCADO PAGO." : "EN PROCESO.",
     heading: "PAGO PENDIENTE.",

@@ -4,11 +4,15 @@ import type {
   OrderRepositoryErrorCode,
   PriceChange,
   PublicOrderStatus,
+  WhatsAppCoordinationResult,
 } from "@/types/checkout";
 
 export interface OrderRepository {
   createOrder(input: CreateOrderInput): Promise<CreateOrderResult>;
   getOrderByPublicId(publicId: string): Promise<PublicOrderStatus | null>;
+  coordinatePaymentByWhatsApp(
+    publicId: string,
+  ): Promise<WhatsAppCoordinationResult>;
 }
 
 export class OrderRepositoryError extends Error {

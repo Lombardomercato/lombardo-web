@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
@@ -57,6 +58,9 @@ interface CheckoutState {
   order: OrderDraft | null;
   paymentError: CreateOrderResult["paymentError"] | null;
   retryingPayment: boolean;
+  coordinatingWhatsApp: boolean;
+  whatsappUrl: string;
+  coordinationError: string;
 }
 
 type CheckoutAction =
@@ -75,6 +79,9 @@ type CheckoutAction =
   | { type: "validation-error"; errors: CheckoutErrors }
   | { type: "submitting" }
   | { type: "retrying-payment" }
+  | { type: "coordinating-whatsapp" }
+  | { type: "whatsapp-ready"; order: OrderDraft; whatsappUrl: string }
+  | { type: "whatsapp-error"; message: string }
   | { type: "repository-error"; message: string }
   | { type: "payment-retry-error"; message: string }
   | {
@@ -93,6 +100,9 @@ const initialState: CheckoutState = {
   order: null,
   paymentError: null,
   retryingPayment: false,
+  coordinatingWhatsApp: false,
+  whatsappUrl: "",
+  coordinationError: "",
 };
 
 const cloneEmptyForm = (): CheckoutFormValues => ({
@@ -179,11 +189,36 @@ function checkoutReducer(
         repositoryError: "",
         announcement: "Volviendo a preparar Mercado Pago.",
       };
+    case "coordinating-whatsapp":
+      return {
+        ...state,
+        coordinatingWhatsApp: true,
+        coordinationError: "",
+        announcement: "Preparando el mensaje para coordinar el pago.",
+      };
+    case "whatsapp-ready":
+      return {
+        ...state,
+        order: action.order,
+        coordinatingWhatsApp: false,
+        whatsappUrl: action.whatsappUrl,
+        coordinationError: "",
+        announcement: "Pedido recibido. El pago quedó pendiente de coordinación.",
+      };
+    case "whatsapp-error":
+      return {
+        ...state,
+        coordinatingWhatsApp: false,
+        coordinationError: action.message,
+        announcement: action.message,
+      };
     case "repository-error":
       return {
         ...state,
         phase: "editing",
         retryingPayment: false,
+        coordinatingWhatsApp: false,
+        coordinationError: "",
         repositoryError: action.message,
         announcement: action.message,
       };
@@ -290,18 +325,29 @@ function OrderPrepared({
   order,
   paymentError,
   retryingPayment,
+  coordinatingWhatsApp,
+  whatsappUrl,
+  coordinationError,
   onRetryPayment,
+  onCoordinateWhatsApp,
+  onFinalizeWhatsApp,
 }: {
   order: OrderDraft;
   paymentError: CreateOrderResult["paymentError"] | null;
   retryingPayment: boolean;
+  coordinatingWhatsApp: boolean;
+  whatsappUrl: string;
+  coordinationError: string;
   onRetryPayment: () => void;
+  onCoordinateWhatsApp: () => void;
+  onFinalizeWhatsApp: () => void;
 }) {
   const deliveryLabel =
     order.deliveryMethod === "PICKUP"
       ? "Retiro en Lombardo"
       : "Envío en Rosario";
   const deliveryPending = order.deliveryCostMode === "TO_BE_CONFIRMED";
+  const whatsappSelected = order.paymentMethod === "whatsapp_coordination";
 
   return (
     <main className={styles.preparedPage}>
@@ -310,8 +356,8 @@ function OrderPrepared({
         <span>ARS</span>
       </div>
       <div className={styles.preparedHeading}>
-        <p>LISTO DE ESTE LADO.</p>
-        <h1>PEDIDO PREPARADO.</h1>
+        <p>{whatsappSelected ? "PEDIDO RECIBIDO." : "LISTO DE ESTE LADO."}</p>
+        <h1>{whatsappSelected ? "PAGO A COORDINAR." : "PEDIDO PREPARADO."}</h1>
       </div>
       <div className={styles.preparedLayout}>
         <section aria-labelledby="prepared-next-step">
@@ -319,11 +365,13 @@ function OrderPrepared({
             #{order.publicId.slice(0, 8).toUpperCase()}
           </span>
           <h2 id="prepared-next-step">
-            El próximo paso será realizar el pago.
+            {whatsappSelected
+              ? "Escribinos para coordinar cómo pagar."
+              : "El próximo paso será realizar el pago."}
           </h2>
           <p>
             El pedido quedó guardado como pendiente de pago. Todavía no se realizó
-            ningún cobro.
+            ningún cobro ni quedó confirmado.
           </p>
           {deliveryPending ? (
             <p className={styles.deliveryPending}>
@@ -350,11 +398,11 @@ function OrderPrepared({
             <span>TOTAL{deliveryPending ? " PROVISORIO" : ""}</span>
             <strong>{formatCurrency(order.total)}</strong>
           </div>
-          {order.paymentCheckoutUrl ? (
+          {!whatsappSelected && order.paymentCheckoutUrl ? (
             <a href={order.paymentCheckoutUrl} aria-describedby="payment-ready-note">
               CONTINUAR AL PAGO <span aria-hidden="true">→</span>
             </a>
-          ) : (
+          ) : !whatsappSelected ? (
             <button
               type="button"
               disabled={
@@ -366,16 +414,58 @@ function OrderPrepared({
               {retryingPayment ? "REINTENTANDO…" : "CONTINUAR AL PAGO"}
               <span aria-hidden="true">→</span>
             </button>
-          )}
-          {order.paymentCheckoutUrl ? (
+          ) : null}
+          {!whatsappSelected && order.paymentCheckoutUrl ? (
             <p id="payment-ready-note" className={styles.paymentNote}>
               Vas a continuar en Mercado Pago TEST.
             </p>
           ) : null}
-          {!order.paymentCheckoutUrl ? (
+          {!whatsappSelected && !order.paymentCheckoutUrl ? (
             <p id="payment-disabled-note" className={styles.paymentNote}>
               {paymentError?.message ?? "El pago todavía no está disponible."}
             </p>
+          ) : null}
+          {whatsappSelected && whatsappUrl ? (
+            <a
+              className={styles.whatsappAction}
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              ABRIR WHATSAPP <span aria-hidden="true">→</span>
+            </a>
+          ) : (
+            <button
+              className={styles.whatsappAction}
+              type="button"
+              disabled={coordinatingWhatsApp}
+              onClick={onCoordinateWhatsApp}
+            >
+              {coordinatingWhatsApp
+                ? "PREPARANDO WHATSAPP…"
+                : "COORDINAR PAGO POR WHATSAPP"}
+              <span aria-hidden="true">→</span>
+            </button>
+          )}
+          <p className={styles.paymentNote}>
+            {whatsappSelected
+              ? "El pedido fue recibido. El pago sigue pendiente hasta que lo coordinemos."
+              : "También podés dejar Mercado Pago y coordinar el pago con Lombardo."}
+          </p>
+          {coordinationError ? (
+            <p className={styles.coordinationError} role="alert">
+              {coordinationError}
+            </p>
+          ) : null}
+          {whatsappSelected ? (
+            <button
+              className={styles.finalizeCoordination}
+              type="button"
+              onClick={onFinalizeWhatsApp}
+            >
+              YA ENVIÉ EL MENSAJE. FINALIZAR PEDIDO
+              <span aria-hidden="true">→</span>
+            </button>
           ) : null}
           <Link className={styles.statusLink} href={`/pedido/${order.publicId}`}>
             VER ESTADO DEL PEDIDO →
@@ -394,7 +484,8 @@ function getCartSignature(items: ReturnType<typeof useCart>["items"]) {
 }
 
 export function CheckoutPage() {
-  const { items, isHydrated, syncPrices, getSubtotal, getItemCount } = useCart();
+  const { items, isHydrated, syncPrices, clearCart, getSubtotal, getItemCount } = useCart();
+  const router = useRouter();
   const [state, dispatch] = useReducer(checkoutReducer, initialState);
   const repository = useMemo(() => new ApiOrderRepository(), []);
   const sessionRef = useRef<StoredCheckoutSession | null>(null);
@@ -428,6 +519,7 @@ export function CheckoutPage() {
                 ...stored.order,
                 orderStatus: publicStatus.orderStatus,
                 paymentStatus: publicStatus.paymentStatus,
+                paymentMethod: publicStatus.paymentMethod,
                 paymentCheckoutUrl: publicStatus.paymentCheckoutUrl,
                 updatedAt: publicStatus.updatedAt,
               }
@@ -636,6 +728,46 @@ export function CheckoutPage() {
     );
   };
 
+  const coordinateWhatsApp = async () => {
+    if (!state.order || state.coordinatingWhatsApp) return;
+    dispatch({ type: "coordinating-whatsapp" });
+    try {
+      const result = await repository.coordinatePaymentByWhatsApp(
+        state.order.publicId,
+      );
+      const session = sessionRef.current;
+      if (session) {
+        const completedSession = { ...session, order: result.order };
+        sessionRef.current = completedSession;
+        writeCheckoutSession(completedSession);
+      }
+      dispatch({
+        type: "whatsapp-ready",
+        order: result.order,
+        whatsappUrl: result.whatsappUrl,
+      });
+      window.location.assign(result.whatsappUrl);
+    } catch (error) {
+      dispatch({
+        type: "whatsapp-error",
+        message:
+          error instanceof OrderRepositoryError
+            ? error.message
+            : "No pudimos preparar WhatsApp. Probá nuevamente en unos minutos.",
+      });
+    }
+  };
+
+  const finalizeWhatsAppOrder = () => {
+    if (!state.order || state.order.paymentMethod !== "whatsapp_coordination") {
+      return;
+    }
+    clearCart();
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    sessionRef.current = null;
+    router.push(`/pedido/${state.order.publicId}`);
+  };
+
   if (!isHydrated || state.phase === "loading") {
     return (
       <main className={styles.loadingPage}>
@@ -650,7 +782,12 @@ export function CheckoutPage() {
         order={state.order}
         paymentError={state.paymentError}
         retryingPayment={state.retryingPayment}
+        coordinatingWhatsApp={state.coordinatingWhatsApp}
+        whatsappUrl={state.whatsappUrl}
+        coordinationError={state.coordinationError}
         onRetryPayment={retryPayment}
+        onCoordinateWhatsApp={() => void coordinateWhatsApp()}
+        onFinalizeWhatsApp={finalizeWhatsAppOrder}
       />
     );
   }
