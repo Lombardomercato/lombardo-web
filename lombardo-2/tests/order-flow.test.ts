@@ -548,7 +548,7 @@ test("firma de webhook válida usa HMAC y tolerancia temporal", () => {
 const runiaDevEnvironment = {
   RUNIA_ENVIRONMENT: "development",
   RUNIA_TENANT_SLUG: "lombardo-dev",
-  RUNIA_SUPABASE_URL: "https://runia-dev.supabase.co",
+  RUNIA_SUPABASE_URL: "https://rtnzzfzofeqmtdmbchbw.supabase.co",
   RUNIA_SUPABASE_SECRET_KEY: "sb_secret_12345678901234567890",
   VERCEL_ENV: "preview",
 };
@@ -570,11 +570,24 @@ test("Production acepta únicamente una configuración Runia Production server-o
     ...runiaDevEnvironment,
     RUNIA_ENVIRONMENT: "production",
     RUNIA_TENANT_SLUG: "lombardo-production",
-    RUNIA_SUPABASE_URL: "https://runia-production.supabase.co",
+    RUNIA_SUPABASE_URL: "https://ymowgnjusqzkqjpwokib.supabase.co",
     VERCEL_ENV: "production",
   });
   assert.equal(configuration.environment, "production");
   assert.equal(configuration.tenantSlug, "lombardo-production");
+});
+
+test("Production rechaza el project ref de Runia Dev aunque el flag diga production", () => {
+  assert.throws(
+    () =>
+      readRuniaConfiguration({
+        ...runiaDevEnvironment,
+        RUNIA_ENVIRONMENT: "production",
+        VERCEL_ENV: "production",
+      }),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "SERVER_NOT_CONFIGURED",
+  );
 });
 
 test("Preview rechaza credenciales de Runia Production", () => {

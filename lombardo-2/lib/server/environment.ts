@@ -3,6 +3,11 @@ import { ServerOrderError } from "./orders/server-order-error.ts";
 
 type EnvironmentSource = Record<string, string | undefined>;
 
+const RUNIA_PROJECT_REFS = {
+  development: "rtnzzfzofeqmtdmbchbw",
+  production: "ymowgnjusqzkqjpwokib",
+} as const;
+
 export interface RuniaConfiguration {
   environment: "development" | "production";
   tenantSlug: string;
@@ -31,6 +36,15 @@ function isHttpsUrl(value: string) {
     return new URL(value).protocol === "https:";
   } catch {
     return false;
+  }
+}
+
+function getSupabaseProjectRef(value: string) {
+  try {
+    const [projectRef, ...domain] = new URL(value).hostname.split(".");
+    return domain.join(".") === "supabase.co" ? projectRef : null;
+  } catch {
+    return null;
   }
 }
 
@@ -85,6 +99,11 @@ export function readRuniaConfiguration(
   const url = requiredEnvironment(env, "RUNIA_SUPABASE_URL").replace(/\/$/, "");
   if (!isHttpsUrl(url)) {
     configurationError("RUNIA_SUPABASE_URL debe ser una URL HTTPS.");
+  }
+  if (getSupabaseProjectRef(url) !== RUNIA_PROJECT_REFS[environment]) {
+    configurationError(
+      `RUNIA_SUPABASE_URL no corresponde al proyecto Runia ${environment}.`,
+    );
   }
 
   const secretKey = requiredEnvironment(env, "RUNIA_SUPABASE_SECRET_KEY");
