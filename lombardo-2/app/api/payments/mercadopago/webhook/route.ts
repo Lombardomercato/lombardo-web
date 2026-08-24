@@ -11,6 +11,7 @@ import { readJsonBody } from "@/lib/server/request-body";
 import {
   createOrderServices,
   getWebhookSecret,
+  paymentUsesLiveMode,
   requirePaymentGateway,
 } from "@/lib/server/services";
 
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
       orders: services.orders,
       store: services.store,
       paymentGateway: requirePaymentGateway(),
-      testMode: true,
+      expectedLiveMode: paymentUsesLiveMode(),
     });
     const result = await webhook.process({ eventId, paymentId, payload });
     return noStoreJson(

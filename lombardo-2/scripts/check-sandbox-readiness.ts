@@ -16,11 +16,8 @@ let runiaConfiguration: ReturnType<typeof readRuniaConfiguration> | null = null;
 
 try {
   runiaConfiguration = readRuniaConfiguration();
-  if (runiaConfiguration.environment !== "development") {
-    throw new Error("El chequeo Sandbox sólo admite Runia Dev.");
-  }
   checks.push({
-    name: "Runia Dev",
+    name: `Runia ${runiaConfiguration.environment}`,
     ready: true,
     detail: "entorno, tenant, URL y secreto server-only válidos",
   });
@@ -33,7 +30,7 @@ try {
   ];
   const missing = requiredRuniaVariables.filter((name) => !process.env[name]?.trim());
   checks.push({
-    name: "Runia Dev",
+    name: "Runia",
     ready: false,
     detail: missing.length
       ? `faltan: ${missing.join(", ")}`
@@ -69,15 +66,15 @@ if (runiaConfiguration) {
     });
     const validCount = page.total >= 1 && page.products.length === 1;
     checks.push({
-      name: "Catálogo Runia Dev",
+      name: `Catálogo Runia ${runiaConfiguration.environment}`,
       ready: validCount,
       detail: validCount
         ? `${page.total} producto(s) SAFE de VINROS visibles`
-        : "Runia Dev no devolvió productos SAFE de VINROS",
+        : "Runia no devolvió productos SAFE de VINROS",
     });
   } catch {
     checks.push({
-      name: "Catálogo Runia Dev",
+      name: `Catálogo Runia ${runiaConfiguration.environment}`,
       ready: false,
       detail: "verificar supplier_products SAFE y precios retail de VINROS",
     });
@@ -89,7 +86,7 @@ if (runiaConfiguration) {
     detail: "no verificable hasta configurar Runia Dev",
   });
   checks.push({
-    name: "Catálogo Runia Dev",
+    name: "Catálogo Runia",
     ready: false,
     detail: "no verificable hasta configurar Runia Dev",
   });
@@ -105,6 +102,7 @@ try {
 } catch (error) {
   const requiredPaymentVariables = [
     "APP_URL",
+    "MERCADO_PAGO_SELLER_ID",
     "MERCADO_PAGO_ACCESS_TOKEN",
     "MERCADO_PAGO_WEBHOOK_SECRET",
   ];

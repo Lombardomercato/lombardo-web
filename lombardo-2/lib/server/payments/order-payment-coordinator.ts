@@ -84,10 +84,18 @@ export class OrderPaymentCoordinator {
         preferenceId: payment.preferenceId,
       });
       return { order, reused: result.reused, payment };
-    } catch {
+    } catch (error) {
+      const knownError = error instanceof Error ? error : null;
       logDevCommerce("payment.preference_failed", {
         orderId: result.order.id,
         publicId: result.order.publicId,
+        errorName: knownError?.name ?? "UnknownError",
+        status:
+          knownError &&
+          "status" in knownError &&
+          typeof knownError.status === "number"
+            ? knownError.status
+            : 502,
       });
       return {
         ...result,

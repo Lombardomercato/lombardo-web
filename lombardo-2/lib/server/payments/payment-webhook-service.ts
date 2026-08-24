@@ -13,7 +13,7 @@ interface PaymentWebhookServiceOptions {
   orders: ServerOrderRepository;
   store: RuniaOrderStore;
   paymentGateway: PaymentGateway;
-  testMode?: boolean;
+  expectedLiveMode?: boolean;
 }
 
 export interface ProcessPaymentWebhookInput {
@@ -32,24 +32,26 @@ export class PaymentWebhookService {
   private readonly orders: ServerOrderRepository;
   private readonly store: RuniaOrderStore;
   private readonly paymentGateway: PaymentGateway;
-  private readonly testMode: boolean;
+  private readonly expectedLiveMode: boolean;
 
   constructor(options: PaymentWebhookServiceOptions) {
     this.tenantId = options.tenantId;
     this.orders = options.orders;
     this.store = options.store;
     this.paymentGateway = options.paymentGateway;
-    this.testMode = options.testMode ?? true;
+    this.expectedLiveMode = options.expectedLiveMode ?? false;
   }
 
   async process(
     input: ProcessPaymentWebhookInput,
   ): Promise<ProcessPaymentWebhookResult> {
     const payment = await this.paymentGateway.getPayment(input.paymentId);
-    if (this.testMode && payment.liveMode) {
+    if (payment.liveMode !== this.expectedLiveMode) {
       throw new ServerOrderError(
         "INVALID_REQUEST",
-        "Se rechazó un pago productivo en el entorno TEST.",
+        this.expectedLiveMode
+          ? "Se rechazó un pago TEST en el entorno LIVE."
+          : "Se rechazó un pago productivo en el entorno TEST.",
         { status: 403 },
       );
     }

@@ -1,7 +1,7 @@
 import { RuniaCommerceProvider } from "../commerce/runia-commerce-provider";
 import {
   paymentsEnabled,
-  readMercadoPagoTestConfiguration,
+  readMercadoPagoConfiguration,
   readRuniaConfiguration,
 } from "./environment";
 import { RuniaOrderRepository } from "./orders/runia-order-repository";
@@ -30,11 +30,12 @@ export function createOrderServices() {
 
 export function createPaymentGateway(): PaymentGateway | null {
   if (!paymentsEnabled()) return null;
-  const configuration = readMercadoPagoTestConfiguration();
+  const configuration = readMercadoPagoConfiguration();
   return new MercadoPagoAdapter({
     accessToken: configuration.accessToken,
     appUrl: configuration.appUrl,
-    mode: "TEST",
+    mode: configuration.mode,
+    sellerId: configuration.sellerId,
   });
 }
 
@@ -54,7 +55,7 @@ export function requirePaymentGateway() {
   if (!gateway) {
     throw new ServerOrderError(
       "PAYMENT_NOT_CONFIGURED",
-      "Mercado Pago TEST todavía no está habilitado.",
+      "Mercado Pago todavía no está habilitado.",
       { status: 503 },
     );
   }
@@ -62,5 +63,9 @@ export function requirePaymentGateway() {
 }
 
 export function getWebhookSecret() {
-  return readMercadoPagoTestConfiguration().webhookSecret;
+  return readMercadoPagoConfiguration().webhookSecret;
+}
+
+export function paymentUsesLiveMode() {
+  return readMercadoPagoConfiguration().mode === "LIVE";
 }

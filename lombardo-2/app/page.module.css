@@ -1,5 +1,5 @@
 .home {
   flex: 1;
   min-width: 0;
-  background: var(--lombardo-blue);
+  background: var(--neutral-paper);
 }

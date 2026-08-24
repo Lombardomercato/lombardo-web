@@ -13,35 +13,35 @@ import styles from "./FirstAct.module.css";
 const situations = [
   {
     label: "ME INVITARON A COMER.",
-    href: "/productos?situacion=me-invitaron-a-comer",
+    href: "/productos?categoria=vinos",
     context: "Llevá algo que abra la mesa.",
     image: dinnerImage,
     alt: "Vino, aceite de oliva y producto gourmet envuelto sobre fondo beige.",
   },
   {
     label: "TENGO UN CUMPLEAÑOS.",
-    href: "/productos?situacion=cumpleanos",
+    href: "/productos?categoria=regalos",
     context: "Una caja. Cero dudas.",
     image: birthdayImage,
     alt: "Caja azul de cumpleaños con vino y productos gourmet sobre fondo rosa.",
   },
   {
     label: "QUIERO QUEDAR MUY BIEN.",
-    href: "/productos?situacion=quiero-quedar-muy-bien",
+    href: "/productos?categoria=regalos",
     context: "La selección que hace el trabajo.",
     image: giftBoxImage,
     alt: "Caja de regalo azul abierta con vino y productos gourmet.",
   },
   {
     label: "ES PARA ALGUIEN QUE TIENE DE TODO.",
-    href: "/productos?situacion=tiene-de-todo",
+    href: "/productos?categoria=gourmet",
     context: "Para sorprender sin exagerar.",
     image: specialImage,
     alt: "Selección especial de bebidas y productos gourmet sobre fondo verde.",
   },
   {
     label: "QUIERO ALGO PARA MÍ.",
-    href: "/productos?situacion=algo-para-mi",
+    href: "/productos?categoria=vinos",
     context: "Porque vos también contás.",
     image: selfImage,
     alt: "Botella especial y chocolate envuelto sobre fondo azul.",
@@ -241,6 +241,13 @@ export function FirstAct() {
                   <span>{situation.label}</span>
                 </button>
               ))}
+              <Link
+                className={styles.situationAction}
+                href={selectedSituation.href}
+                tabIndex={phase === "situations" ? 0 : -1}
+              >
+                Ver opciones para esto <span aria-hidden="true">→</span>
+              </Link>
             </div>
           </div>
         </section>

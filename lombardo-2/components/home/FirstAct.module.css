@@ -467,6 +467,21 @@
   color: var(--lombardo-pink);
 }
 
+.situationAction {
+  width: fit-content;
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid currentColor;
+  color: var(--neutral-paper);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 @keyframes product-in {
   from {
     opacity: 0;
@@ -676,6 +691,11 @@
     position: relative;
     z-index: 3;
     margin-top: auto;
+  }
+
+  .situationAction {
+    margin-top: 0.75rem;
+    font-size: 0.68rem;
   }
 
   .situationList button {

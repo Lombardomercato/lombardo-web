@@ -11,12 +11,15 @@ import {
 interface MercadoPagoAdapterOptions {
   accessToken: string;
   appUrl: string;
-  mode?: "TEST";
+  mode: "TEST" | "LIVE";
+  sellerId: string;
   fetcher?: typeof fetch;
 }
 
 interface MercadoPagoPreferenceResponse {
+  collector_id?: string | number;
   id?: string;
+  init_point?: string;
   sandbox_init_point?: string;
 }
 
@@ -28,6 +31,18 @@ interface MercadoPagoPaymentResponse {
   currency_id?: string;
   live_mode?: boolean;
   metadata?: Record<string, unknown>;
+}
+
+interface MercadoPagoErrorResponse {
+  cause?: Array<{ code?: string | number }>;
+  error?: string;
+  message?: string;
+}
+
+function safeProviderErrorCode(payload: MercadoPagoErrorResponse) {
+  const value = payload.error ?? payload.cause?.[0]?.code ?? payload.message;
+  if (typeof value !== "string" && typeof value !== "number") return "unknown";
+  return String(value).replace(/[^a-zA-Z0-9_.:-]/g, "_").slice(0, 80);
 }
 
 function safeAppUrl(value: string) {
@@ -63,18 +78,27 @@ export class MercadoPagoAdapter implements PaymentGateway {
   private readonly accessToken: string;
   private readonly appUrl: string;
   private readonly fetcher: typeof fetch;
+  private readonly mode: "TEST" | "LIVE";
+  private readonly sellerId: string;
 
   constructor(options: MercadoPagoAdapterOptions) {
     const appUrl = safeAppUrl(options.appUrl);
-    if (!options.accessToken || !appUrl || options.mode !== "TEST") {
+    if (
+      !options.accessToken ||
+      !appUrl ||
+      (options.mode !== "TEST" && options.mode !== "LIVE") ||
+      !/^\d{5,30}$/.test(options.sellerId)
+    ) {
       throw new PaymentGatewayError(
-        "Mercado Pago TEST todavía no está configurado.",
+        "Mercado Pago todavía no está configurado.",
         503,
       );
     }
     this.accessToken = options.accessToken;
     this.appUrl = appUrl;
     this.fetcher = options.fetcher ?? fetch;
+    this.mode = options.mode;
+    this.sellerId = options.sellerId;
   }
 
   private request(path: string, init: RequestInit = {}) {
@@ -136,15 +160,29 @@ export class MercadoPagoAdapter implements PaymentGateway {
     });
 
     if (!response.ok) {
+      let providerCode = "unknown";
+      try {
+        providerCode = safeProviderErrorCode(
+          (await response.json()) as MercadoPagoErrorResponse,
+        );
+      } catch {
+        // La respuesta puede no ser JSON; nunca se registra el body crudo.
+      }
       throw new PaymentGatewayError(
-        "Mercado Pago no pudo preparar el checkout de prueba.",
+        `Mercado Pago no pudo preparar el checkout (${providerCode}).`,
         response.status,
       );
     }
 
     const payload = (await response.json()) as MercadoPagoPreferenceResponse;
-    const checkoutUrl = payload.sandbox_init_point;
-    if (!payload.id || !checkoutUrl || !isMercadoPagoCheckoutUrl(checkoutUrl)) {
+    const checkoutUrl =
+      this.mode === "LIVE" ? payload.init_point : payload.sandbox_init_point;
+    if (
+      String(payload.collector_id ?? "") !== this.sellerId ||
+      !payload.id ||
+      !checkoutUrl ||
+      !isMercadoPagoCheckoutUrl(checkoutUrl)
+    ) {
       throw new PaymentGatewayError(
         "Mercado Pago devolvió una preferencia incompleta o insegura.",
       );

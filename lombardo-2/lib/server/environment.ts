@@ -15,9 +15,13 @@ export interface RuniaConfiguration {
   secretKey: string;
 }
 
-export interface MercadoPagoTestConfiguration {
+export type MercadoPagoMode = "TEST" | "LIVE";
+
+export interface MercadoPagoConfiguration {
   accessToken: string;
   appUrl: string;
+  mode: MercadoPagoMode;
+  sellerId: string;
   webhookSecret: string;
 }
 
@@ -120,32 +124,76 @@ export function paymentsEnabled(env: EnvironmentSource = process.env) {
   return env.PAYMENTS_ENABLED?.trim().toLocaleLowerCase("en-US") === "true";
 }
 
-export function readMercadoPagoTestConfiguration(
+function normalizedHttpsOrigin(value: string) {
+  if (!isHttpsUrl(value)) return null;
+  const url = new URL(value);
+  if (url.pathname !== "/" || url.search || url.hash) return null;
+  return url.origin;
+}
+
+export function readMercadoPagoConfiguration(
   env: EnvironmentSource = process.env,
-): MercadoPagoTestConfiguration {
-  readRuniaConfiguration(env);
-  if (!paymentsEnabled(env)) {
-    configurationError("PAYMENTS_ENABLED debe ser true para ejecutar el Sandbox.");
-  }
-  if (env.VERCEL_ENV?.trim().toLocaleLowerCase("en-US") === "production") {
-    configurationError("Mercado Pago TEST no puede habilitarse en Production.");
-  }
-  if (env.MERCADO_PAGO_MODE?.trim().toUpperCase() !== "TEST") {
-    configurationError("MERCADO_PAGO_MODE debe permanecer en TEST.");
+): MercadoPagoConfiguration {
+  const runia = readRuniaConfiguration(env);
+  const mode = env.MERCADO_PAGO_MODE?.trim().toUpperCase();
+  if (mode !== "TEST" && mode !== "LIVE") {
+    configurationError("MERCADO_PAGO_MODE debe ser TEST o LIVE.");
   }
 
   const appUrl = requiredEnvironment(env, "APP_URL");
-  if (!isHttpsUrl(appUrl)) {
-    configurationError("APP_URL debe ser una URL HTTPS pública de Preview.");
+  const appOrigin = normalizedHttpsOrigin(appUrl);
+  if (!appOrigin) {
+    configurationError("APP_URL debe ser un origen HTTPS público sin path ni query.");
   }
-  const hostname = new URL(appUrl).hostname.toLocaleLowerCase("en-US");
-  if (hostname === "lombardomercato.com" || hostname === "www.lombardomercato.com") {
-    configurationError("APP_URL no puede apuntar al dominio productivo en esta etapa.");
+  const hostname = new URL(appOrigin).hostname.toLocaleLowerCase("en-US");
+  const officialHostname = hostname === "www.lombardomercato.com";
+  const apexHostname = hostname === "lombardomercato.com";
+
+  if (mode === "TEST" && (officialHostname || apexHostname)) {
+    configurationError("Mercado Pago TEST no puede usar el dominio productivo.");
+  }
+  if (mode === "LIVE") {
+    if (
+      env.VERCEL_ENV?.trim().toLocaleLowerCase("en-US") !== "production" ||
+      runia.environment !== "production"
+    ) {
+      configurationError("Mercado Pago LIVE exige Vercel y Runia Production.");
+    }
+    if (!officialHostname) {
+      configurationError(
+        "Mercado Pago LIVE exige APP_URL=https://www.lombardomercato.com.",
+      );
+    }
+  }
+
+  const sellerId = requiredEnvironment(env, "MERCADO_PAGO_SELLER_ID");
+  if (!/^\d{5,30}$/.test(sellerId)) {
+    configurationError("MERCADO_PAGO_SELLER_ID no tiene un formato válido.");
+  }
+
+  const accessToken = requiredEnvironment(env, "MERCADO_PAGO_ACCESS_TOKEN");
+  if (!accessToken.startsWith("APP_USR-")) {
+    configurationError("MERCADO_PAGO_ACCESS_TOKEN no tiene el formato esperado.");
   }
 
   return {
-    accessToken: requiredEnvironment(env, "MERCADO_PAGO_ACCESS_TOKEN"),
-    appUrl,
+    accessToken,
+    appUrl: appOrigin,
+    mode,
+    sellerId,
     webhookSecret: requiredEnvironment(env, "MERCADO_PAGO_WEBHOOK_SECRET"),
   };
+}
+
+export function readMercadoPagoTestConfiguration(
+  env: EnvironmentSource = process.env,
+): MercadoPagoConfiguration {
+  if (!paymentsEnabled(env)) {
+    configurationError("PAYMENTS_ENABLED debe ser true para ejecutar el Sandbox.");
+  }
+  const configuration = readMercadoPagoConfiguration(env);
+  if (configuration.mode !== "TEST") {
+    configurationError("El chequeo Sandbox exige MERCADO_PAGO_MODE=TEST.");
+  }
+  return configuration;
 }

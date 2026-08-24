@@ -9,6 +9,7 @@ import {
 import { getOrderStatusPresentation } from "../lib/order-status/presentation.ts";
 import { logDevCommerce } from "../lib/server/dev-commerce-logger.ts";
 import {
+  readMercadoPagoConfiguration,
   readMercadoPagoTestConfiguration,
   readRuniaConfiguration,
 } from "../lib/server/environment.ts";
@@ -401,9 +402,11 @@ test("Mercado Pago usa la misma idempotency key en cada retry", async () => {
     accessToken: "APP_USR_TEST_ONLY",
     appUrl: "https://sandbox.lombardo.test",
     mode: "TEST",
+    sellerId: "3605075037",
     fetcher: async (_url, initValue) => {
       keys.push(new Headers(initValue?.headers).get("X-Idempotency-Key") ?? "");
       return Response.json({
+        collector_id: 3605075037,
         id: "preference-test",
         sandbox_init_point: "https://sandbox.mercadopago.com.ar/checkout",
       });
@@ -424,9 +427,50 @@ test("Mercado Pago TEST exige sandbox_init_point y rechaza init_point", async ()
     accessToken: "APP_USR_TEST_ONLY",
     appUrl: "https://sandbox.lombardo.test",
     mode: "TEST",
+    sellerId: "3605075037",
     fetcher: async () =>
       Response.json({
+        collector_id: 3605075037,
         id: "preference-live-looking",
+        init_point: "https://www.mercadopago.com.ar/checkout",
+      }),
+  });
+  await assert.rejects(adapter.createPreference(order));
+});
+
+test("Mercado Pago LIVE usa init_point y valida el seller", async () => {
+  const { repository } = setup();
+  const order = (await repository.createOrder(input())).order;
+  const adapter = new MercadoPagoAdapter({
+    accessToken: "APP_USR_LIVE_ONLY",
+    appUrl: "https://www.lombardomercato.com",
+    mode: "LIVE",
+    sellerId: "123456789",
+    fetcher: async () =>
+      Response.json({
+        collector_id: 123456789,
+        id: "preference-live",
+        init_point: "https://www.mercadopago.com.ar/checkout",
+        sandbox_init_point: "https://sandbox.mercadopago.com.ar/checkout",
+      }),
+  });
+  const preference = await adapter.createPreference(order);
+  assert.equal(preference.preferenceId, "preference-live");
+  assert.match(preference.checkoutUrl, /^https:\/\/www\.mercadopago\.com\.ar\//);
+});
+
+test("Mercado Pago rechaza una preferencia de otro seller", async () => {
+  const { repository } = setup();
+  const order = (await repository.createOrder(input())).order;
+  const adapter = new MercadoPagoAdapter({
+    accessToken: "APP_USR_LIVE_ONLY",
+    appUrl: "https://www.lombardomercato.com",
+    mode: "LIVE",
+    sellerId: "123456789",
+    fetcher: async () =>
+      Response.json({
+        collector_id: 987654321,
+        id: "preference-wrong-seller",
         init_point: "https://www.mercadopago.com.ar/checkout",
       }),
   });
@@ -441,7 +485,7 @@ async function processStatus(status: string) {
     orders: repository,
     store,
     paymentGateway: gateway,
-    testMode: true,
+    expectedLiveMode: false,
   });
   const result = await service.process({ eventId: `event-${status}`, paymentId: "900001", payload: {} });
   return { ...result, store };
@@ -451,6 +495,61 @@ test("webhook approved confirma orden y pago", async () => {
   const result = await processStatus("approved");
   assert.equal(result.order.paymentStatus, "approved");
   assert.equal(result.order.orderStatus, "confirmed");
+});
+
+test("webhook LIVE rechaza un payment TEST", async () => {
+  const { store, repository, order } = await createOrderForWebhook();
+  const service = new PaymentWebhookService({
+    tenantId: "lombardo-test",
+    orders: repository,
+    store,
+    paymentGateway: new FakeGateway(paymentFor(order, "approved")),
+    expectedLiveMode: true,
+  });
+  await assert.rejects(
+    service.process({ eventId: "event-test-in-live", paymentId: "900001", payload: {} }),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "INVALID_REQUEST",
+  );
+  assert.equal(store.paymentUpdates, 0);
+});
+
+test("webhook LIVE aprobado confirma orden y pago LIVE", async () => {
+  const { store, repository, order } = await createOrderForWebhook();
+  const livePayment = { ...paymentFor(order, "approved"), liveMode: true };
+  const service = new PaymentWebhookService({
+    tenantId: "lombardo-test",
+    orders: repository,
+    store,
+    paymentGateway: new FakeGateway(livePayment),
+    expectedLiveMode: true,
+  });
+  const result = await service.process({
+    eventId: "event-approved-live",
+    paymentId: "900001",
+    payload: {},
+  });
+  assert.equal(result.order.paymentStatus, "approved");
+  assert.equal(result.order.orderStatus, "confirmed");
+  assert.equal(store.paymentUpdates, 1);
+});
+
+test("webhook TEST rechaza un payment LIVE", async () => {
+  const { store, repository, order } = await createOrderForWebhook();
+  const livePayment = { ...paymentFor(order, "approved"), liveMode: true };
+  const service = new PaymentWebhookService({
+    tenantId: "lombardo-test",
+    orders: repository,
+    store,
+    paymentGateway: new FakeGateway(livePayment),
+    expectedLiveMode: false,
+  });
+  await assert.rejects(
+    service.process({ eventId: "event-live-in-test", paymentId: "900001", payload: {} }),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "INVALID_REQUEST",
+  );
+  assert.equal(store.paymentUpdates, 0);
 });
 
 test("webhook rejected mantiene la orden disponible para reintento", async () => {
@@ -609,6 +708,7 @@ test("Mercado Pago TEST rechaza el dominio productivo", () => {
         ...runiaDevEnvironment,
         PAYMENTS_ENABLED: "true",
         MERCADO_PAGO_MODE: "TEST",
+        MERCADO_PAGO_SELLER_ID: "3605075037",
         MERCADO_PAGO_ACCESS_TOKEN: "APP_USR_TEST",
         MERCADO_PAGO_WEBHOOK_SECRET: "webhook-test",
         APP_URL: "https://www.lombardomercato.com",
@@ -618,22 +718,37 @@ test("Mercado Pago TEST rechaza el dominio productivo", () => {
   );
 });
 
-test("Mercado Pago TEST no puede habilitarse en Vercel Production", () => {
-  assert.throws(
-    () =>
-      readMercadoPagoTestConfiguration({
-        ...runiaDevEnvironment,
-        RUNIA_ENVIRONMENT: "production",
-        VERCEL_ENV: "production",
-        PAYMENTS_ENABLED: "true",
-        MERCADO_PAGO_MODE: "TEST",
-        MERCADO_PAGO_ACCESS_TOKEN: "APP_USR_TEST",
-        MERCADO_PAGO_WEBHOOK_SECRET: "webhook-test",
-        APP_URL: "https://preview.example.com",
-      }),
-    (error: unknown) =>
-      error instanceof ServerOrderError && error.code === "SERVER_NOT_CONFIGURED",
-  );
+test("Mercado Pago TEST admite un proyecto Sandbox productivo fuera del dominio oficial", () => {
+  const configuration = readMercadoPagoTestConfiguration({
+    ...runiaDevEnvironment,
+    RUNIA_ENVIRONMENT: "production",
+    RUNIA_SUPABASE_URL: "https://ymowgnjusqzkqjpwokib.supabase.co",
+    VERCEL_ENV: "production",
+    PAYMENTS_ENABLED: "true",
+    MERCADO_PAGO_MODE: "TEST",
+    MERCADO_PAGO_SELLER_ID: "3605075037",
+    MERCADO_PAGO_ACCESS_TOKEN: "APP_USR-TEST",
+    MERCADO_PAGO_WEBHOOK_SECRET: "webhook-test",
+    APP_URL: "https://lombardo-sandbox-dev.vercel.app",
+  });
+  assert.equal(configuration.mode, "TEST");
+});
+
+test("Mercado Pago LIVE exige Runia Production y el dominio www oficial", () => {
+  const configuration = readMercadoPagoConfiguration({
+    ...runiaDevEnvironment,
+    RUNIA_ENVIRONMENT: "production",
+    RUNIA_SUPABASE_URL: "https://ymowgnjusqzkqjpwokib.supabase.co",
+    VERCEL_ENV: "production",
+    PAYMENTS_ENABLED: "false",
+    MERCADO_PAGO_MODE: "LIVE",
+    MERCADO_PAGO_SELLER_ID: "123456789",
+    MERCADO_PAGO_ACCESS_TOKEN: "APP_USR-LIVE",
+    MERCADO_PAGO_WEBHOOK_SECRET: "webhook-live",
+    APP_URL: "https://www.lombardomercato.com",
+  });
+  assert.equal(configuration.mode, "LIVE");
+  assert.equal(configuration.appUrl, "https://www.lombardomercato.com");
 });
 
 test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", async () => {

@@ -1,4 +1,4 @@
-# Checkout → Runia → Mercado Pago TEST
+# Checkout → Runia → Mercado Pago
 
 El navegador envía únicamente productos, cantidades, datos del comprador, entrega,
 `checkout_session_id` e `idempotency_key`. Subtotal, envío y total se recalculan en
@@ -32,13 +32,17 @@ La preferencia de Checkout Pro se crea después de persistir la orden. Sus items
 monto, moneda y `external_reference` provienen de esa orden. Los retries reutilizan
 una clave estable `lombardo_preference_{order_id}`.
 
-La integración prioriza `sandbox_init_point` y sólo acepta URLs HTTPS cuyo hostname
-pertenece a Mercado Pago. `APP_URL` debe ser HTTPS y pública: las URLs de retorno de
-Checkout Pro no admiten localhost.
+La integración usa `sandbox_init_point` en TEST e `init_point` en LIVE y sólo acepta
+URLs HTTPS cuyo hostname pertenece a Mercado Pago. También comprueba que el
+`collector_id` de la preferencia coincida con `MERCADO_PAGO_SELLER_ID`. `APP_URL`
+debe ser HTTPS, pública y sin path: las URLs de retorno no admiten localhost.
+
+TEST nunca puede usar el dominio oficial. LIVE exige simultáneamente Vercel
+Production, Runia Production y `APP_URL=https://www.lombardomercato.com`.
 
 Las return URLs muestran experiencia, pero nunca modifican estados. Sólo el webhook
-firmado consulta `/v1/payments/{id}`, compara tenant, orden, metadata, monto y moneda,
-y aplica la transición.
+firmado consulta `/v1/payments/{id}`, compara tenant, orden, metadata, monto, moneda
+y el valor exacto de `live_mode`, y aplica la transición.
 
 Política V1:
 

@@ -417,7 +417,11 @@ function OrderPrepared({
           ) : null}
           {!whatsappSelected && order.paymentCheckoutUrl ? (
             <p id="payment-ready-note" className={styles.paymentNote}>
-              Vas a continuar en Mercado Pago TEST.
+              Vas a continuar en Mercado Pago
+              {new URL(order.paymentCheckoutUrl).hostname.startsWith("sandbox.")
+                ? " TEST"
+                : ""}
+              .
             </p>
           ) : null}
           {!whatsappSelected && !order.paymentCheckoutUrl ? (
