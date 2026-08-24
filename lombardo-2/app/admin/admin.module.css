@@ -667,17 +667,27 @@
     grid-template-columns: 0.55fr 1.45fr;
   }
 
+  .productRow > :nth-child(3),
+  .productRow > :nth-child(4),
   .productRow > :nth-child(5),
   .productRow > :nth-child(6) {
     display: block;
   }
 
-  .productRow > :nth-child(5) {
+  .productRow > :nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .productRow > :nth-child(4) {
     grid-column: 1;
   }
 
-  .productRow > :nth-child(6) {
+  .productRow > :nth-child(5) {
     grid-column: 2;
+  }
+
+  .productRow > :nth-child(6) {
+    grid-column: 1 / -1;
   }
 
   .customerRow {
