@@ -15,6 +15,10 @@ export interface RuniaConfiguration {
   secretKey: string;
 }
 
+export interface AdminConfiguration extends RuniaConfiguration {
+  publishableKey: string;
+}
+
 export type MercadoPagoMode = "TEST" | "LIVE";
 
 export interface MercadoPagoConfiguration {
@@ -118,6 +122,25 @@ export function readRuniaConfiguration(
   }
 
   return { environment, tenantSlug, url, secretKey };
+}
+
+export function readAdminConfiguration(
+  env: EnvironmentSource = process.env,
+): AdminConfiguration {
+  const runia = readRuniaConfiguration(env);
+  const publishableKey = requiredEnvironment(
+    env,
+    "RUNIA_SUPABASE_PUBLISHABLE_KEY",
+  );
+  if (
+    !publishableKey.startsWith("sb_publishable_") &&
+    publishableKey.split(".").length !== 3
+  ) {
+    configurationError(
+      "RUNIA_SUPABASE_PUBLISHABLE_KEY no tiene un formato válido.",
+    );
+  }
+  return { ...runia, publishableKey };
 }
 
 export function paymentsEnabled(env: EnvironmentSource = process.env) {

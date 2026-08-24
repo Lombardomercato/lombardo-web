@@ -1,0 +1,41 @@
+import Link from "next/link";
+import { logoutAdminAction } from "@/app/admin/actions";
+import type { AdminSession } from "@/lib/server/admin/types";
+import styles from "@/app/admin/admin.module.css";
+
+export function AdminShell({
+  session,
+  newOrders,
+  children,
+}: {
+  session: AdminSession;
+  newOrders: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={styles.adminRoot}>
+      <header className={styles.adminHeader}>
+        <Link className={styles.adminBrand} href="/admin">
+          <strong>LOMBARDO.</strong>
+          <span>ADMIN</span>
+        </Link>
+        <div className={styles.operatorMenu}>
+          <span>{session.displayName}</span>
+          <form action={logoutAdminAction}>
+            <button type="submit">SALIR</button>
+          </form>
+        </div>
+      </header>
+      <nav className={styles.adminNav} aria-label="Administración">
+        <Link href="/admin">RESUMEN</Link>
+        <Link href="/admin/pedidos">
+          PEDIDOS
+          {newOrders > 0 ? <strong>{newOrders}</strong> : null}
+        </Link>
+        <Link href="/admin/productos">PRODUCTOS</Link>
+        <Link href="/admin/clientes">CLIENTES</Link>
+      </nav>
+      <main className={styles.adminMain}>{children}</main>
+    </div>
+  );
+}
