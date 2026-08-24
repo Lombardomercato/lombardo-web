@@ -5,6 +5,9 @@ type DevCommerceEvent =
   | "order.created"
   | "order.reused"
   | "order.request_failed"
+  | "order_notification.sent"
+  | "order_notification.failed"
+  | "order_notification.persistence_failed"
   | "payment.preference_created"
   | "payment.preference_reused"
   | "payment.preference_failed"
@@ -34,6 +37,10 @@ interface DevCommerceFields {
   errorName?: string;
   errorMessage?: string;
   status?: number;
+  notificationId?: string;
+  providerMessageId?: string;
+  errorCode?: string;
+  notificationStatus?: string;
 }
 
 type EnvironmentSource = Record<string, string | undefined>;

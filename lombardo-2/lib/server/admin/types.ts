@@ -8,6 +8,7 @@ import type {
   PaymentMethod,
   PaymentStatus,
 } from "../../../types/checkout";
+import type { OrderNotification } from "../notifications/types";
 
 export type FulfillmentStatus =
   | "new"
@@ -54,6 +55,7 @@ export interface AdminOrder {
   cancelledAt?: string;
   createdAt: string;
   updatedAt: string;
+  newOrderNotification?: OrderNotification;
 }
 
 export interface AdminDashboard {

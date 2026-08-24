@@ -12,6 +12,13 @@ const schemaPath = fileURLToPath(
   new URL("../supabase/schema/lombardo_admin_v1.sql", import.meta.url),
 );
 const schema = readFileSync(schemaPath, "utf8");
+const notificationSchemaPath = fileURLToPath(
+  new URL(
+    "../supabase/migrations/20260824193813_lombardo_order_whatsapp_notifications.sql",
+    import.meta.url,
+  ),
+);
+const notificationSchema = readFileSync(notificationSchemaPath, "utf8");
 
 test("Admin mantiene fulfillment separado de order_status y payment_status", () => {
   assert.match(schema, /add column if not exists fulfillment_status text/);
@@ -71,4 +78,28 @@ test("contacto WhatsApp usa contexto del pedido y omite datos sensibles", () => 
   assert.match(message, /Ana/);
   assert.match(message, /ABC12345/);
   assert.doesNotMatch(message, /ana@example\.com|12345678/);
+});
+
+test("notificación de pedido tiene outbox idempotente y server-only", () => {
+  assert.match(
+    notificationSchema,
+    /unique \(\s*tenant_id, order_id, kind, channel\s*\)/,
+  );
+  assert.match(
+    notificationSchema,
+    /alter table public\.commerce_order_notifications force row level security/,
+  );
+  assert.match(
+    notificationSchema,
+    /revoke all on table public\.commerce_order_notifications\s+from public, anon, authenticated/,
+  );
+  assert.match(
+    notificationSchema,
+    /grant select, insert, update on table public\.commerce_order_notifications\s+to service_role/,
+  );
+  assert.match(
+    notificationSchema,
+    /p_allow_retry and v_notification\.status = 'failed'/,
+  );
+  assert.doesNotMatch(notificationSchema, /p_allow_retry.*status = 'unknown'/);
 });

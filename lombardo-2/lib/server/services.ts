@@ -3,7 +3,12 @@ import {
   paymentsEnabled,
   readMercadoPagoConfiguration,
   readRuniaConfiguration,
+  readWhatsAppOrderNotificationConfiguration,
+  whatsAppOrderNotificationsEnabled,
 } from "./environment";
+import { OrderNotificationService } from "./notifications/order-notification-service";
+import { SupabaseOrderNotificationStore } from "./notifications/supabase-order-notification-store";
+import { WhatsAppCloudApi } from "./notifications/whatsapp-cloud-api";
 import { RuniaOrderRepository } from "./orders/runia-order-repository";
 import { EnvironmentDeliveryPricing } from "./orders/server-delivery-pricing";
 import { ServerOrderError } from "./orders/server-order-error";
@@ -46,8 +51,34 @@ export function createCheckoutCoordinator() {
     coordinator: new OrderPaymentCoordinator({
       orders: services.orders,
       paymentGateway: createPaymentGateway(),
+      newOrderNotifier: createNewOrderNotifier(),
     }),
   };
+}
+
+export function createNewOrderNotifier() {
+  if (!whatsAppOrderNotificationsEnabled()) return null;
+  const runia = readRuniaConfiguration();
+  return new OrderNotificationService({
+    store: new SupabaseOrderNotificationStore({
+      url: runia.url,
+      secretKey: runia.secretKey,
+    }),
+    configurationFactory: () => {
+      const configuration = readWhatsAppOrderNotificationConfiguration();
+      return {
+        provider: new WhatsAppCloudApi({
+          accessToken: configuration.accessToken,
+          phoneNumberId: configuration.phoneNumberId,
+          graphApiVersion: configuration.graphApiVersion,
+        }),
+        recipient: configuration.recipient,
+        templateName: configuration.templateName,
+        languageCode: configuration.languageCode,
+        adminUrl: configuration.adminUrl,
+      };
+    },
+  });
 }
 
 export function requirePaymentGateway() {

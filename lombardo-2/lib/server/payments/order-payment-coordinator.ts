@@ -5,21 +5,25 @@ import type {
   PaymentPreferenceResult,
 } from "../../../types/checkout.ts";
 import type { ServerOrderRepository } from "../orders/order-dependencies.ts";
+import type { NewOrderNotifier } from "../notifications/types.ts";
 import { logDevCommerce } from "../dev-commerce-logger.ts";
 import type { PaymentGateway } from "./payment-gateway.ts";
 
 interface OrderPaymentCoordinatorOptions {
   orders: ServerOrderRepository;
   paymentGateway: PaymentGateway | null;
+  newOrderNotifier?: NewOrderNotifier | null;
 }
 
 export class OrderPaymentCoordinator {
   private readonly orders: ServerOrderRepository;
   private readonly paymentGateway: PaymentGateway | null;
+  private readonly newOrderNotifier: NewOrderNotifier | null;
 
   constructor(options: OrderPaymentCoordinatorOptions) {
     this.orders = options.orders;
     this.paymentGateway = options.paymentGateway;
+    this.newOrderNotifier = options.newOrderNotifier ?? null;
   }
 
   private existingPayment(order: OrderDraft): PaymentPreferenceResult | null {
@@ -37,6 +41,16 @@ export class OrderPaymentCoordinator {
       publicId: result.order.publicId,
       reused: result.reused,
     });
+    if (!result.reused && this.newOrderNotifier) {
+      try {
+        await this.newOrderNotifier.notify(result.order);
+      } catch {
+        logDevCommerce("order_notification.persistence_failed", {
+          orderId: result.order.id,
+          publicId: result.order.publicId,
+        });
+      }
+    }
     if (result.order.paymentMethod === "whatsapp_coordination") {
       return { ...result, payment: null };
     }

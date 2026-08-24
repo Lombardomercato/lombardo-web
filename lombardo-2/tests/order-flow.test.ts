@@ -12,6 +12,7 @@ import {
   readMercadoPagoConfiguration,
   readMercadoPagoTestConfiguration,
   readRuniaConfiguration,
+  readWhatsAppOrderNotificationConfiguration,
 } from "../lib/server/environment.ts";
 import { readJsonBody } from "../lib/server/request-body.ts";
 import { parseCreateOrderInput } from "../lib/server/orders/order-input.ts";
@@ -32,6 +33,10 @@ import {
 } from "../lib/server/payments/mercado-pago-adapter.ts";
 import { OrderPaymentCoordinator } from "../lib/server/payments/order-payment-coordinator.ts";
 import type { PaymentGateway } from "../lib/server/payments/payment-gateway.ts";
+import type {
+  ClaimedOrderNotification,
+  NewOrderNotifier,
+} from "../lib/server/notifications/types.ts";
 import { PaymentWebhookService } from "../lib/server/payments/payment-webhook-service.ts";
 import {
   inspectMercadoPagoWebhookSignature,
@@ -231,6 +236,36 @@ class FakeGateway implements PaymentGateway {
   }
 }
 
+class FakeNewOrderNotifier implements NewOrderNotifier {
+  attempts = 0;
+  shouldFail = false;
+
+  async notify(order: OrderDraft): Promise<ClaimedOrderNotification> {
+    this.attempts += 1;
+    if (this.shouldFail) throw new Error("notification store unavailable");
+    return this.result(order);
+  }
+
+  async retry(order: OrderDraft): Promise<ClaimedOrderNotification> {
+    return this.result(order);
+  }
+
+  private result(order: OrderDraft): ClaimedOrderNotification {
+    const now = new Date().toISOString();
+    return {
+      claimed: true,
+      notification: {
+        id: "notification-1",
+        orderId: order.id,
+        status: "sent",
+        attemptCount: 1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    };
+  }
+}
+
 function setup(products = [product()]) {
   const store = new FakeOrderStore();
   const repository = new RuniaOrderRepository({
@@ -337,6 +372,34 @@ test("sin gateway la orden queda pendiente y pasa a coordinación por WhatsApp",
   assert.equal(result.order.paymentStatus, "pending");
   assert.equal(result.payment, null);
   assert.equal(result.paymentError, undefined);
+});
+
+test("el aviso de orden nueva no se duplica cuando la API reutiliza la orden", async () => {
+  const { repository } = setup();
+  const notifier = new FakeNewOrderNotifier();
+  const coordinator = new OrderPaymentCoordinator({
+    orders: repository,
+    paymentGateway: null,
+    newOrderNotifier: notifier,
+  });
+  await coordinator.createOrder(input());
+  await coordinator.createOrder(input());
+  assert.equal(notifier.attempts, 1);
+});
+
+test("una falla del aviso no impide crear ni devolver la orden", async () => {
+  const { store, repository } = setup();
+  const notifier = new FakeNewOrderNotifier();
+  notifier.shouldFail = true;
+  const coordinator = new OrderPaymentCoordinator({
+    orders: repository,
+    paymentGateway: null,
+    newOrderNotifier: notifier,
+  });
+  const result = await coordinator.createOrder(input());
+  assert.equal(result.order.id, "1");
+  assert.equal(store.orders.length, 1);
+  assert.equal(result.order.paymentStatus, "pending");
 });
 
 test("el mensaje de coordinación contiene el pedido y omite email y DNI", async () => {
@@ -806,6 +869,25 @@ test("Mercado Pago LIVE exige Runia Production y el dominio www oficial", () => 
   });
   assert.equal(configuration.mode, "LIVE");
   assert.equal(configuration.appUrl, "https://www.lombardomercato.com");
+});
+
+test("WhatsApp Cloud API exige configuración server-only y dominio Admin oficial", () => {
+  const configuration = readWhatsAppOrderNotificationConfiguration({
+    WHATSAPP_ORDER_NOTIFICATIONS_ENABLED: "true",
+    APP_URL: "https://www.lombardomercato.com",
+    WHATSAPP_CLOUD_API_PHONE_NUMBER_ID: "123456789012345",
+    WHATSAPP_CLOUD_API_ACCESS_TOKEN: `test-token-${"x".repeat(60)}`,
+    WHATSAPP_ORDER_NOTIFICATION_RECIPIENT: "+5493415887708",
+    WHATSAPP_ORDER_TEMPLATE_NAME: "lombardo_nuevo_pedido",
+    WHATSAPP_ORDER_TEMPLATE_LANGUAGE: "es_AR",
+    WHATSAPP_CLOUD_API_VERSION: "v25.0",
+  });
+  assert.equal(configuration.recipient, "5493415887708");
+  assert.equal(
+    configuration.adminUrl,
+    "https://www.lombardomercato.com/admin",
+  );
+  assert.equal("accessToken" in configuration, true);
 });
 
 test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", async () => {

@@ -22,6 +22,10 @@ import type {
   FulfillmentStatus,
   FulfillmentTransitionResult,
 } from "./types";
+import type {
+  OrderNotification,
+  OrderNotificationStatus,
+} from "../notifications/types";
 
 interface RuniaAdminStoreOptions {
   url: string;
@@ -92,6 +96,34 @@ interface SupplierRow {
 interface TransitionRow {
   changed: boolean;
   order_record: OrderRow;
+}
+
+interface NotificationRow {
+  id: string | number;
+  order_id: string | number;
+  status: OrderNotificationStatus;
+  attempt_count: number;
+  provider_message_id: string | null;
+  last_error_code: string | null;
+  last_error_summary: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapNotification(row: NotificationRow): OrderNotification {
+  return {
+    id: String(row.id),
+    orderId: String(row.order_id),
+    status: row.status,
+    attemptCount: Number(row.attempt_count),
+    providerMessageId: row.provider_message_id ?? undefined,
+    lastErrorCode: row.last_error_code ?? undefined,
+    lastErrorSummary: row.last_error_summary ?? undefined,
+    sentAt: row.sent_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 const ORDER_SELECT = [
@@ -367,7 +399,27 @@ export class RuniaAdminStore {
       `commerce_orders?${search}`,
       "No pudimos cargar el pedido.",
     );
-    return rows[0] ? mapOrder(rows[0]) : null;
+    if (!rows[0]) return null;
+    const order = mapOrder(rows[0]);
+    const notificationSearch = new URLSearchParams({
+      select:
+        "id,order_id,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
+      tenant_id: `eq.${this.tenantId}`,
+      order_id: `eq.${order.id}`,
+      kind: "eq.new_order",
+      channel: "eq.whatsapp_cloud_api",
+      limit: "1",
+    });
+    const notificationResult = await this.rows<NotificationRow>(
+      `commerce_order_notifications?${notificationSearch}`,
+      "No pudimos cargar el estado de la notificación.",
+    );
+    return {
+      ...order,
+      newOrderNotification: notificationResult.rows[0]
+        ? mapNotification(notificationResult.rows[0])
+        : undefined,
+    };
   }
 
   async getDashboard(): Promise<AdminDashboard> {

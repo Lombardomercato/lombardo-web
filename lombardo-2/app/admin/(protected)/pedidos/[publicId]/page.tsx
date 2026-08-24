@@ -13,6 +13,7 @@ import {
 import { loadAdminOrder } from "@/lib/server/admin/admin-data";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import styles from "../../../admin.module.css";
+import { retryOrderNotificationAction } from "@/app/admin/actions";
 
 type Query = Record<string, string | string[] | undefined>;
 
@@ -20,6 +21,14 @@ function message(query: Query, name: string) {
   const value = query[name];
   return typeof value === "string" ? value.slice(0, 180) : "";
 }
+
+const NOTIFICATION_LABELS = {
+  pending: "PENDIENTE",
+  sending: "ENVIANDO",
+  sent: "ENVIADA",
+  failed: "FALLÓ",
+  unknown: "RESULTADO A VERIFICAR",
+} as const;
 
 export default async function AdminOrderDetailPage({
   params,
@@ -104,7 +113,33 @@ export default async function AdminOrderDetailPage({
             <div className={styles.detailField}><span className={styles.fieldLabel}>CREADO</span><p>{formatAdminDate(order.createdAt)}</p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>ACTUALIZADO</span><p>{formatAdminDate(order.fulfillmentUpdatedAt)}</p></div>
             {order.paymentProviderId ? <div className={styles.detailField}><span className={styles.fieldLabel}>PROVIDER PAYMENT ID</span><p>{order.paymentProviderId}</p></div> : null}
+            <div className={styles.detailField}>
+              <span className={styles.fieldLabel}>AVISO WHATSAPP</span>
+              <p>
+                {order.newOrderNotification
+                  ? NOTIFICATION_LABELS[order.newOrderNotification.status]
+                  : "NO GENERADO"}
+              </p>
+              {order.newOrderNotification?.sentAt ? (
+                <small className={styles.muted}>
+                  Enviado {formatAdminDate(order.newOrderNotification.sentAt)}
+                </small>
+              ) : null}
+              {order.newOrderNotification?.lastErrorSummary ? (
+                <small className={styles.muted}>
+                  {order.newOrderNotification.lastErrorSummary}
+                </small>
+              ) : null}
+            </div>
           </div>
+          {order.newOrderNotification?.status === "failed" ? (
+            <form action={retryOrderNotificationAction}>
+              <input type="hidden" name="publicId" value={order.publicId} />
+              <button className={styles.secondaryButton} type="submit">
+                REINTENTAR AVISO WHATSAPP
+              </button>
+            </form>
+          ) : null}
           <a className={styles.whatsappButton} href={customerWhatsAppUrl(order)} target="_blank" rel="noreferrer">CONTACTAR POR WHATSAPP</a>
           <OrderActions order={order} />
         </aside>
