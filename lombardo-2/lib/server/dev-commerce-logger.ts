@@ -11,6 +11,7 @@ type DevCommerceEvent =
   | "payment.whatsapp_coordination_selected"
   | "whatsapp.coordination_failed"
   | "webhook.received"
+  | "webhook.signature_rejected"
   | "webhook.duplicate"
   | "webhook.failed"
   | "payment.transition";

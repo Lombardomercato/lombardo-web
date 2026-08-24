@@ -33,7 +33,10 @@ import {
 import { OrderPaymentCoordinator } from "../lib/server/payments/order-payment-coordinator.ts";
 import type { PaymentGateway } from "../lib/server/payments/payment-gateway.ts";
 import { PaymentWebhookService } from "../lib/server/payments/payment-webhook-service.ts";
-import { verifyMercadoPagoWebhookSignature } from "../lib/server/payments/webhook-signature.ts";
+import {
+  inspectMercadoPagoWebhookSignature,
+  verifyMercadoPagoWebhookSignature,
+} from "../lib/server/payments/webhook-signature.ts";
 import type {
   CreateOrderInput,
   MercadoPagoPayment,
@@ -641,6 +644,60 @@ test("firma de webhook válida usa HMAC y tolerancia temporal", () => {
       now: Number(timestamp) * 1000,
     }),
     true,
+  );
+});
+
+test("fixture LIVE observado valida payment.created con data.id numérico", () => {
+  const timestamp = "1787586833";
+  const secret = "live-fixture-secret";
+  const requestId = "4ed4fa2b-0b31-42ec-a62f-ad793c486c59";
+  const dataId = "174467953181";
+  const manifest = `id:${dataId};request-id:${requestId};ts:${timestamp};`;
+  const signature = createHmac("sha256", secret).update(manifest).digest("hex");
+
+  assert.deepEqual(
+    inspectMercadoPagoWebhookSignature({
+      xSignature: `ts=${timestamp},v1=${signature}`,
+      xRequestId: requestId,
+      dataId,
+      secret,
+      now: Date.parse("2026-08-24T15:53:53Z"),
+    }),
+    { valid: true },
+  );
+});
+
+test("manifest omite pares ausentes y preserva el case de data.id", () => {
+  const timestamp = "1787586833";
+  const secret = "case-sensitive-fixture-secret";
+  const dataId = "ORD01JQ4S4KY8HWQ6NA5PXB65B3D3";
+  const signature = createHmac("sha256", secret)
+    .update(`id:${dataId};ts:${timestamp};`)
+    .digest("hex");
+
+  assert.equal(
+    verifyMercadoPagoWebhookSignature({
+      xSignature: `TS=${timestamp},V1=${signature}`,
+      xRequestId: null,
+      dataId,
+      secret,
+      now: Number(timestamp) * 1000,
+    }),
+    true,
+  );
+});
+
+test("firma realmente inválida conserva 401 diagnosticable", () => {
+  const timestamp = "1787586833";
+  assert.deepEqual(
+    inspectMercadoPagoWebhookSignature({
+      xSignature: `ts=${timestamp},v1=${"0".repeat(64)}`,
+      xRequestId: "request-live-fixture",
+      dataId: "174467953181",
+      secret: "live-fixture-secret",
+      now: Number(timestamp) * 1000,
+    }),
+    { valid: false, reason: "signature_mismatch" },
   );
 });
 

@@ -1,8 +1,9 @@
 # Reporte para soporte de Mercado Pago — Checkout Pro TEST Argentina
 
-Fecha de actualización: 2026-08-14. Alcance exclusivo: cuentas, credenciales y
-tarjetas TEST de Mercado Pago en Argentina. No se usaron credenciales LIVE, dinero
-real ni manipulación manual de estados.
+Fecha de actualización: 2026-08-24. El incidente original corresponde a cuentas,
+credenciales y tarjetas TEST de Mercado Pago en Argentina. Este reporte agrega el
+primer intento LIVE controlado y la auditoría posterior del webhook. No hubo un
+cobro aprobado, no se repitió el intento LIVE y no se manipularon estados.
 
 ## Resumen del incidente
 
@@ -62,6 +63,48 @@ Timestamps disponibles del último intento:
 
 Después de confirmar el patrón se detuvieron los intentos TEST con tarjetas.
 
+## Primer intento LIVE controlado — evidencia para soporte
+
+| Dato | Valor observado |
+| --- | --- |
+| Orden (`external_reference`) | `b231fc48-22ef-4ee3-96d5-70cefe1de752` |
+| Preference ID | `2442201092-c171f2be-b528-47bb-9a2f-4d0bf4414662` |
+| Producto | `NC065B` |
+| Total | ARS 441,40 |
+| Checkout utilizado | Checkout Pro LIVE |
+| Comportamiento | Botón **Pagar** deshabilitado con dinero en cuenta y tarjeta nueva |
+| Pago aprobado | No |
+| Nuevo intento LIVE posterior | No |
+
+La preference y la merchant order existían, pero el Checkout Pro alojado por
+Mercado Pago no habilitó el envío del pago. El panel de Webhooks de la aplicación
+oficial muestra posteriormente un único evento LIVE `payment.created`, recurso
+`174467953181`, notificación `136804383112`, con fecha
+`2026-08-24T15:53:53Z`. Mercado Pago realizó tres entregas del mismo evento al
+endpoint productivo y recibió HTTP 401 en las tres.
+
+Esta evidencia nueva impide afirmar simplemente que Mercado Pago no creó ningún
+recurso `payment`: soporte debe reconciliar el recurso notificado
+`174467953181` con el botón deshabilitado y con la merchant order del intento.
+La aplicación de Lombardo no recibió ni persistió una transición aprobada y la
+orden no fue marcada como pagada.
+
+### Auditoría y corrección del webhook LIVE
+
+Las tres entregas fueron `POST`, con `type=payment` y
+`data.id=174467953181`; representan reintentos del mismo evento
+`payment.created`, no tres pagos. La causa efectiva del HTTP 401 fue una clave
+secreta de Webhooks productiva desactualizada o distinta en Vercel. El algoritmo
+ya construía correctamente el manifest para este ID numérico, pero sólo devolvía
+un booleano y no registraba el motivo seguro del rechazo.
+
+Se sincronizó la clave productiva sin versionarla, se mantuvo
+`PAYMENTS_ENABLED=false` y se agregó diagnóstico seguro de motivos de firma. El
+endpoint conserva HTTP 401 para firmas inválidas. Una simulación oficial firmada
+de Mercado Pago contra la URL productiva, usando un evento de Órdenes comerciales
+y un Data ID de simulación, respondió `202 Accepted`. Ese evento no consultó un
+payment ni modificó órdenes o estados.
+
 ## Solicitud de diagnóstico interno
 
 Solicitamos a Mercado Pago revisar internamente:
@@ -79,6 +122,12 @@ Solicitamos a Mercado Pago revisar internamente:
 6. Si existe una limitación o incidente vigente de Checkout Pro TEST en Argentina.
 7. Qué corrección o regeneración de recursos TEST recomiendan antes de repetir la
    prueba.
+8. Por qué Checkout Pro LIVE mantuvo deshabilitado el botón **Pagar** con dinero
+   en cuenta y tarjeta nueva para la preference
+   `2442201092-c171f2be-b528-47bb-9a2f-4d0bf4414662`.
+9. Qué estado y relación interna tiene el recurso notificado
+   `174467953181` con esa preference/merchant order y por qué la interfaz no
+   permitió enviar el pago.
 
 ## Mensaje técnico corto para el canal de soporte
 
@@ -93,6 +142,21 @@ Solicitamos a Mercado Pago revisar internamente:
 > los logs internos, restricciones de las cuentas/credenciales TEST y cualquier
 > incidente de Checkout Pro TEST Argentina. No se usaron credenciales LIVE ni
 > dinero real.
+
+## Mensaje corto de actualización para el caso abierto
+
+> Agregamos evidencia del primer intento LIVE controlado. Orden
+> `b231fc48-22ef-4ee3-96d5-70cefe1de752`, preference
+> `2442201092-c171f2be-b528-47bb-9a2f-4d0bf4414662`, producto `NC065B`, ARS
+> 441,40. Checkout Pro mantuvo deshabilitado **Pagar** tanto con dinero en cuenta
+> como con tarjeta nueva. El panel de Webhooks de la aplicación registra un único
+> `payment.created` LIVE (recurso `174467953181`, notificación
+> `136804383112`, `2026-08-24T15:53:53Z`) entregado tres veces. Los tres 401 se
+> debieron a una clave productiva de Webhooks desactualizada en nuestro entorno;
+> ya fue sincronizada y una simulación oficial firmada contra la URL productiva
+> respondió 202. No hubo pago aprobado ni un nuevo intento LIVE. Solicitamos que
+> revisen por qué el checkout alojado no habilitó el envío y que reconcilien el
+> recurso `174467953181` con la preference y su merchant order.
 
 Este reporte no contiene access tokens, cookies, secretos, números de tarjeta ni
 información personal sensible.

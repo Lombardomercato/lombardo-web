@@ -1,6 +1,6 @@
 import { noStoreJson, serverErrorResponse } from "@/lib/server/http-response";
 import { PaymentWebhookService } from "@/lib/server/payments/payment-webhook-service";
-import { verifyMercadoPagoWebhookSignature } from "@/lib/server/payments/webhook-signature";
+import { inspectMercadoPagoWebhookSignature } from "@/lib/server/payments/webhook-signature";
 import { checkRateLimit, getRequestIp } from "@/lib/server/rate-limit";
 import {
   getRequestId,
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   try {
     const url = new URL(request.url);
     const queryDataId = url.searchParams.get("data.id") ?? url.searchParams.get("id");
-    const signatureValid = verifyMercadoPagoWebhookSignature({
+    const signature = inspectMercadoPagoWebhookSignature({
       xSignature: request.headers.get("x-signature"),
       xRequestId: request.headers.get("x-request-id"),
       dataId: queryDataId,
@@ -52,7 +52,12 @@ export async function POST(request: Request) {
         process.env.MERCADO_PAGO_WEBHOOK_TOLERANCE_SECONDS ?? 300,
       ),
     });
-    if (!signatureValid) {
+    if (!signature.valid) {
+      logDevCommerce("webhook.signature_rejected", {
+        paymentId: queryDataId ?? undefined,
+        reason: signature.reason,
+        requestId,
+      });
       return noStoreJson(
         { accepted: false },
         { status: 401, headers: { "X-Request-ID": requestId } },
