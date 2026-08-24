@@ -158,5 +158,15 @@ Solicitamos a Mercado Pago revisar internamente:
 > revisen por qué el checkout alojado no habilitó el envío y que reconcilien el
 > recurso `174467953181` con la preference y su merchant order.
 
+## Seguimiento oficial
+
+- Caso original: `WCS-45920` — cerrado el 2026-08-21.
+- Seguimiento LIVE: `WCS-47386` — creado el 2026-08-24.
+- Canal: Mercado Pago Developers Support Center.
+- Estado al crearlo: `Aguardando soporte`.
+- El seguimiento contiene los IDs de orden, preference, payment notificado y
+  notificación, junto con la aclaración de que el pagador LIVE era una cuenta
+  personal distinta de la cuenta vendedora oficial de Lombardo.
+
 Este reporte no contiene access tokens, cookies, secretos, números de tarjeta ni
 información personal sensible.
