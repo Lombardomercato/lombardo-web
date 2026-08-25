@@ -11,9 +11,14 @@ export type OrderNotificationChannel =
   | "whatsapp_cloud_api"
   | "email_resend";
 
+export type OrderNotificationKind =
+  | "new_order"
+  | "customer_order_confirmation";
+
 export interface OrderNotification {
   id: string;
   orderId: string;
+  kind: OrderNotificationKind;
   channel: OrderNotificationChannel;
   status: OrderNotificationStatus;
   attemptCount: number;

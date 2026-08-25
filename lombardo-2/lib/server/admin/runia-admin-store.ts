@@ -101,6 +101,7 @@ interface TransitionRow {
 interface NotificationRow {
   id: string | number;
   order_id: string | number;
+  kind: OrderNotification["kind"];
   channel: OrderNotification["channel"];
   status: OrderNotificationStatus;
   attempt_count: number;
@@ -116,6 +117,7 @@ function mapNotification(row: NotificationRow): OrderNotification {
   return {
     id: String(row.id),
     orderId: String(row.order_id),
+    kind: row.kind,
     channel: row.channel,
     status: row.status,
     attemptCount: Number(row.attempt_count),
@@ -405,21 +407,30 @@ export class RuniaAdminStore {
     const order = mapOrder(rows[0]);
     const notificationSearch = new URLSearchParams({
       select:
-        "id,order_id,channel,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
+        "id,order_id,kind,channel,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
       tenant_id: `eq.${this.tenantId}`,
       order_id: `eq.${order.id}`,
-      kind: "eq.new_order",
+      kind: "in.(new_order,customer_order_confirmation)",
       order: "created_at.desc",
-      limit: "1",
+      limit: "2",
     });
     const notificationResult = await this.rows<NotificationRow>(
       `commerce_order_notifications?${notificationSearch}`,
       "No pudimos cargar el estado de la notificación.",
     );
+    const newOrderNotification = notificationResult.rows.find(
+      (notification) => notification.kind === "new_order",
+    );
+    const customerOrderConfirmation = notificationResult.rows.find(
+      (notification) => notification.kind === "customer_order_confirmation",
+    );
     return {
       ...order,
-      newOrderNotification: notificationResult.rows[0]
-        ? mapNotification(notificationResult.rows[0])
+      newOrderNotification: newOrderNotification
+        ? mapNotification(newOrderNotification)
+        : undefined,
+      customerOrderConfirmation: customerOrderConfirmation
+        ? mapNotification(customerOrderConfirmation)
         : undefined,
     };
   }

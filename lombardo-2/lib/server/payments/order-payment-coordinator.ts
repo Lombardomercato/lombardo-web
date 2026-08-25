@@ -13,17 +13,21 @@ interface OrderPaymentCoordinatorOptions {
   orders: ServerOrderRepository;
   paymentGateway: PaymentGateway | null;
   newOrderNotifier?: NewOrderNotifier | null;
+  newOrderNotifiers?: readonly NewOrderNotifier[];
 }
 
 export class OrderPaymentCoordinator {
   private readonly orders: ServerOrderRepository;
   private readonly paymentGateway: PaymentGateway | null;
-  private readonly newOrderNotifier: NewOrderNotifier | null;
+  private readonly newOrderNotifiers: readonly NewOrderNotifier[];
 
   constructor(options: OrderPaymentCoordinatorOptions) {
     this.orders = options.orders;
     this.paymentGateway = options.paymentGateway;
-    this.newOrderNotifier = options.newOrderNotifier ?? null;
+    this.newOrderNotifiers = [
+      ...(options.newOrderNotifier ? [options.newOrderNotifier] : []),
+      ...(options.newOrderNotifiers ?? []),
+    ];
   }
 
   private existingPayment(order: OrderDraft): PaymentPreferenceResult | null {
@@ -41,15 +45,19 @@ export class OrderPaymentCoordinator {
       publicId: result.order.publicId,
       reused: result.reused,
     });
-    if (!result.reused && this.newOrderNotifier) {
-      try {
-        await this.newOrderNotifier.notify(result.order);
-      } catch {
-        logDevCommerce("order_notification.persistence_failed", {
-          orderId: result.order.id,
-          publicId: result.order.publicId,
-        });
-      }
+    if (!result.reused && this.newOrderNotifiers.length) {
+      const notificationResults = await Promise.allSettled(
+        this.newOrderNotifiers.map((notifier) => notifier.notify(result.order)),
+      );
+      notificationResults.forEach((notificationResult, index) => {
+        if (notificationResult.status === "rejected") {
+          logDevCommerce("order_notification.persistence_failed", {
+            orderId: result.order.id,
+            publicId: result.order.publicId,
+            reason: `notifier_${index}_persistence_failed`,
+          });
+        }
+      });
     }
     if (result.order.paymentMethod === "whatsapp_coordination") {
       return { ...result, payment: null };

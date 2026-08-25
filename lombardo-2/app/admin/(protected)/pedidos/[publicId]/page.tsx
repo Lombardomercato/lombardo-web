@@ -14,6 +14,10 @@ import { loadAdminOrder } from "@/lib/server/admin/admin-data";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import styles from "../../../admin.module.css";
 import { retryOrderNotificationAction } from "@/app/admin/actions";
+import type {
+  OrderNotification,
+  OrderNotificationKind,
+} from "@/lib/server/notifications/types";
 
 type Query = Record<string, string | string[] | undefined>;
 
@@ -34,6 +38,50 @@ const NOTIFICATION_CHANNEL_LABELS = {
   whatsapp_cloud_api: "WHATSAPP",
   email_resend: "EMAIL",
 } as const;
+
+function NotificationStatus({
+  label,
+  notification,
+  kind,
+  publicId,
+}: {
+  label: string;
+  notification?: OrderNotification;
+  kind: OrderNotificationKind;
+  publicId: string;
+}) {
+  return (
+    <>
+      <div className={styles.detailField}>
+        <span className={styles.fieldLabel}>{label}</span>
+        <p>
+          {notification
+            ? NOTIFICATION_LABELS[notification.status]
+            : "NO GENERADA"}
+        </p>
+        {notification?.sentAt ? (
+          <small className={styles.muted}>
+            Enviado {formatAdminDate(notification.sentAt)}
+          </small>
+        ) : null}
+        {notification?.lastErrorSummary ? (
+          <small className={styles.muted}>
+            {notification.lastErrorSummary}
+          </small>
+        ) : null}
+      </div>
+      {notification?.status === "failed" ? (
+        <form action={retryOrderNotificationAction}>
+          <input type="hidden" name="publicId" value={publicId} />
+          <input type="hidden" name="kind" value={kind} />
+          <button className={styles.secondaryButton} type="submit">
+            REINTENTAR {label}
+          </button>
+        </form>
+      ) : null}
+    </>
+  );
+}
 
 export default async function AdminOrderDetailPage({
   params,
@@ -118,37 +166,21 @@ export default async function AdminOrderDetailPage({
             <div className={styles.detailField}><span className={styles.fieldLabel}>CREADO</span><p>{formatAdminDate(order.createdAt)}</p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>ACTUALIZADO</span><p>{formatAdminDate(order.fulfillmentUpdatedAt)}</p></div>
             {order.paymentProviderId ? <div className={styles.detailField}><span className={styles.fieldLabel}>PROVIDER PAYMENT ID</span><p>{order.paymentProviderId}</p></div> : null}
-            <div className={styles.detailField}>
-              <span className={styles.fieldLabel}>
-                AVISO {order.newOrderNotification
-                  ? NOTIFICATION_CHANNEL_LABELS[order.newOrderNotification.channel]
-                  : "OPERATIVO"}
-              </span>
-              <p>
-                {order.newOrderNotification
-                  ? NOTIFICATION_LABELS[order.newOrderNotification.status]
-                  : "NO GENERADO"}
-              </p>
-              {order.newOrderNotification?.sentAt ? (
-                <small className={styles.muted}>
-                  Enviado {formatAdminDate(order.newOrderNotification.sentAt)}
-                </small>
-              ) : null}
-              {order.newOrderNotification?.lastErrorSummary ? (
-                <small className={styles.muted}>
-                  {order.newOrderNotification.lastErrorSummary}
-                </small>
-              ) : null}
-            </div>
+            <NotificationStatus
+              kind="new_order"
+              label={`AVISO ${order.newOrderNotification
+                ? NOTIFICATION_CHANNEL_LABELS[order.newOrderNotification.channel]
+                : "OPERATIVO"}`}
+              notification={order.newOrderNotification}
+              publicId={order.publicId}
+            />
+            <NotificationStatus
+              kind="customer_order_confirmation"
+              label="CONFIRMACIÓN CLIENTE"
+              notification={order.customerOrderConfirmation}
+              publicId={order.publicId}
+            />
           </div>
-          {order.newOrderNotification?.status === "failed" ? (
-            <form action={retryOrderNotificationAction}>
-              <input type="hidden" name="publicId" value={order.publicId} />
-              <button className={styles.secondaryButton} type="submit">
-                REINTENTAR AVISO
-              </button>
-            </form>
-          ) : null}
           <a className={styles.whatsappButton} href={customerWhatsAppUrl(order)} target="_blank" rel="noreferrer">CONTACTAR POR WHATSAPP</a>
           <OrderActions order={order} />
         </aside>

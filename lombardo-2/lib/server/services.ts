@@ -9,6 +9,7 @@ import {
   whatsAppOrderNotificationsEnabled,
 } from "./environment";
 import { EmailOrderNotificationService } from "./notifications/email-order-notification-service";
+import { CustomerOrderConfirmationService } from "./notifications/customer-order-confirmation-service";
 import { OrderNotificationService } from "./notifications/order-notification-service";
 import { SupabaseOrderNotificationStore } from "./notifications/supabase-order-notification-store";
 import { ResendEmailApi } from "./notifications/resend-email-api";
@@ -50,14 +51,39 @@ export function createPaymentGateway(): PaymentGateway | null {
 
 export function createCheckoutCoordinator() {
   const services = createOrderServices();
+  const newOrderNotifiers = [
+    createNewOrderNotifier(),
+    createCustomerOrderConfirmationNotifier(),
+  ].filter((notifier) => notifier !== null);
   return {
     ...services,
     coordinator: new OrderPaymentCoordinator({
       orders: services.orders,
       paymentGateway: createPaymentGateway(),
-      newOrderNotifier: createNewOrderNotifier(),
+      newOrderNotifiers,
     }),
   };
+}
+
+export function createCustomerOrderConfirmationNotifier() {
+  if (!emailOrderNotificationsEnabled()) return null;
+  const runia = readRuniaConfiguration();
+  return new CustomerOrderConfirmationService({
+    store: new SupabaseOrderNotificationStore({
+      url: runia.url,
+      secretKey: runia.secretKey,
+      channel: "email_resend",
+      kind: "customer_order_confirmation",
+    }),
+    configurationFactory: () => {
+      const configuration = readEmailOrderNotificationConfiguration();
+      return {
+        provider: new ResendEmailApi({ apiKey: configuration.apiKey }),
+        sender: configuration.sender,
+        appUrl: configuration.appUrl,
+      };
+    },
+  });
 }
 
 export function createNewOrderNotifier() {

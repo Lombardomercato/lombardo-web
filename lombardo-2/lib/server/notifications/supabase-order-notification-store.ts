@@ -4,6 +4,7 @@ import { ServerOrderError } from "../orders/server-order-error.ts";
 import type {
   ClaimedOrderNotification,
   OrderNotificationChannel,
+  OrderNotificationKind,
   OrderNotification,
   OrderNotificationStatus,
   OrderNotificationStore,
@@ -13,12 +14,14 @@ interface SupabaseOrderNotificationStoreOptions {
   url: string;
   secretKey: string;
   channel?: OrderNotificationChannel;
+  kind?: OrderNotificationKind;
   fetcher?: typeof fetch;
 }
 
 interface NotificationRow {
   id: string | number;
   order_id: string | number;
+  kind: OrderNotificationKind;
   channel: OrderNotificationChannel;
   status: OrderNotificationStatus;
   attempt_count: number;
@@ -39,6 +42,7 @@ function mapNotification(row: NotificationRow): OrderNotification {
   return {
     id: String(row.id),
     orderId: String(row.order_id),
+    kind: row.kind,
     channel: row.channel,
     status: row.status,
     attemptCount: Number(row.attempt_count),
@@ -56,12 +60,14 @@ export class SupabaseOrderNotificationStore implements OrderNotificationStore {
   private readonly secretKey: string;
   private readonly fetcher: typeof fetch;
   private readonly channel: OrderNotificationChannel;
+  private readonly kind: OrderNotificationKind;
 
   constructor(options: SupabaseOrderNotificationStoreOptions) {
     this.url = options.url.replace(/\/$/, "");
     this.secretKey = options.secretKey;
     this.fetcher = options.fetcher ?? fetch;
     this.channel = options.channel ?? "whatsapp_cloud_api";
+    this.kind = options.kind ?? "new_order";
   }
 
   private headers(prefer?: string) {
@@ -93,13 +99,14 @@ export class SupabaseOrderNotificationStore implements OrderNotificationStore {
     orderId: string,
     allowRetry: boolean,
   ): Promise<ClaimedOrderNotification> {
-    const response = await this.request("rpc/lombardo_claim_order_notification_v2", {
+    const response = await this.request("rpc/lombardo_claim_order_notification_v3", {
       method: "POST",
       body: JSON.stringify({
         p_tenant_id: tenantId,
         p_order_id: Number(orderId),
         p_allow_retry: allowRetry,
         p_channel: this.channel,
+        p_kind: this.kind,
       }),
     });
     if (!response.ok) this.failure("No pudimos reservar la notificación operativa.");

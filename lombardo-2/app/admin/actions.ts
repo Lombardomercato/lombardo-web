@@ -13,6 +13,7 @@ import { AdminStoreError } from "@/lib/server/admin/runia-admin-store";
 import type { FulfillmentStatus } from "@/lib/server/admin/types";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import {
+  createCustomerOrderConfirmationNotifier,
   createNewOrderNotifier,
   createOrderServices,
 } from "@/lib/server/services";
@@ -130,7 +131,9 @@ export async function transitionOrderAction(formData: FormData) {
 export async function retryOrderNotificationAction(formData: FormData) {
   await requireAdminSession();
   const publicId = formText(formData, "publicId", 36);
+  const kind = formText(formData, "kind", 40);
   if (
+    (kind !== "new_order" && kind !== "customer_order_confirmation") ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       publicId,
     )
@@ -141,7 +144,10 @@ export async function retryOrderNotificationAction(formData: FormData) {
   let destination = `/admin/pedidos/${publicId}`;
   try {
     const order = await createOrderServices().orders.getByPublicId(publicId);
-    const notifier = createNewOrderNotifier();
+    const notifier =
+      kind === "customer_order_confirmation"
+        ? createCustomerOrderConfirmationNotifier()
+        : createNewOrderNotifier();
     if (!order) throw new AdminStoreError("Pedido no encontrado.", 404);
     if (!notifier) {
       throw new AdminStoreError("Las notificaciones automáticas están desactivadas.", 409);

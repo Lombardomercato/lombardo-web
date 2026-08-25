@@ -41,6 +41,7 @@ interface DevCommerceFields {
   providerMessageId?: string;
   errorCode?: string;
   notificationStatus?: string;
+  notificationKind?: string;
 }
 
 type EnvironmentSource = Record<string, string | undefined>;

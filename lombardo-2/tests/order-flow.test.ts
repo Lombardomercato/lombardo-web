@@ -257,6 +257,7 @@ class FakeNewOrderNotifier implements NewOrderNotifier {
       notification: {
         id: "notification-1",
         orderId: order.id,
+        kind: "new_order",
         channel: "whatsapp_cloud_api",
         status: "sent",
         attemptCount: 1,
@@ -401,6 +402,24 @@ test("una falla del aviso no impide crear ni devolver la orden", async () => {
   assert.equal(result.order.id, "1");
   assert.equal(store.orders.length, 1);
   assert.equal(result.order.paymentStatus, "pending");
+});
+
+test("aviso interno y confirmación al cliente se ejecutan una vez y se aíslan entre sí", async () => {
+  const { repository } = setup();
+  const operationalNotifier = new FakeNewOrderNotifier();
+  const customerNotifier = new FakeNewOrderNotifier();
+  operationalNotifier.shouldFail = true;
+  const coordinator = new OrderPaymentCoordinator({
+    orders: repository,
+    paymentGateway: null,
+    newOrderNotifiers: [operationalNotifier, customerNotifier],
+  });
+  const first = await coordinator.createOrder(input());
+  const second = await coordinator.createOrder(input());
+  assert.equal(first.order.id, second.order.id);
+  assert.equal(second.reused, true);
+  assert.equal(operationalNotifier.attempts, 1);
+  assert.equal(customerNotifier.attempts, 1);
 });
 
 test("el mensaje de coordinación contiene el pedido y omite email y DNI", async () => {

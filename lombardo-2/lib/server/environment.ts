@@ -43,6 +43,7 @@ export interface EmailOrderNotificationConfiguration {
   apiKey: string;
   recipient: string;
   sender: string;
+  appUrl: string;
   adminUrl: string;
 }
 
@@ -368,6 +369,7 @@ export function readEmailOrderNotificationConfiguration(
     apiKey,
     recipient,
     sender,
+    appUrl: appOrigin,
     adminUrl: `${appOrigin}/admin`,
   };
 }

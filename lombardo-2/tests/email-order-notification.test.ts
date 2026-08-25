@@ -71,6 +71,7 @@ class FakeStore implements OrderNotificationStore {
       notification: {
         id: "1",
         orderId,
+        kind: "new_order",
         channel: "email_resend",
         status: this.status,
         attemptCount: this.attempts,

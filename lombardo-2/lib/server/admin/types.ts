@@ -56,6 +56,7 @@ export interface AdminOrder {
   createdAt: string;
   updatedAt: string;
   newOrderNotification?: OrderNotification;
+  customerOrderConfirmation?: OrderNotification;
 }
 
 export interface AdminDashboard {
