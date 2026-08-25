@@ -7,9 +7,14 @@ export type OrderNotificationStatus =
   | "failed"
   | "unknown";
 
+export type OrderNotificationChannel =
+  | "whatsapp_cloud_api"
+  | "email_resend";
+
 export interface OrderNotification {
   id: string;
   orderId: string;
+  channel: OrderNotificationChannel;
   status: OrderNotificationStatus;
   attemptCount: number;
   providerMessageId?: string;
@@ -54,6 +59,19 @@ export interface WhatsAppOrderMessage {
 
 export interface WhatsAppOrderProvider {
   send(message: WhatsAppOrderMessage): Promise<{ messageId: string }>;
+}
+
+export interface EmailOrderMessage {
+  from: string;
+  recipient: string;
+  subject: string;
+  text: string;
+  html: string;
+  idempotencyKey: string;
+}
+
+export interface EmailOrderProvider {
+  send(message: EmailOrderMessage): Promise<{ messageId: string }>;
 }
 
 export interface NewOrderNotifier {

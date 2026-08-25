@@ -257,6 +257,7 @@ class FakeNewOrderNotifier implements NewOrderNotifier {
       notification: {
         id: "notification-1",
         orderId: order.id,
+        channel: "whatsapp_cloud_api",
         status: "sent",
         attemptCount: 1,
         createdAt: now,

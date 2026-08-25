@@ -101,6 +101,7 @@ interface TransitionRow {
 interface NotificationRow {
   id: string | number;
   order_id: string | number;
+  channel: OrderNotification["channel"];
   status: OrderNotificationStatus;
   attempt_count: number;
   provider_message_id: string | null;
@@ -115,6 +116,7 @@ function mapNotification(row: NotificationRow): OrderNotification {
   return {
     id: String(row.id),
     orderId: String(row.order_id),
+    channel: row.channel,
     status: row.status,
     attemptCount: Number(row.attempt_count),
     providerMessageId: row.provider_message_id ?? undefined,
@@ -403,11 +405,11 @@ export class RuniaAdminStore {
     const order = mapOrder(rows[0]);
     const notificationSearch = new URLSearchParams({
       select:
-        "id,order_id,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
+        "id,order_id,channel,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
       tenant_id: `eq.${this.tenantId}`,
       order_id: `eq.${order.id}`,
       kind: "eq.new_order",
-      channel: "eq.whatsapp_cloud_api",
+      order: "created_at.desc",
       limit: "1",
     });
     const notificationResult = await this.rows<NotificationRow>(

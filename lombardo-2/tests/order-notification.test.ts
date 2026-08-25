@@ -70,6 +70,7 @@ class FakeNotificationStore implements OrderNotificationStore {
       notification: {
         id: "1",
         orderId,
+        channel: "whatsapp_cloud_api",
         status: this.status,
         attemptCount: this.attempts,
         createdAt: now,

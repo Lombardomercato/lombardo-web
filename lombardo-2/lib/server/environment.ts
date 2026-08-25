@@ -39,6 +39,13 @@ export interface WhatsAppOrderNotificationConfiguration {
   adminUrl: string;
 }
 
+export interface EmailOrderNotificationConfiguration {
+  apiKey: string;
+  recipient: string;
+  sender: string;
+  adminUrl: string;
+}
+
 function configurationError(message: string): never {
   throw new ServerOrderError("SERVER_NOT_CONFIGURED", message, { status: 503 });
 }
@@ -162,6 +169,16 @@ export function whatsAppOrderNotificationsEnabled(
 ) {
   return (
     env.WHATSAPP_ORDER_NOTIFICATIONS_ENABLED
+      ?.trim()
+      .toLocaleLowerCase("en-US") === "true"
+  );
+}
+
+export function emailOrderNotificationsEnabled(
+  env: EnvironmentSource = process.env,
+) {
+  return (
+    env.EMAIL_ORDER_NOTIFICATIONS_ENABLED
       ?.trim()
       .toLocaleLowerCase("en-US") === "true"
   );
@@ -310,6 +327,47 @@ export function readWhatsAppOrderNotificationConfiguration(
     templateName,
     languageCode,
     graphApiVersion,
+    adminUrl: `${appOrigin}/admin`,
+  };
+}
+
+export function readEmailOrderNotificationConfiguration(
+  env: EnvironmentSource = process.env,
+): EmailOrderNotificationConfiguration {
+  if (!emailOrderNotificationsEnabled(env)) {
+    configurationError(
+      "EMAIL_ORDER_NOTIFICATIONS_ENABLED debe ser true para enviar avisos.",
+    );
+  }
+
+  const appUrl = requiredEnvironment(env, "APP_URL");
+  const appOrigin = normalizedHttpsOrigin(appUrl);
+  if (appOrigin !== "https://www.lombardomercato.com") {
+    configurationError(
+      "Las notificaciones de pedidos exigen APP_URL=https://www.lombardomercato.com.",
+    );
+  }
+
+  const apiKey = requiredEnvironment(env, "RESEND_API_KEY");
+  if (!apiKey.startsWith("re_") || apiKey.length < 20 || /\s/.test(apiKey)) {
+    configurationError("RESEND_API_KEY no es válida.");
+  }
+
+  const recipient = requiredEnvironment(env, "ORDER_NOTIFICATION_EMAIL_TO");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+    configurationError("ORDER_NOTIFICATION_EMAIL_TO no es válido.");
+  }
+
+  const sender = requiredEnvironment(env, "ORDER_NOTIFICATION_EMAIL_FROM");
+  const senderAddress = sender.match(/<([^<>]+)>$/)?.[1] ?? sender;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderAddress)) {
+    configurationError("ORDER_NOTIFICATION_EMAIL_FROM no es válido.");
+  }
+
+  return {
+    apiKey,
+    recipient,
+    sender,
     adminUrl: `${appOrigin}/admin`,
   };
 }

@@ -3,23 +3,32 @@ import "server-only";
 import type { OrderDraft } from "../../../types/checkout.ts";
 import { formatCurrency } from "../../utils/format-currency.ts";
 import { logDevCommerce } from "../dev-commerce-logger.ts";
+import { OrderNotificationProviderError } from "./provider-error.ts";
 import type {
   ClaimedOrderNotification,
+  EmailOrderProvider,
   NewOrderNotifier,
   OrderNotificationStore,
-  WhatsAppOrderProvider,
 } from "./types.ts";
-import { OrderNotificationProviderError } from "./provider-error.ts";
 
-interface OrderNotificationServiceOptions {
+interface EmailOrderNotificationServiceOptions {
   store: OrderNotificationStore;
   configurationFactory: () => {
-    provider: WhatsAppOrderProvider;
+    provider: EmailOrderProvider;
     recipient: string;
-    templateName: string;
-    languageCode: string;
+    sender: string;
     adminUrl: string;
   };
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] ?? character);
 }
 
 function customerName(order: OrderDraft) {
@@ -41,25 +50,43 @@ function paymentLabel(order: OrderDraft) {
   return labels[order.paymentStatus];
 }
 
-export function buildNewOrderTemplateParameters(
-  order: OrderDraft,
-  adminUrl: string,
-) {
-  return [
-    order.publicId.slice(0, 8).toUpperCase(),
-    customerName(order),
-    formatCurrency(order.total),
-    deliveryLabel(order),
-    paymentLabel(order),
-    `${adminUrl.replace(/\/$/, "")}/pedidos/${order.publicId}`,
-  ] as const;
+export function buildNewOrderEmail(order: OrderDraft, adminUrl: string) {
+  const displayId = order.publicId.slice(0, 8).toUpperCase();
+  const name = customerName(order);
+  const total = formatCurrency(order.total);
+  const delivery = deliveryLabel(order);
+  const payment = paymentLabel(order);
+  const orderUrl = `${adminUrl.replace(/\/$/, "")}/pedidos/${order.publicId}`;
+  const subject = `Nuevo pedido #${displayId} · ${total}`;
+  const text = [
+    `Pedido #${displayId}`,
+    `Cliente: ${name}`,
+    `Total: ${total}`,
+    `Entrega: ${delivery}`,
+    `Pago: ${payment}`,
+    `Abrir pedido: ${orderUrl}`,
+  ].join("\n");
+  const rows = [
+    ["Pedido", `#${displayId}`],
+    ["Cliente", name],
+    ["Total", total],
+    ["Entrega", delivery],
+    ["Pago", payment],
+  ];
+  const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#073f73"><h1>Nuevo pedido Lombardo</h1>${rows.map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`).join("")}<p><a href="${escapeHtml(orderUrl)}">Abrir pedido en Admin</a></p></body></html>`;
+  return {
+    subject,
+    text,
+    html,
+    idempotencyKey: `lombardo-new-order-${order.id}`,
+  };
 }
 
-export class OrderNotificationService implements NewOrderNotifier {
+export class EmailOrderNotificationService implements NewOrderNotifier {
   private readonly store: OrderNotificationStore;
-  private readonly configurationFactory: OrderNotificationServiceOptions["configurationFactory"];
+  private readonly configurationFactory: EmailOrderNotificationServiceOptions["configurationFactory"];
 
-  constructor(options: OrderNotificationServiceOptions) {
+  constructor(options: EmailOrderNotificationServiceOptions) {
     this.store = options.store;
     this.configurationFactory = options.configurationFactory;
   }
@@ -82,18 +109,14 @@ export class OrderNotificationService implements NewOrderNotifier {
     let providerStarted = false;
     try {
       const configuration = this.configurationFactory();
+      const email = buildNewOrderEmail(order, configuration.adminUrl);
       providerStarted = true;
       const result = await configuration.provider.send({
+        from: configuration.sender,
         recipient: configuration.recipient,
-        templateName: configuration.templateName,
-        languageCode: configuration.languageCode,
-        parameters: buildNewOrderTemplateParameters(order, configuration.adminUrl),
+        ...email,
       });
-      await this.store.markSent(
-        order.tenantId,
-        claim.notification.id,
-        result.messageId,
-      );
+      await this.store.markSent(order.tenantId, claim.notification.id, result.messageId);
       logDevCommerce("order_notification.sent", {
         orderId: order.id,
         publicId: order.publicId,

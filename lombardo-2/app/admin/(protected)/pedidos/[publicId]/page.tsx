@@ -30,6 +30,11 @@ const NOTIFICATION_LABELS = {
   unknown: "RESULTADO A VERIFICAR",
 } as const;
 
+const NOTIFICATION_CHANNEL_LABELS = {
+  whatsapp_cloud_api: "WHATSAPP",
+  email_resend: "EMAIL",
+} as const;
+
 export default async function AdminOrderDetailPage({
   params,
   searchParams,
@@ -114,7 +119,11 @@ export default async function AdminOrderDetailPage({
             <div className={styles.detailField}><span className={styles.fieldLabel}>ACTUALIZADO</span><p>{formatAdminDate(order.fulfillmentUpdatedAt)}</p></div>
             {order.paymentProviderId ? <div className={styles.detailField}><span className={styles.fieldLabel}>PROVIDER PAYMENT ID</span><p>{order.paymentProviderId}</p></div> : null}
             <div className={styles.detailField}>
-              <span className={styles.fieldLabel}>AVISO WHATSAPP</span>
+              <span className={styles.fieldLabel}>
+                AVISO {order.newOrderNotification
+                  ? NOTIFICATION_CHANNEL_LABELS[order.newOrderNotification.channel]
+                  : "OPERATIVO"}
+              </span>
               <p>
                 {order.newOrderNotification
                   ? NOTIFICATION_LABELS[order.newOrderNotification.status]
@@ -136,7 +145,7 @@ export default async function AdminOrderDetailPage({
             <form action={retryOrderNotificationAction}>
               <input type="hidden" name="publicId" value={order.publicId} />
               <button className={styles.secondaryButton} type="submit">
-                REINTENTAR AVISO WHATSAPP
+                REINTENTAR AVISO
               </button>
             </form>
           ) : null}

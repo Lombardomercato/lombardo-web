@@ -4,6 +4,7 @@ import type {
   WhatsAppOrderMessage,
   WhatsAppOrderProvider,
 } from "./types.ts";
+import { OrderNotificationProviderError } from "./provider-error.ts";
 
 interface WhatsAppCloudApiOptions {
   accessToken: string;
@@ -17,20 +18,7 @@ interface WhatsAppSendResponse {
   error?: { code?: number; error_subcode?: number };
 }
 
-export class WhatsAppProviderError extends Error {
-  readonly code: string;
-  readonly outcome: "rejected" | "unknown";
-
-  constructor(
-    code: string,
-    message: string,
-    outcome: "rejected" | "unknown",
-  ) {
-    super(message);
-    this.code = code;
-    this.outcome = outcome;
-  }
-}
+export class WhatsAppProviderError extends OrderNotificationProviderError {}
 
 export class WhatsAppCloudApi implements WhatsAppOrderProvider {
   private readonly endpoint: string;

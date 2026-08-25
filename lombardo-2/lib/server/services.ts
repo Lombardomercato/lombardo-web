@@ -1,13 +1,17 @@
 import { RuniaCommerceProvider } from "../commerce/runia-commerce-provider";
 import {
+  emailOrderNotificationsEnabled,
   paymentsEnabled,
+  readEmailOrderNotificationConfiguration,
   readMercadoPagoConfiguration,
   readRuniaConfiguration,
   readWhatsAppOrderNotificationConfiguration,
   whatsAppOrderNotificationsEnabled,
 } from "./environment";
+import { EmailOrderNotificationService } from "./notifications/email-order-notification-service";
 import { OrderNotificationService } from "./notifications/order-notification-service";
 import { SupabaseOrderNotificationStore } from "./notifications/supabase-order-notification-store";
+import { ResendEmailApi } from "./notifications/resend-email-api";
 import { WhatsAppCloudApi } from "./notifications/whatsapp-cloud-api";
 import { RuniaOrderRepository } from "./orders/runia-order-repository";
 import { EnvironmentDeliveryPricing } from "./orders/server-delivery-pricing";
@@ -57,12 +61,32 @@ export function createCheckoutCoordinator() {
 }
 
 export function createNewOrderNotifier() {
+  if (emailOrderNotificationsEnabled()) {
+    const runia = readRuniaConfiguration();
+    return new EmailOrderNotificationService({
+      store: new SupabaseOrderNotificationStore({
+        url: runia.url,
+        secretKey: runia.secretKey,
+        channel: "email_resend",
+      }),
+      configurationFactory: () => {
+        const configuration = readEmailOrderNotificationConfiguration();
+        return {
+          provider: new ResendEmailApi({ apiKey: configuration.apiKey }),
+          recipient: configuration.recipient,
+          sender: configuration.sender,
+          adminUrl: configuration.adminUrl,
+        };
+      },
+    });
+  }
   if (!whatsAppOrderNotificationsEnabled()) return null;
   const runia = readRuniaConfiguration();
   return new OrderNotificationService({
     store: new SupabaseOrderNotificationStore({
       url: runia.url,
       secretKey: runia.secretKey,
+      channel: "whatsapp_cloud_api",
     }),
     configurationFactory: () => {
       const configuration = readWhatsAppOrderNotificationConfiguration();
