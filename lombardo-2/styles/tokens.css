@@ -10,8 +10,9 @@
   --neutral-muted: #5b6268;
   --neutral-line: rgba(0, 58, 112, 0.22);
 
-  --font-display: var(--font-gopher), Arial, sans-serif;
-  --font-body: var(--font-articulat), Arial, sans-serif;
+  --font-functional: Arial, Helvetica, sans-serif;
+  --font-display: var(--font-gopher), var(--font-functional);
+  --font-body: var(--font-articulat), var(--font-functional);
 
   --step--1: clamp(0.78rem, 0.75rem + 0.12vw, 0.86rem);
   --step-0: clamp(1rem, 0.94rem + 0.28vw, 1.16rem);

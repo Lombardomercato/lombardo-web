@@ -71,7 +71,7 @@
 
 .closeButton span {
   margin-left: 0.4rem;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-functional);
   font-size: 1rem;
 }
 
@@ -109,7 +109,7 @@
 
 .lineInfo > div > span,
 .summary strong {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-functional);
 }
 
 .lineActions {

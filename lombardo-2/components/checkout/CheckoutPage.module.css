@@ -27,8 +27,10 @@
 }
 
 .hero > div a {
-  height: fit-content;
+  min-height: 2.75rem;
   padding-bottom: 0.25rem;
+  display: inline-flex;
+  align-items: flex-start;
   border-bottom: 1px solid transparent;
 }
 
@@ -162,7 +164,7 @@
   outline: 0;
   background: transparent;
   color: var(--lombardo-blue);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: clamp(1.35rem, 2.2vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -320,7 +322,7 @@
 
 .summaryItems strong,
 .totals dd {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-functional);
   font-size: 0.8rem;
 }
 
@@ -531,7 +533,7 @@
 
 .orderNumber {
   color: var(--lombardo-green);
-  font-family: Arial, sans-serif;
+  font-family: var(--font-functional);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -582,7 +584,7 @@
 
 .preparedSummary > div > span:last-child,
 .preparedSummary strong {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-functional);
   text-align: right;
 }
 

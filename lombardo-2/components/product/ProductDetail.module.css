@@ -19,8 +19,10 @@
 
 .topline a {
   width: fit-content;
-  height: fit-content;
+  min-height: 2.75rem;
   padding-bottom: 0.25rem;
+  display: inline-flex;
+  align-items: flex-start;
   border-bottom: 1px solid transparent;
 }
 
@@ -114,7 +116,7 @@
   padding-block: clamp(1.8rem, 4vw, 3.5rem);
   display: grid;
   justify-items: end;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-functional);
 }
 
 .price del {

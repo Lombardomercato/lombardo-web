@@ -409,6 +409,10 @@
   display: none;
 }
 
+.reducedSituationProduct > div {
+  position: relative;
+}
+
 .situationList {
   grid-column: 1;
   align-self: end;
@@ -426,7 +430,7 @@
   border: 0;
   border-top: 1px solid rgba(255, 253, 249, 0.36);
   background: transparent;
-  color: rgba(255, 253, 249, 0.5);
+  color: rgba(255, 253, 249, 0.68);
   cursor: pointer;
   text-align: left;
   transition: color 180ms ease, padding-left 240ms ease,
@@ -469,6 +473,7 @@
 
 .situationAction {
   width: fit-content;
+  min-height: 2.75rem;
   margin-top: 1rem;
   display: inline-flex;
   align-items: center;
@@ -778,7 +783,6 @@
   }
 
   .reducedSituationProduct > div {
-    position: relative;
     min-height: 45svh;
     overflow: hidden;
   }

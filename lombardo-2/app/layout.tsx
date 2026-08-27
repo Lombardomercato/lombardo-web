@@ -22,6 +22,13 @@ const gopher = localFont({
   display: "swap",
   variable: "--font-gopher",
   fallback: ["Arial", "sans-serif"],
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0030-0039,U+0041-005A,U+0061-007A,U+00C0-00D6,U+00D8-00F6,U+00F8-00FF,U+0100-017F",
+    },
+  ],
 });
 
 const articulat = localFont({
@@ -40,6 +47,13 @@ const articulat = localFont({
   display: "swap",
   variable: "--font-articulat",
   fallback: ["Arial", "sans-serif"],
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0041-005A,U+0061-007A,U+00C0-00D6,U+00D8-00F6,U+00F8-00FF,U+0100-017F",
+    },
+  ],
 });
 
 export const metadata: Metadata = {

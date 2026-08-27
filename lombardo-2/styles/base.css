@@ -32,7 +32,8 @@ button,
 input,
 select,
 textarea {
-  font: inherit;
+  font-family: var(--font-functional);
+  font-size: inherit;
 }
 
 button,

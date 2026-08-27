@@ -204,6 +204,7 @@
 }
 
 .productDetails strong {
+  font-family: var(--font-functional);
   font-size: var(--step-0);
 }
 
@@ -295,7 +296,10 @@
 
 .business a {
   justify-self: start;
+  min-height: 2.75rem;
   padding-bottom: 0.45rem;
+  display: inline-flex;
+  align-items: center;
   border-bottom: 1px solid currentColor;
   font-size: 0.75rem;
   font-weight: 700;

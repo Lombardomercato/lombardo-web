@@ -814,7 +814,7 @@ export function CheckoutPage() {
           <Link href="/carrito">← VOLVER AL CARRITO</Link>
           <span>CHECKOUT / 03</span>
         </div>
-        <p>TODO CLARO.</p>
+        <p>PAGO A COORDINAR.</p>
         <h1>PREPARAMOS TU PEDIDO.</h1>
       </header>
 
@@ -1054,6 +1054,7 @@ export function CheckoutPage() {
             <span aria-hidden="true">→</span>
           </button>
           <p className={styles.noPaymentNote}>
+            Confirmás el pedido ahora y después coordinás el pago por WhatsApp.
             En este paso no se realiza ningún cobro.
           </p>
         </aside>

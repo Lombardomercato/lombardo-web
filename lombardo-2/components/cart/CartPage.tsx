@@ -120,7 +120,7 @@ export function CartPage() {
               <strong>{formatCurrency(subtotal)}</strong>
             </div>
             <Link className={styles.checkoutLink} href="/checkout">
-              <span>CONTINUAR</span>
+              <span>CONTINUAR CON EL PEDIDO</span>
               <span aria-hidden="true">→</span>
             </Link>
 

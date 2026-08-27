@@ -136,7 +136,7 @@
 .lineSubtotal,
 .orderSummary strong,
 .orderSummary > div > span:last-child {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-functional);
 }
 
 .unitPrice {
@@ -211,7 +211,7 @@
   font-size: 1.5rem;
 }
 
-.orderSummary > a {
+.orderSummary > a:not(.checkoutLink) {
   width: fit-content;
   margin-top: 1.5rem;
   padding-bottom: 0.25rem;
@@ -219,6 +219,10 @@
   border-bottom: 1px solid currentColor;
   font-size: 0.65rem;
   font-weight: 700;
+}
+
+.orderSummary > .checkoutLink {
+  width: 100%;
 }
 
 .loading {
