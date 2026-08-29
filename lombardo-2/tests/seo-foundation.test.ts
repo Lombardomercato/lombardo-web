@@ -120,6 +120,8 @@ test("legacy URLs críticas tienen redirect permanente a destinos equivalentes",
     "/wine-tinder.html",
     "/tinder-wine.html",
     "/pages/wine-tinder",
+    "/wine-tinder",
+    "/pasteleria",
     "/pages/pasteleria",
   ]) {
     assert.match(config, new RegExp(legacy.replaceAll("/", "\\/")));
