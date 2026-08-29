@@ -103,6 +103,8 @@ test("matching y publicación nunca ocurren sin una decisión humana explícita"
 test("seleccionar HIGH visibles excluye MEDIUM y los filtros se ejecutan server-side", () => {
   assert.match(imageQueue, /filter\(\(candidate\) => candidate\.confidenceBand === "high"\)/);
   assert.match(imageQueue, /setSelected\(new Set\(highIds\)\)/);
+  assert.match(imageQueue, /status === "approved" && candidate\.publicationStatus === "pending"/);
+  assert.match(imageQueue, /PUBLICAR SELECCIONADOS/);
   assert.match(imageQueuePage, /confidenceBand: confidence/);
   assert.match(adminStore, /input\.confidenceBand === "high"[\s\S]*match_confidence", "gte\.0\.9"/);
   assert.match(adminStore, /input\.confidenceBand === "medium"[\s\S]*"gte\.0\.72"[\s\S]*"lt\.0\.9"/);

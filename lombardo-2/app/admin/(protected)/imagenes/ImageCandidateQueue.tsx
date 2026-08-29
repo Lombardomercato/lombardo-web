@@ -18,8 +18,10 @@ interface Props {
 
 export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const pendingCandidates = status === "pending" ? candidates : [];
-  const highIds = pendingCandidates
+  const actionableCandidates = candidates.filter((candidate) =>
+    status === "pending" || (status === "approved" && candidate.publicationStatus === "pending"));
+  const actionableIds = new Set(actionableCandidates.map((candidate) => candidate.id));
+  const highIds = actionableCandidates
     .filter((candidate) => candidate.confidenceBand === "high")
     .map((candidate) => candidate.id);
 
@@ -39,11 +41,13 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
 
   return (
     <>
-      {status === "pending" ? (
+      {actionableCandidates.length ? (
         <section className={styles.bulkReviewBar} aria-label="Revisión masiva">
           <div>
             <strong>{selected.size} SELECCIONADOS</strong>
-            <span>La aprobación descarga la imagen, registra la fuente y la publica como principal.</span>
+            <span>{status === "pending"
+              ? "La aprobación descarga la imagen, registra la fuente y la publica como principal."
+              : "Estos matches ya están aprobados. Publicar registra la fuente y actualiza catálogo y ficha."}</span>
           </div>
           <button className={styles.secondaryButton} type="button" onClick={selectVisibleHigh} disabled={!highIds.length}>
             SELECCIONAR HIGH VISIBLES ({highIds.length})
@@ -55,7 +59,7 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
             <input type="hidden" name="returnStatus" value={status} />
             <input type="hidden" name="returnConfidence" value={confidence || ""} />
             <button className={styles.primaryButton} name="decision" value="approved" disabled={!selected.size}>
-              APROBAR SELECCIONADOS
+              {status === "pending" ? "APROBAR SELECCIONADOS" : "PUBLICAR SELECCIONADOS"}
             </button>
             <button className={styles.dangerButton} name="decision" value="rejected" disabled={!selected.size}>
               RECHAZAR SELECCIONADOS
@@ -68,7 +72,7 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
         {candidates.map((candidate) => (
           <article className={styles.candidateCard} key={candidate.id} data-selected={selected.has(candidate.id)}>
             <div className={styles.candidateSelection}>
-              {status === "pending" ? (
+              {actionableIds.has(candidate.id) ? (
                 <label>
                   <input
                     form={BULK_FORM_ID}
