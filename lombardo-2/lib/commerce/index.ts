@@ -14,6 +14,7 @@ import type { CommerceProvider, ProductPageQuery } from "./provider";
 
 export type {
   CommerceProvider,
+  IndexableProduct,
   ProductPage,
   ProductPageQuery,
 } from "./provider";
@@ -127,6 +128,12 @@ const cachedProductBySlug = unstable_cache(
   { revalidate: 300, tags: ["runia-real-catalog"] },
 );
 
+const cachedIndexableProducts = unstable_cache(
+  () => getRuniaProvider().getIndexableProducts(),
+  ["runia-indexable-products-v1"],
+  { revalidate: 3600, tags: ["runia-real-catalog"] },
+);
+
 export const commerceProvider: CommerceProvider = {
   getProductPage: async (
     query: ProductPageQuery = {},
@@ -173,5 +180,6 @@ export const commerceProvider: CommerceProvider = {
     );
     return product ? attachPricingIdentity(product, context.contextKey) : null;
   },
+  getIndexableProducts: () => cachedIndexableProducts(),
   getCategories: () => getRuniaProvider().getCategories(),
 };

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   bestPublicCatalogMatch,
   comparePublicCatalogImage,
+  reviewRiskForMatch,
   visualVariantForSku,
 } from "../lib/images/mass-image-matcher.ts";
 
@@ -29,6 +30,20 @@ test("matcher auto-publica una identidad completa sin conflictos", () => {
   assert.equal(match.band, "high");
   assert.equal(match.hardConflicts.length, 0);
   assert.equal(match.needsReview, false);
+});
+
+test("matcher bloquea una línea distinta aprendida del QA", () => {
+  const match = comparePublicCatalogImage(
+    { ...product, sku: "BIA062B", name: "BIANCHI Chardonnay x 750 cc" },
+    candidate("Bianchi Maria Carmen Chardonnay 750 ml"),
+  );
+  assert.ok(match.hardConflicts.includes("línea claramente diferente"));
+});
+
+test("NEEDS_REVIEW prioriza riesgo de presentación antes que confianza", () => {
+  const match = comparePublicCatalogImage(product, candidate("Andeluna Raices Malbec"));
+  assert.equal(reviewRiskForMatch(match).rank, 1);
+  assert.match(reviewRiskForMatch(match).reason, /presentación|volumen/i);
 });
 
 test("matcher bloquea varietal, volumen y pack/unidad", () => {

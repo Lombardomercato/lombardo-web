@@ -4,9 +4,17 @@ import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 
 export const metadata: Metadata = {
-  title: "Productos",
-  description: "Vinos, regalos y cosas buenas seleccionadas por Lombardo.",
+  title: "Tienda online de vinos, destilados y regalos en Rosario",
+  description:
+    "Explorá vinos, destilados, regalos y productos gourmet para comprar online en Rosario con precios actualizados.",
   alternates: { canonical: "/productos" },
+  openGraph: {
+    title: "Vinos, destilados y regalos online en Rosario | LOMBARDO.",
+    description:
+      "Catálogo online de Lombardo con productos y precios actualizados.",
+    url: "/productos",
+    type: "website",
+  },
 };
 
 export const dynamic = "force-dynamic";

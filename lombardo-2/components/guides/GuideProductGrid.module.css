@@ -1,0 +1,90 @@
+.section {
+  padding: clamp(4rem, 9vw, 8rem) var(--page-gutter);
+  background: var(--neutral-paper);
+  color: var(--lombardo-blue);
+}
+
+.heading {
+  margin-bottom: clamp(2rem, 5vw, 4rem);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 0.8rem 2rem;
+}
+
+.heading > p {
+  grid-column: 1 / -1;
+  color: var(--lombardo-red);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.heading h2 {
+  max-width: 12ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.7rem, 6vw, 6.8rem);
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+}
+
+.heading a {
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid currentColor;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(2rem, 4vw, 4rem) clamp(1rem, 2vw, 2rem);
+}
+
+.card {
+  min-width: 0;
+}
+
+.card > div {
+  padding-top: 1rem;
+}
+
+.card p {
+  color: var(--neutral-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.card h3 {
+  margin: 0.45rem 0 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2vw, 2.1rem);
+  line-height: 0.95;
+}
+
+.card strong {
+  font-size: var(--step-1);
+}
+
+@media (max-width: 64rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .heading {
+    grid-template-columns: 1fr;
+  }
+
+  .heading a {
+    justify-self: start;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+}

@@ -38,13 +38,27 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const url = new URL(request.url);
   const offset = Math.max(0, Math.trunc(Number(url.searchParams.get("offset")) || 0));
   const limit = Math.min(100, Math.max(10, Math.trunc(Number(url.searchParams.get("limit")) || 100)));
-  if (url.searchParams.get("queue") === "approved") {
+  const queue = url.searchParams.get("queue");
+  if (queue === "approved") {
     const page = await store.listImageCandidates({
       status: "approved",
       publicationStatus: "pending",
       offset,
       limit,
     });
+    return NextResponse.json(page);
+  }
+  if (queue === "published") {
+    const page = await store.listImageCandidates({
+      status: "approved",
+      publicationStatus: "approved",
+      offset,
+      limit,
+    });
+    return NextResponse.json(page);
+  }
+  if (queue === "rejected") {
+    const page = await store.listImageCandidates({ status: "rejected", offset, limit });
     return NextResponse.json(page);
   }
   const page = await store.listProductsWithoutImageMatch({ offset, limit });
@@ -73,7 +87,17 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 25) {
     return NextResponse.json({ error: "El lote de matching debe contener entre 1 y 25 candidatos." }, { status: 400 });
   }
-  const imported = await store.importMassImageCandidates(body.items);
+  const items = body.items as unknown[];
+  const imported = await store.importMassImageCandidates(items);
+  await store.setMassImageCandidateReviewRisks(imported.map((candidate, index) => {
+    const item = items[index] as { reviewRiskRank?: unknown; reviewRiskReason?: unknown; runId?: unknown };
+    return {
+      candidateId: candidate.candidate_id,
+      reviewRiskRank: item?.reviewRiskRank,
+      reviewRiskReason: item?.reviewRiskReason,
+      runId: item?.runId,
+    };
+  }));
   return NextResponse.json({ imported });
 }
 
