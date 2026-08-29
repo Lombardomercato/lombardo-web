@@ -1,4 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { execFile as execFileCallback } from "node:child_process";
+import { promisify } from "node:util";
 import {
   bestPublicCatalogMatch,
   comparePublicCatalogImage,
@@ -15,6 +17,7 @@ interface SourceDefinition {
   tier: ImageSourceTier;
   sitemapUrl: string;
   productPath: RegExp;
+  listingPages?: number;
 }
 
 interface SitemapRecord extends PublicCatalogImage {
@@ -37,9 +40,21 @@ const SOURCES: SourceDefinition[] = [
   { key: "official_luigi_bosca", tier: "official", sitemapUrl: "https://tienda.luigibosca.com/sitemap.xml", productPath: /\/p(?:\?|$)/i },
   { key: "official_rutini", tier: "official", sitemapUrl: "https://tienda.rutiniwines.com/sitemap.xml", productPath: /\/products\//i },
   { key: "official_norton", tier: "official", sitemapUrl: "https://shop.norton.com.ar/sitemap.xml", productPath: /\/products\//i },
+  { key: "official_alfredo_roca", tier: "official", sitemapUrl: "https://tienda-rocawines.com/sitemap.xml", productPath: /\/products\//i },
   { key: "distributor_tonel_privado", tier: "distributor", sitemapUrl: "https://www.tonelprivado.com/sitemap.xml", productPath: /\/productos\//i },
   { key: "distributor_ligier", tier: "distributor", sitemapUrl: "https://www.ligier.com.ar/sitemap.xml", productPath: /\/productos\//i },
   { key: "distributor_distribebidas", tier: "distributor", sitemapUrl: "https://www.distribebidaslp.com.ar/sitemap.xml", productPath: /\/productos\//i },
+  { key: "distributor_bebiendo_estrellas", tier: "distributor", sitemapUrl: "https://www.bebiendoestrellas.com.ar/sitemap.xml", productPath: /\/productos\//i },
+  { key: "distributor_mercado_bebidas", tier: "distributor", sitemapUrl: "https://www.elmercadodebebidas.com.ar/sitemap.xml", productPath: /\/shop\//i },
+  { key: "distributor_casa_catar", tier: "distributor", sitemapUrl: "https://casacatar.com/sitemap.xml", productPath: /\/products\//i },
+  { key: "distributor_bonvino", tier: "distributor", sitemapUrl: "https://www.bonvino.com.ar/sitemap.xml", productPath: /\/productos\//i },
+  { key: "distributor_musters", tier: "distributor", sitemapUrl: "https://musters.com.ar/sitemap_index.xml", productPath: /\/producto\//i },
+  { key: "distributor_debarricas", tier: "distributor", sitemapUrl: "https://debarricas.com.ar/sitemap_index.xml", productPath: /\/producto\//i },
+  { key: "distributor_black_bebidas", tier: "distributor", sitemapUrl: "https://blackbebidas.com.ar/wp-sitemap.xml", productPath: /\/producto\//i },
+  { key: "distributor_espacio_vino", tier: "distributor", sitemapUrl: "https://www.espaciovino.com.ar/vinos?o=recomendados", productPath: /\/vinos-ficha\//i, listingPages: 98 },
+  { key: "distributor_vinicius", tier: "distributor", sitemapUrl: "https://viniciusvinos.com.ar/sitemap.xml", productPath: /\/productos\//i },
+  { key: "distributor_quirino", tier: "distributor", sitemapUrl: "https://quirinobebidas.com.ar/sitemap_index.xml", productPath: /\/producto\//i },
+  { key: "commercial_megawine", tier: "commercial", sitemapUrl: "https://www.megawine.com.ar/sitemap.xml", productPath: /\/productos\//i },
   { key: "commercial_tienda_de_vinos", tier: "commercial", sitemapUrl: "https://tiendadevinos.ar/sitemap_index.xml", productPath: /^https:\/\/tiendadevinos[.]ar\/(?!venta\/?$)/i },
   { key: "commercial_lavinoteca_lanus", tier: "commercial", sitemapUrl: "https://lavinotecalanus.mitiendanube.com/sitemap.xml", productPath: /\/productos\//i },
   { key: "commercial_boncic", tier: "commercial", sitemapUrl: "https://boncic.com/sitemap.xml", productPath: /\/productos\//i },
@@ -59,8 +74,11 @@ const token = process.env.IMAGE_JOB_TOKEN || "";
 const confirmation = process.env.MASS_IMAGE_RUN_CONFIRM;
 const searchCachePath = process.env.MASS_IMAGE_SEARCH_CACHE_PATH || "docs/mass-image-search-cache-v3-2026-08-29.json";
 const searchFallbackLimit = Number.parseInt(process.env.MASS_IMAGE_SEARCH_LIMIT || "0", 10);
+const searchDisabled = process.env.MASS_IMAGE_DISABLE_SEARCH === "1";
+const duckSearchEnabled = process.env.MASS_IMAGE_ENABLE_DDG === "1";
 const runId = `mass-image-coverage-v1-${new Date().toISOString().slice(0, 10)}`;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const execFile = promisify(execFileCallback);
 
 if (!baseUrl.startsWith("https://") || !uuidPattern.test(jobId) || token.length < 43) {
   throw new Error("Configuración incompleta para el trabajo protegido de imágenes.");
@@ -205,6 +223,38 @@ function sitemapProducts(xml: string, source: SourceDefinition, relevantTokens: 
 }
 
 async function loadSourceCatalog(source: SourceDefinition, relevantTokens: Set<string>) {
+  if (source.listingPages) {
+    const pages = await mapLimit(Array.from({ length: source.listingPages }, (_, index) => index + 1), 4, async (page) => {
+      const response = await fetchWithRetry(`${source.sitemapUrl}&page=${page}`, {
+        headers: { "User-Agent": "LombardoCatalogCoverage/1.0", Accept: "text/html" },
+      });
+      if (!response.ok) return [];
+      const html = await response.text();
+      const records: SitemapRecord[] = [];
+      for (const match of html.matchAll(/<a[^>]+href=["']([^"']*\/vinos-ficha\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+        const image = match[2].match(/<img[^>]+>/i)?.[0] || "";
+        const sourceUrl = new URL(decodeHtml(match[1]), "https://www.espaciovino.com.ar").href;
+        const name = decodeHtml(image.match(/alt=["']([^"']+)["']/i)?.[1] || pageName(sourceUrl));
+        const tokens = normalizeImageMatchText(name).split(" ");
+        if (!tokens.some((token) => relevantTokens.has(token))) continue;
+        const rawImage = image.match(/data-src=["']([^"']+)["']/i)?.[1] || image.match(/src=["']([^"']+)["']/i)?.[1] || "";
+        const imageUrl = rawImage
+          ? new URL(decodeHtml(rawImage).replace(/_small(?=[.])/i, "_medium"), "https://www.espaciovino.com.ar").href
+          : "";
+        records.push({
+          key: sourceUrl,
+          source: source.key,
+          tier: source.tier,
+          sourceUrl,
+          imageUrl,
+          name,
+          requiresPageFetch: false,
+        });
+      }
+      return records;
+    });
+    return [...new Map(pages.flat().map((record) => [record.sourceUrl, record])).values()];
+  }
   const queue = [{ url: source.sitemapUrl, depth: 0 }];
   const visited = new Set<string>();
   const products = new Map<string, SitemapRecord>();
@@ -215,8 +265,8 @@ async function loadSourceCatalog(source: SourceDefinition, relevantTokens: Set<s
     const response = await fetchWithRetry(current.url, {
       headers: { "User-Agent": "LombardoCatalogCoverage/1.0", Accept: "application/xml,text/xml" },
     });
-    if (!response.ok) continue;
     const xml = await response.text();
+    if (!response.ok && !/<(?:urlset|sitemapindex)(?:\s|>)/i.test(xml)) continue;
     for (const product of sitemapProducts(xml, source, relevantTokens)) products.set(product.sourceUrl, product);
     const children = sitemapChildren(xml)
       .filter((url) => /product|producto/i.test(url));
@@ -361,21 +411,87 @@ function duckDuckGoImageResults(value: unknown, product: ImageMatchProduct) {
   });
 }
 
+function decodeJavaScriptString(value: string) {
+  try {
+    return JSON.parse(`"${value}"`) as string;
+  } catch {
+    return value.replace(/\\"/g, '"').replace(/\\\//g, "/");
+  }
+}
+
+function braveImageResults(html: string, product: ImageMatchProduct) {
+  const records: PublicCatalogImage[] = [];
+  const pattern = /\{title:"([^"]+)",url:"([^"]+)"[\s\S]{0,2000}?original:"([^"]+)"/g;
+  for (const match of html.matchAll(pattern)) {
+    try {
+      const name = decodeJavaScriptString(match[1]);
+      const sourceUrl = new URL(decodeJavaScriptString(match[2]));
+      const imageUrl = new URL(decodeJavaScriptString(match[3]));
+      if (sourceUrl.protocol !== "https:" || imageUrl.protocol !== "https:") continue;
+      const source = searchSource(sourceUrl, product);
+      records.push({
+        key: `${sourceUrl.href}#brave-${records.length}`,
+        source: source.source,
+        tier: source.tier,
+        sourceUrl: sourceUrl.href,
+        imageUrl: imageUrl.href,
+        name,
+        presentation: name,
+      });
+    } catch {
+      // Ignore malformed external result records.
+    }
+  }
+  return records;
+}
+
 function bestSearchResult(product: ImageMatchProduct, candidates: PublicCatalogImage[]) {
   const ranked = candidates
     .map((external, index) => ({ match: comparePublicCatalogImage(product, external), index }))
-    .filter(({ match }) => match.hardConflicts.length === 0 && (match.band === "high" || match.band === "medium"))
+    .filter(({ match }) => match.hardConflicts.length === 0 && match.confidence >= 0.58)
     .sort((left, right) => {
       if (left.match.external?.tier !== right.match.external?.tier) return left.match.external?.tier === "official" ? -1 : 1;
-      if (left.match.band !== right.match.band) return left.match.band === "high" ? -1 : 1;
+      if (left.match.band !== right.match.band) {
+        const rank = { high: 3, medium: 2, low: 1, none: 0 };
+        return rank[right.match.band] - rank[left.match.band];
+      }
       if (Math.abs(left.match.confidence - right.match.confidence) >= 0.02) return right.match.confidence - left.match.confidence;
       return left.index - right.index;
     });
-  return ranked[0]?.match;
+  const best = ranked[0]?.match;
+  if (!best || best.band === "high" || best.band === "medium") return best;
+  const independentDomains = new Set(ranked.flatMap(({ match }) => {
+    try {
+      return match.external ? [new URL(match.external.sourceUrl).hostname.replace(/^www[.]/, "")] : [];
+    } catch {
+      return [];
+    }
+  }));
+  if (independentDomains.size < 2) return undefined;
+  return {
+    ...best,
+    confidence: 0.72,
+    band: "medium" as const,
+    needsReview: true,
+    matchedFields: [...best.matchedFields, "corroborado por segunda fuente"],
+  };
 }
 
 async function imageSearchFallback(product: ImageMatchProduct) {
   const query = encodeURIComponent(publicSearchQuery(product));
+  try {
+    const { stdout } = await execFile("/usr/bin/curl", [
+      "-sL",
+      "--compressed",
+      "--max-time", "20",
+      "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+      `https://search.brave.com/images?q=${query}&source=web`,
+    ], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024, timeout: 25_000 });
+    return bestSearchResult(product, braveImageResults(stdout, product));
+  } catch {
+    // Continue with the secondary public index.
+  }
+  if (!duckSearchEnabled) return undefined;
   try {
     const searchPage = await fetchWithRetry(`https://duckduckgo.com/?q=${query}&iax=images&ia=images`, {
       headers: {
@@ -404,6 +520,9 @@ async function imageSearchFallback(product: ImageMatchProduct) {
 async function searchFallback(product: ImageMatchProduct): Promise<ImageMatchResult> {
   const imageMatch = await imageSearchFallback(product);
   if (imageMatch) return imageMatch;
+  if (!duckSearchEnabled) {
+    return { product, confidence: 0, band: "none", exact: false, matchedFields: [], hardConflicts: [], needsReview: false };
+  }
   const query = encodeURIComponent(publicSearchQuery(product));
   let response: Response;
   try {
@@ -483,6 +602,7 @@ function chooseBySourcePriority(product: ImageMatchProduct, catalogs: Array<{
 }>) {
   let medium: ImageMatchResult | undefined;
   let low: ImageMatchResult | undefined;
+  const corroboratedLow: ImageMatchResult[] = [];
   const key = distinctiveToken(product.name);
   for (const catalog of catalogs) {
     const candidates = key ? catalog.index.get(key) ?? [] : [];
@@ -490,7 +610,20 @@ function chooseBySourcePriority(product: ImageMatchProduct, catalogs: Array<{
     if (match.hardConflicts.length) continue;
     if (match.band === "high") return match;
     if (match.band === "medium" && !medium) medium = match;
-    if (match.band === "low" && !low) low = match;
+    if (match.band === "low") {
+      if (!low) low = match;
+      if (match.confidence >= 0.58) corroboratedLow.push(match);
+    }
+  }
+  if (!medium && new Set(corroboratedLow.map((match) => match.external?.source).filter(Boolean)).size >= 2) {
+    const best = [...corroboratedLow].sort((left, right) => right.confidence - left.confidence)[0];
+    return {
+      ...best,
+      confidence: 0.72,
+      band: "medium" as const,
+      needsReview: true,
+      matchedFields: [...best.matchedFields, "corroborado por segunda fuente"],
+    };
   }
   return medium || low || { product, confidence: 0, band: "none", exact: false, matchedFields: [], hardConflicts: [], needsReview: false } satisfies ImageMatchResult;
 }
@@ -554,7 +687,7 @@ const catalogMatches = initial.map((match) => {
 const searchCache = await readSearchCache(products);
 const unresolved = catalogMatches.filter((match) => match.band === "none" || match.band === "low");
 const pendingSearch = unresolved.filter((match) => !searchCache.has(match.product.id));
-const searchQueue = searchFallbackLimit > 0 ? pendingSearch.slice(0, searchFallbackLimit) : pendingSearch;
+const searchQueue = searchDisabled ? [] : searchFallbackLimit > 0 ? pendingSearch.slice(0, searchFallbackLimit) : pendingSearch;
 console.log(JSON.stringify({ stage: "search", unresolved: unresolved.length, cached: unresolved.length - pendingSearch.length, queued: searchQueue.length }));
 let searchedCount = 0;
 for (let index = 0; index < searchQueue.length; index += 100) {
