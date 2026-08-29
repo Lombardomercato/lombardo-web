@@ -14,15 +14,16 @@ export function ProductImageUpload({ productId, hasImages }: { productId: string
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setPending(true);
     setError(undefined);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     form.set("makePrimary", String(form.get("makePrimary") === "on"));
     try {
       const response = await fetch(`/admin/api/productos/${productId}/imagenes`, { method: "POST", body: form });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "No pudimos subir la imagen.");
-      event.currentTarget.reset();
+      formElement.reset();
       setPreview(undefined);
       router.refresh();
     } catch (caught) {
