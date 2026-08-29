@@ -114,7 +114,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
             <p>{guide.eyebrow}</p>
             <h1 aria-label={guide.title}>
               {guide.titleLines.map((line) => (
-                <span className={line.length > 12 ? styles.longTitleLine : undefined} key={line} aria-hidden="true">{line}</span>
+                <span className={line.length > 10 ? styles.longTitleLine : undefined} key={line} aria-hidden="true">{line}</span>
               ))}
             </h1>
             <p>{guide.dek}</p>
