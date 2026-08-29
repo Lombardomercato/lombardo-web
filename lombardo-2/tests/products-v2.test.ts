@@ -19,6 +19,10 @@ const massImageMigration = readFileSync(
   fileURLToPath(new URL("../supabase/migrations/20260829041000_positano_mass_image_jobs.sql", import.meta.url)),
   "utf8",
 );
+const massCoverageMigration = readFileSync(
+  fileURLToPath(new URL("../supabase/migrations/20260829133000_mass_image_coverage_v1.sql", import.meta.url)),
+  "utf8",
+);
 const unpublishMigration = readFileSync(
   fileURLToPath(new URL("../supabase/migrations/20260829043000_external_media_unpublish_state.sql", import.meta.url)),
   "utf8",
@@ -114,16 +118,23 @@ test("matching humano sigue separado de publicación y la excepción masiva qued
   assert.match(adminActions, /reviewImageCandidate\(id, "approved", session\.authUserId\)[\s\S]*publishApprovedImageCandidate\(id, session\.authUserId\)/);
 });
 
-test("seleccionar HIGH visibles excluye MEDIUM y los filtros se ejecutan server-side", () => {
+test("Admin separa HIGH, MEDIUM, auto-publicadas y NEEDS_REVIEW con filtros server-side", () => {
   assert.match(imageQueue, /filter\(\(candidate\) => candidate\.confidenceBand === "high"\)/);
   assert.match(imageQueue, /setSelected\(new Set\(highIds\)\)/);
   assert.match(imageQueue, /status === "approved" && candidate\.publicationStatus === "pending"/);
   assert.match(imageQueue, /PUBLICAR SELECCIONADOS/);
-  assert.match(imageQueuePage, /PENDIENTES MEDIUM/);
+  assert.match(imageQueuePage, /NEEDS_REVIEW/);
+  assert.match(imageQueuePage, />HIGH</);
+  assert.match(imageQueuePage, />MEDIUM</);
   assert.match(imageQueuePage, /AUTO-PUBLICADAS/);
-  assert.match(imageQueuePage, /SIN MATCH/);
+  assert.match(imageQueuePage, /SIN IMAGEN/);
+  assert.match(imageQueuePage, /CORREGIDAS/);
+  assert.match(imageQueuePage, /RECHAZADAS/);
   assert.match(adminStore, /input\.confidenceBand === "high"[\s\S]*match_confidence", "gte\.0\.9"/);
   assert.match(adminStore, /input\.confidenceBand === "medium"[\s\S]*"gte\.0\.72"[\s\S]*"lt\.0\.9"/);
+  assert.match(massCoverageMigration, /supplier_import_mass_image_candidates/);
+  assert.match(massCoverageMigration, /auto_medium/);
+  assert.match(massCoverageMigration, /quality_status/);
 });
 
 test("el job masivo es server-only, por lotes y no puede publicar productos no SAFE", () => {

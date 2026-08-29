@@ -5,8 +5,8 @@ import styles from "../../admin.module.css";
 import { ImageCandidateQueue } from "./ImageCandidateQueue";
 
 type Query = Record<string, string | string[] | undefined>;
-type ImageView = "published" | "auto" | "medium" | "unmatched" | "rejected";
-const VIEWS: ImageView[] = ["published", "auto", "medium", "unmatched", "rejected"];
+type ImageView = "without_image" | "auto" | "needs_review" | "high" | "medium" | "corrected" | "rejected";
+const VIEWS: ImageView[] = ["without_image", "auto", "needs_review", "high", "medium", "corrected", "rejected"];
 
 function value(query: Query, key: string) {
   return typeof query[key] === "string" ? query[key] : "";
@@ -21,65 +21,72 @@ function pageHref(view: ImageView, offset = 0) {
 export default async function AdminImageCandidatesPage({ searchParams }: { searchParams: Promise<Query> }) {
   const query = await searchParams;
   const requestedView = value(query, "view") as ImageView;
-  const view = VIEWS.includes(requestedView) ? requestedView : "medium";
+  const view = VIEWS.includes(requestedView) ? requestedView : "needs_review";
   const offset = /^\d+$/.test(value(query, "offset")) ? Number(value(query, "offset")) : 0;
   const success = value(query, "success");
   const error = value(query, "error");
 
-  let status: MatchReviewStatus = "pending";
+  let status: MatchReviewStatus = "approved";
   let confidence: MatchConfidenceBand | undefined;
   let publicationStatus: "pending" | "approved" | "rejected" | undefined;
-  let approvalMode: "auto_exact_high" | undefined;
-  if (view === "published") {
-    status = "approved";
+  let approvalMode: "auto" | undefined;
+  let qualityStatus: "needs_review" | "corrected" | undefined;
+  if (view === "auto") {
     publicationStatus = "approved";
-  } else if (view === "auto") {
-    status = "approved";
+    approvalMode = "auto";
+  } else if (view === "needs_review") {
     publicationStatus = "approved";
-    approvalMode = "auto_exact_high";
+    qualityStatus = "needs_review";
+  } else if (view === "high") {
+    publicationStatus = "approved";
+    confidence = "high";
   } else if (view === "medium") {
-    status = "pending";
+    publicationStatus = "approved";
     confidence = "medium";
-    publicationStatus = "pending";
+  } else if (view === "corrected") {
+    publicationStatus = "approved";
+    qualityStatus = "corrected";
   } else if (view === "rejected") {
     status = "rejected";
   }
 
-  const page = view === "unmatched"
+  const page = view === "without_image"
     ? await loadProductsWithoutImageMatch({ offset, limit: 25 })
-    : await loadAdminImageCandidates({ status, confidenceBand: confidence, publicationStatus, approvalMode, offset, limit: 25 });
+    : await loadAdminImageCandidates({ status, confidenceBand: confidence, publicationStatus, approvalMode, qualityStatus, offset, limit: 25 });
   const unmatchedPage = "products" in page ? page : null;
   const candidatePage = "candidates" in page ? page : null;
 
   return (
     <>
       <header className={styles.pageHeader}>
-        <div><p className={styles.eyebrow}>MATCHING · POSITANO</p><h1>IMÁGENES.</h1></div>
-        <p>Origen y estado de publicación visibles. Los matches dudosos siempre requieren revisión humana. <Link href="/admin/imagenes/sistema-lombardo">VER PILOTO VISUAL LOMBARDO →</Link></p>
+        <div><p className={styles.eyebrow}>COBERTURA · MULTIFUENTE</p><h1>IMÁGENES.</h1></div>
+        <p>Fuente, confianza y revisión visibles. <Link href="/admin/imagenes/sistema-lombardo">PRODUCT IMAGE SYSTEM V1 APROBADO →</Link></p>
       </header>
       {success ? <p className={styles.notice}>{success}</p> : null}
       {error ? <p className={styles.errorNotice}>{error}</p> : null}
       <nav className={styles.candidateTabs} aria-label="Estado de imágenes">
-        <Link data-active={view === "published"} href={pageHref("published")}>PUBLICADAS</Link>
+        <Link data-active={view === "without_image"} href={pageHref("without_image")}>SIN IMAGEN</Link>
         <Link data-active={view === "auto"} href={pageHref("auto")}>AUTO-PUBLICADAS</Link>
-        <Link data-active={view === "medium"} href={pageHref("medium")}>PENDIENTES MEDIUM</Link>
-        <Link data-active={view === "unmatched"} href={pageHref("unmatched")}>SIN MATCH</Link>
+        <Link data-active={view === "needs_review"} href={pageHref("needs_review")}>NEEDS_REVIEW</Link>
+        <Link data-active={view === "high"} href={pageHref("high")}>HIGH</Link>
+        <Link data-active={view === "medium"} href={pageHref("medium")}>MEDIUM</Link>
+        <Link data-active={view === "corrected"} href={pageHref("corrected")}>CORREGIDAS</Link>
         <Link data-active={view === "rejected"} href={pageHref("rejected")}>RECHAZADAS</Link>
       </nav>
       <p className={styles.readOnlyNotice}>{page.total} productos o candidatos en este filtro.</p>
 
-      {view === "unmatched" ? (
+      {view === "without_image" ? (
         unmatchedPage?.products.length ? (
           <div className={styles.productList}>
             {unmatchedPage.products.map((product) => (
               <Link className={styles.productRow} href={`/admin/productos/${product.id}`} key={product.id}>
                 <strong>{product.sku}</strong>
                 <span><strong>{product.name}</strong><small className={styles.muted}>{product.presentation}</small></span>
-                <span>POSITANO · SIN CANDIDATO</span>
+                <span>FALLBACK LOMBARDO · SIN IMAGEN PUBLICADA</span>
               </Link>
             ))}
           </div>
-        ) : <p className={styles.emptyState}>No hay productos SAFE sin imagen y sin candidato.</p>
+        ) : <p className={styles.emptyState}>No hay productos SAFE sin imagen publicada.</p>
       ) : (
         candidatePage?.candidates.length
           ? <ImageCandidateQueue candidates={candidatePage.candidates} status={status} confidence={confidence} />

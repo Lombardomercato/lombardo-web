@@ -73,7 +73,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 25) {
     return NextResponse.json({ error: "El lote de matching debe contener entre 1 y 25 candidatos." }, { status: 400 });
   }
-  const imported = await store.importPositanoCandidates(body.items);
+  const imported = await store.importMassImageCandidates(body.items);
   return NextResponse.json({ imported });
 }
 

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   bulkReviewImageCandidatesAction,
   publishImageCandidateAction,
+  reviewPublishedImageCandidateAction,
 } from "@/app/admin/actions";
 import type { AdminImageCandidate, MatchConfidenceBand, MatchReviewStatus } from "@/lib/server/admin/types";
 import styles from "../../admin.module.css";
@@ -88,6 +90,7 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
               <span className={styles.confidenceBadge} data-band={candidate.confidenceBand}>
                 {candidate.confidenceBand.toLocaleUpperCase("es-AR")} · {Math.round(candidate.confidence * 100)}%
               </span>
+              <span>{candidate.qualityStatus.toLocaleUpperCase("es-AR")}</span>
             </div>
 
             <div className={styles.externalPreview}>
@@ -143,6 +146,20 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
                   <input type="hidden" name="candidateId" value={candidate.id} />
                   <button className={styles.primaryButton}>REINTENTAR PUBLICACIÓN</button>
                 </form>
+              ) : null}
+              {candidate.publicationStatus === "approved" ? (
+                <div>
+                  <form action={reviewPublishedImageCandidateAction}>
+                    <input type="hidden" name="candidateId" value={candidate.id} />
+                    <button className={styles.primaryButton} name="decision" value="correct">CORRECTA</button>
+                  </form>
+                  <Link className={styles.secondaryButton} href={`/admin/productos/${candidate.productId}`}>CAMBIAR</Link>
+                  <form action={reviewPublishedImageCandidateAction}>
+                    <input type="hidden" name="candidateId" value={candidate.id} />
+                    <button className={styles.dangerButton} name="decision" value="remove">QUITAR</button>
+                    <button className={styles.secondaryButton} name="decision" value="search_other">BUSCAR OTRA</button>
+                  </form>
+                </div>
               ) : null}
               <small>DERECHOS: {candidate.rightsStatus.toLocaleUpperCase("es-AR")} · PUBLICACIÓN: {candidate.publicationStatus.toLocaleUpperCase("es-AR")}</small>
             </div>

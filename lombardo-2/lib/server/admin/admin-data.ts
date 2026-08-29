@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminStore, requireAdminSession } from "./admin-auth";
-import type { AdminOrderFilters, AdminProduct, MatchConfidenceBand, MatchReviewStatus } from "./types";
+import type { AdminOrderFilters, AdminProduct, ImageQualityStatus, MatchConfidenceBand, MatchReviewStatus } from "./types";
 
 export async function loadAdminDashboard() {
   await requireAdminSession();
@@ -52,7 +52,8 @@ export async function loadAdminImageCandidates(input: {
   status?: MatchReviewStatus;
   confidenceBand?: MatchConfidenceBand;
   publicationStatus?: "pending" | "approved" | "rejected";
-  approvalMode?: "auto_exact_high";
+  approvalMode?: "auto";
+  qualityStatus?: ImageQualityStatus;
 } = {}) {
   await requireAdminSession();
   return createAdminStore().listImageCandidates(input);

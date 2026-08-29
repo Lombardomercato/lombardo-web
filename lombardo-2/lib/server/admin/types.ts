@@ -180,6 +180,15 @@ export interface VinrosReviewProduct extends AdminProductDetail {
 
 export type MatchConfidenceBand = "high" | "medium" | "low";
 export type MatchReviewStatus = "pending" | "approved" | "rejected";
+export type ImageQualityStatus =
+  | "unreviewed"
+  | "auto_published"
+  | "needs_review"
+  | "correct"
+  | "corrected"
+  | "rejected"
+  | "removed"
+  | "search_requested";
 
 export interface AdminImageCandidate {
   id: string;
@@ -201,6 +210,7 @@ export interface AdminImageCandidate {
   matchReviewStatus: MatchReviewStatus;
   publicationStatus: "pending" | "approved" | "rejected";
   rightsStatus: "unknown" | "licensed" | "approved" | "restricted";
+  qualityStatus: ImageQualityStatus;
   createdAt: string;
 }
 
