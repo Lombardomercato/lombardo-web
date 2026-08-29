@@ -1288,6 +1288,7 @@ export class RuniaAdminStore {
     publicationStatus?: "pending" | "approved" | "rejected";
     approvalMode?: "auto";
     qualityStatus?: ImageQualityStatus;
+    runId?: string;
   } = {}): Promise<AdminImageCandidatePage> {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
@@ -1308,6 +1309,7 @@ export class RuniaAdminStore {
       search.set("provenance->>approvalMode", "in.(auto_exact_high,auto_high,auto_medium)");
     }
     if (input.qualityStatus) search.set("quality_status", `eq.${input.qualityStatus}`);
+    if (input.runId) search.set("provenance->>runId", `eq.${input.runId}`);
     if (input.confidenceBand === "high") search.set("match_confidence", "gte.0.9");
     if (input.confidenceBand === "medium") {
       search.append("match_confidence", "gte.0.72");

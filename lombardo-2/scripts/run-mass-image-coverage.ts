@@ -796,7 +796,22 @@ async function importResilient(items: Array<Record<string, unknown>>) {
   const candidateIds: string[] = [];
   const failures: Array<{ productId: string; reason: string }> = [];
   async function importBatch(batch: Array<Record<string, unknown>>): Promise<void> {
-    const response = await jobRequest("", { method: "PUT", body: JSON.stringify({ items: batch }) });
+    let response: Response;
+    try {
+      response = await jobRequest("", { method: "PUT", body: JSON.stringify({ items: batch }) });
+    } catch (error) {
+      if (batch.length === 1) {
+        failures.push({
+          productId: String(batch[0].productId || ""),
+          reason: error instanceof Error ? error.message : "network_error",
+        });
+        return;
+      }
+      const middle = Math.ceil(batch.length / 2);
+      await importBatch(batch.slice(0, middle));
+      await importBatch(batch.slice(middle));
+      return;
+    }
     if (!response.ok) {
       if (batch.length === 1) {
         failures.push({ productId: String(batch[0].productId || ""), reason: `HTTP ${response.status}` });
