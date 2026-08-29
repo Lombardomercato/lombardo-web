@@ -40,9 +40,14 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const limit = Math.min(100, Math.max(10, Math.trunc(Number(url.searchParams.get("limit")) || 100)));
   const queue = url.searchParams.get("queue");
   if (queue === "approved") {
+    const runId = url.searchParams.get("runId") || undefined;
+    if (runId && !/^mass-image-coverage-phase2-[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(runId)) {
+      return NextResponse.json({ error: "Run de imágenes inválido." }, { status: 400 });
+    }
     const page = await store.listImageCandidates({
       status: "approved",
       publicationStatus: "pending",
+      runId,
       offset,
       limit,
     });
