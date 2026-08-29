@@ -424,6 +424,12 @@ function OrderPrepared({
               <span>{formatCurrency(item.lineTotal)}</span>
             </div>
           ))}
+          {order.couponCode ? (
+            <div>
+              <span>CUPÓN · {order.couponCode}</span>
+              <span>−{formatCurrency(order.couponDiscountAmount ?? 0)}</span>
+            </div>
+          ) : null}
           <div>
             <span>ENTREGA</span>
             <span>{deliveryLabel}</span>
@@ -547,7 +553,16 @@ export function CheckoutPage({
   customerDefaults?: CheckoutCustomerDefaults;
   pricingContextKey: string;
 }) {
-  const { items, isHydrated, syncPrices, clearCart, getSubtotal, getItemCount } = useCart();
+  const {
+    items,
+    isHydrated,
+    syncPrices,
+    clearCart,
+    getSubtotal,
+    getItemCount,
+    appliedPromotion,
+    getFinalSubtotal,
+  } = useCart();
   const router = useRouter();
   const [state, dispatch] = useReducer(checkoutReducer, initialState);
   const repository = useMemo(() => new ApiOrderRepository(), []);
@@ -556,13 +571,14 @@ export function CheckoutPage({
   const hydratedRef = useRef(false);
   const trackedCheckoutRef = useRef(false);
   const subtotal = getSubtotal();
+  const finalSubtotal = getFinalSubtotal();
   const itemCount = getItemCount();
-  const cartSignature = getCartSignature(items);
+  const cartSignature = `${getCartSignature(items)}|coupon:${appliedPromotion?.code ?? ""}`;
   const pricingContextKey = items.length
     ? getCartPricingContextKey(items)
     : expectedPricingContextKey;
   const deliveryQuote = getDeliveryQuote(state.form.deliveryMethod);
-  const total = subtotal + deliveryQuote.amount;
+  const total = finalSubtotal + deliveryQuote.amount;
 
   useEffect(() => {
     if (
@@ -735,6 +751,7 @@ export function CheckoutPage({
     deliveryMethod: form.deliveryMethod,
     deliveryAddress:
       form.deliveryMethod === "DELIVERY" ? form.deliveryAddress : undefined,
+    couponCode: appliedPromotion?.code,
   });
 
   const submitOrder = async (
@@ -1120,6 +1137,12 @@ export function CheckoutPage({
               <dt>SUBTOTAL</dt>
               <dd>{formatCurrency(subtotal)}</dd>
             </div>
+            {appliedPromotion ? (
+              <div>
+                <dt>CUPÓN · {appliedPromotion.code}</dt>
+                <dd>−{formatCurrency(appliedPromotion.discountAmount)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>ENTREGA</dt>
               <dd>

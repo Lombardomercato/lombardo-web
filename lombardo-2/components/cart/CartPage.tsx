@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils/format-currency";
 import { useCart } from "./CartProvider";
 import { QuantityControl } from "./QuantityControl";
 import styles from "./CartPage.module.css";
+import { CouponForm } from "@/components/promotions/CouponForm";
 
 export function CartPage() {
   const {
@@ -21,10 +22,13 @@ export function CartPage() {
     getSubtotal,
     getItemCount,
     retryCatalog,
+    appliedPromotion,
+    getFinalSubtotal,
   } = useCart();
   const trackedViewRef = useRef(false);
   const subtotal = getSubtotal();
   const itemCount = getItemCount();
+  const finalSubtotal = getFinalSubtotal();
 
   useEffect(() => {
     if (!isHydrated || trackedViewRef.current) return;
@@ -115,9 +119,16 @@ export function CartPage() {
               <span>{itemCount} {itemCount === 1 ? "unidad" : "unidades"}</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
+            <CouponForm />
+            {appliedPromotion ? (
+              <div className={styles.discount}>
+                <span>DESCUENTO · {appliedPromotion.code}</span>
+                <span>−{formatCurrency(appliedPromotion.discountAmount)}</span>
+              </div>
+            ) : null}
             <div className={styles.total}>
               <span>TOTAL</span>
-              <strong>{formatCurrency(subtotal)}</strong>
+              <strong>{formatCurrency(finalSubtotal)}</strong>
             </div>
             <Link className={styles.checkoutLink} href="/checkout">
               <span>CONTINUAR CON EL PEDIDO</span>

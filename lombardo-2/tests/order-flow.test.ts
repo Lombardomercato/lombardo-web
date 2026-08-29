@@ -50,6 +50,7 @@ import type {
 } from "../types/checkout.ts";
 import type { Product } from "../types/commerce.ts";
 import type { CustomerPricingContext } from "../lib/server/customers/types.ts";
+import type { PromotionValidator } from "../lib/server/promotions/promotion-service.ts";
 
 const retailPricingContext: CustomerPricingContext = {
   tenantRecordId: "11111111-1111-4111-8111-111111111111",
@@ -287,6 +288,7 @@ class FakeNewOrderNotifier implements NewOrderNotifier {
 function setup(
   products = [product()],
   pricingContext: CustomerPricingContext = retailPricingContext,
+  promotionService?: PromotionValidator,
 ) {
   const store = new FakeOrderStore();
   const repository = new RuniaOrderRepository({
@@ -295,9 +297,35 @@ function setup(
     productSource: new FakeProductSource(products),
     deliveryPricing: new FreeDelivery(),
     store,
+    promotionService,
   });
   return { store, repository };
 }
+
+const tenPercentPromotion: PromotionValidator = {
+  async validate({ code, lines }) {
+    const line = lines[0]!;
+    const discountAmount = Math.round(line.commercialUnitPrice * line.quantity * 10) / 100;
+    const finalUnitPrice = Math.round(line.commercialUnitPrice * 90) / 100;
+    return {
+      valid: true,
+      code: "APPLIED",
+      message: "Cupón aplicado.",
+      promotion: {
+        promotionId: "90000000-0000-4000-8000-000000000001",
+        code: code.toUpperCase(),
+        name: "Diez por ciento",
+        discountType: "PERCENTAGE",
+        discountValue: 10,
+        discountAmount,
+        stackable: false,
+        commercialSubtotal: line.commercialUnitPrice * line.quantity,
+        finalSubtotal: finalUnitPrice * line.quantity,
+        lines: [{ productId: line.productId, discountAmount, finalUnitPrice, finalLineTotal: finalUnitPrice * line.quantity }],
+      },
+    };
+  },
+};
 
 async function createOrderForWebhook() {
   const setupValue = setup();
@@ -384,6 +412,26 @@ test("un total manipulado del navegador se ignora y se recalcula", async () => {
   assert.equal(result.order.pricingDiscountAmount, 0);
   assert.equal(result.order.items[0].baseUnitPrice, 10_000);
   assert.equal(result.order.items[0].pricingPolicy, "RETAIL");
+});
+
+test("cupón se revalida y persiste un snapshot completo sin confiar en el navegador", async () => {
+  const { repository } = setup([product()], retailPricingContext, tenPercentPromotion);
+  const parsed = parseCreateOrderInput({
+    ...input({ items: [{ productId: "product-1", quantity: 1, expectedUnitPrice: 10_000 }] }),
+    couponCode: "hito3-10",
+    couponDiscountAmount: 9_999,
+    total: 1,
+  });
+  const result = await repository.createOrder(parsed);
+  assert.equal(result.order.commercialSubtotal, 10_000);
+  assert.equal(result.order.couponCode, "HITO3-10");
+  assert.equal(result.order.couponDiscountAmount, 1_000);
+  assert.equal(result.order.subtotal, 9_000);
+  assert.equal(result.order.total, 9_000);
+  assert.equal(result.order.items[0].commercialUnitPrice, 10_000);
+  assert.equal(result.order.items[0].couponDiscountAmount, 1_000);
+  assert.equal(result.order.items[0].finalUnitPrice, 9_000);
+  assert.equal(result.order.items[0].lineFinalTotal, 9_000);
 });
 
 test("CUSTOM_DISCOUNT persiste base, política, descuento y precio final", async () => {

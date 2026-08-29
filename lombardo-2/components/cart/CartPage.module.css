@@ -186,6 +186,8 @@
   font-weight: 700;
 }
 
+.discount { color: #25713f; font-weight: 700; }
+
 .total strong {
   font-size: clamp(1.8rem, 3vw, 3rem);
   letter-spacing: -0.04em;

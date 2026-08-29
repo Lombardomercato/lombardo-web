@@ -26,6 +26,10 @@ import {
   CustomerAdminValidationError,
   parseAdminCustomerInput,
 } from "@/lib/server/customers/customer-admin-validation";
+import {
+  parseAdminPromotionInput,
+  PromotionAdminValidationError,
+} from "@/lib/server/promotions/promotion-admin-validation";
 
 export interface AdminLoginState {
   error?: string;
@@ -142,6 +146,36 @@ export async function updateCustomerAction(formData: FormData) {
       error instanceof AdminStoreError || error instanceof CustomerAdminValidationError
         ? error.message
         : "No pudimos actualizar el cliente.";
+    destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+export async function createPromotionAction(formData: FormData) {
+  let destination = "/admin/promociones/nuevo";
+  try {
+    const session = await requireAdminRole("admin");
+    const id = await createAdminStore().createPromotion(parseAdminPromotionInput(formData), session.authUserId);
+    revalidatePath("/admin/promociones");
+    destination = `/admin/promociones/${id}?success=${encodeURIComponent("Promoción creada.")}`;
+  } catch (error) {
+    const message = error instanceof AdminStoreError || error instanceof PromotionAdminValidationError ? error.message : "No pudimos crear la promoción.";
+    destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+export async function updatePromotionAction(formData: FormData) {
+  const promotionId = formText(formData, "promotionId", 36);
+  let destination = `/admin/promociones/${promotionId}`;
+  try {
+    await requireAdminRole("admin");
+    await createAdminStore().updatePromotion(promotionId, parseAdminPromotionInput(formData));
+    revalidatePath("/admin/promociones");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Promoción actualizada.")}`;
+  } catch (error) {
+    const message = error instanceof AdminStoreError || error instanceof PromotionAdminValidationError ? error.message : "No pudimos actualizar la promoción.";
     destination += `?error=${encodeURIComponent(message)}`;
   }
   redirect(destination);

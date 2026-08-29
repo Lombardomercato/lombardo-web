@@ -124,7 +124,10 @@ export default async function AdminOrderDetailPage({
                   <strong>{formatCurrency(item.lineTotal)}</strong>
                 </div>
               ))}
-              <div className={styles.lineItem}><span>Subtotal</span><span>{formatCurrency(order.subtotal)}</span></div>
+              {order.baseSubtotal !== undefined ? <div className={styles.lineItem}><span>Precio base</span><span>{formatCurrency(order.baseSubtotal)}</span></div> : null}
+              {order.pricingDiscountAmount ? <div className={styles.lineItem}><span>Descuento comercial</span><span>−{formatCurrency(order.pricingDiscountAmount)}</span></div> : null}
+              {order.couponCode ? <div className={styles.lineItem}><span>Cupón · {order.couponCode}</span><span>−{formatCurrency(order.couponDiscountAmount ?? 0)}</span></div> : null}
+              <div className={styles.lineItem}><span>Subtotal final</span><span>{formatCurrency(order.subtotal)}</span></div>
               <div className={styles.lineItem}><span>Entrega</span><span>{formatCurrency(order.deliveryCost)}</span></div>
               <div className={styles.totalLine}><strong>TOTAL</strong><strong>{formatCurrency(order.total)}</strong></div>
             </div>

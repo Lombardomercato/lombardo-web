@@ -39,6 +39,13 @@ interface OrderRow {
   items: OrderItemSnapshot[];
   base_subtotal: number | string;
   pricing_discount_amount: number | string;
+  commercial_subtotal: number | string;
+  promotion_id: string | null;
+  coupon_code: string | null;
+  coupon_discount_type: "PERCENTAGE" | "FIXED_AMOUNT" | null;
+  coupon_discount_value: number | string | null;
+  coupon_discount_amount: number | string;
+  coupon_stackable: boolean | null;
   subtotal: number;
   delivery_cost: number;
   total: number;
@@ -63,6 +70,11 @@ interface AppliedPaymentEventRow {
   order_record: OrderRow;
 }
 
+interface PromotionOrderResultRow {
+  reused: boolean;
+  order_record: OrderRow;
+}
+
 function mapOrder(row: OrderRow): OrderDraft {
   return {
     id: String(row.id),
@@ -76,6 +88,13 @@ function mapOrder(row: OrderRow): OrderDraft {
     items: row.items,
     baseSubtotal: Number(row.base_subtotal),
     pricingDiscountAmount: Number(row.pricing_discount_amount),
+    commercialSubtotal: Number(row.commercial_subtotal ?? row.subtotal),
+    promotionId: row.promotion_id ?? undefined,
+    couponCode: row.coupon_code ?? undefined,
+    couponDiscountType: row.coupon_discount_type ?? undefined,
+    couponDiscountValue: row.coupon_discount_value === null ? undefined : Number(row.coupon_discount_value),
+    couponDiscountAmount: Number(row.coupon_discount_amount ?? 0),
+    couponStackable: row.coupon_stackable ?? undefined,
     subtotal: Number(row.subtotal),
     deliveryCost: Number(row.delivery_cost),
     total: Number(row.total),
@@ -141,14 +160,30 @@ export class SupabaseOrderStore implements RuniaOrderStore {
 
   private async readFailure(response: Response, fallback: string): Promise<never> {
     let databaseCode = "";
+    let databaseMessage = "";
     try {
-      const payload = (await response.json()) as { code?: string };
+      const payload = (await response.json()) as { code?: string; message?: string };
       databaseCode = payload.code ?? "";
+      databaseMessage = payload.message ?? "";
     } catch {
       databaseCode = "";
     }
-    throw new ServerOrderError("CREATE_FAILED", fallback, {
-      status: databaseCode === "42501" ? 503 : 502,
+    const promotionFailures = {
+      PROMOTION_NOT_FOUND: ["PROMOTION_NOT_FOUND", "El código ingresado no es válido."],
+      PROMOTION_INACTIVE: ["PROMOTION_INACTIVE", "Este cupón está desactivado."],
+      PROMOTION_SCHEDULED: ["PROMOTION_SCHEDULED", "Este cupón todavía no está vigente."],
+      PROMOTION_EXPIRED: ["PROMOTION_EXPIRED", "Este cupón está vencido."],
+      PROMOTION_MINIMUM: ["PROMOTION_MINIMUM", "La compra mínima del cupón ya no se cumple."],
+      PROMOTION_EXHAUSTED: ["PROMOTION_EXHAUSTED", "Este cupón ya alcanzó su límite de usos."],
+      PROMOTION_ALREADY_USED: ["PROMOTION_ALREADY_USED", "Este cupón ya fue utilizado por esta cuenta."],
+      PROMOTION_NOT_STACKABLE: ["PROMOTION_NOT_STACKABLE", "Este cupón no es acumulable con tu precio especial."],
+      PROMOTION_ACCOUNT_SCOPE: ["PROMOTION_NOT_APPLICABLE", "Este cupón no aplica a tu cuenta."],
+      PROMOTION_PRODUCTS_SCOPE: ["PROMOTION_NOT_APPLICABLE", "Este cupón no aplica a tu selección."],
+      PROMOTION_FIRST_ORDER_ONLY: ["PROMOTION_FIRST_ORDER_ONLY", "Este cupón es únicamente para la primera compra."],
+    } as const;
+    const promotionFailure = promotionFailures[databaseMessage as keyof typeof promotionFailures];
+    throw new ServerOrderError(promotionFailure?.[0] ?? "CREATE_FAILED", promotionFailure?.[1] ?? fallback, {
+      status: promotionFailure ? 422 : databaseCode === "42501" ? 503 : 502,
     });
   }
 
@@ -177,33 +212,43 @@ export class SupabaseOrderStore implements RuniaOrderStore {
   }
 
   async insertOrderAtomic(record: NewOrderRecord): Promise<AtomicInsertResult> {
-    const response = await this.request("commerce_orders?select=*", {
+    const payload = {
+      public_id: record.publicId,
+      tenant_id: record.tenantId,
+      tenant_record_id: record.tenantRecordId,
+      customer_account_id: record.customerAccountId ?? null,
+      pricing_policy: record.pricingPolicy,
+      discount_percent: record.discountPercent,
+      customer: record.customer,
+      items: record.items,
+      base_subtotal: record.baseSubtotal,
+      pricing_discount_amount: record.pricingDiscountAmount,
+      commercial_subtotal: record.commercialSubtotal ?? record.subtotal,
+      promotion_id: record.promotionId ?? null,
+      coupon_code: record.couponCode ?? null,
+      coupon_discount_type: record.couponDiscountType ?? null,
+      coupon_discount_value: record.couponDiscountValue ?? null,
+      coupon_discount_amount: record.couponDiscountAmount ?? 0,
+      coupon_stackable: record.couponStackable ?? null,
+      subtotal: record.subtotal,
+      delivery_cost: record.deliveryCost,
+      total: record.total,
+      currency: record.currency,
+      delivery_method: record.deliveryMethod,
+      delivery_address: record.deliveryAddress ?? null,
+      delivery_cost_mode: record.deliveryCostMode,
+      order_status: record.orderStatus,
+      payment_status: record.paymentStatus,
+      payment_method: record.paymentMethod,
+      checkout_session_id: record.checkoutSessionId,
+      idempotency_key: record.idempotencyKey,
+    };
+    const response = await this.request(record.promotionId
+      ? "rpc/lombardo_create_order_with_promotion"
+      : "commerce_orders?select=*", {
       method: "POST",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        public_id: record.publicId,
-        tenant_id: record.tenantId,
-        tenant_record_id: record.tenantRecordId,
-        customer_account_id: record.customerAccountId ?? null,
-        pricing_policy: record.pricingPolicy,
-        discount_percent: record.discountPercent,
-        customer: record.customer,
-        items: record.items,
-        base_subtotal: record.baseSubtotal,
-        pricing_discount_amount: record.pricingDiscountAmount,
-        subtotal: record.subtotal,
-        delivery_cost: record.deliveryCost,
-        total: record.total,
-        currency: record.currency,
-        delivery_method: record.deliveryMethod,
-        delivery_address: record.deliveryAddress ?? null,
-        delivery_cost_mode: record.deliveryCostMode,
-        order_status: record.orderStatus,
-        payment_status: record.paymentStatus,
-        payment_method: record.paymentMethod,
-        checkout_session_id: record.checkoutSessionId,
-        idempotency_key: record.idempotencyKey,
-      }),
+      body: JSON.stringify(record.promotionId ? { p_order: payload } : payload),
     });
 
     if (response.status === 409) {
@@ -217,7 +262,15 @@ export class SupabaseOrderStore implements RuniaOrderStore {
     if (!response.ok) {
       return this.readFailure(response, "No pudimos guardar el pedido.");
     }
-    const rows = (await response.json()) as OrderRow[];
+    const responsePayload = (await response.json()) as OrderRow[] | OrderRow | PromotionOrderResultRow[];
+    if (record.promotionId) {
+      const result = (responsePayload as PromotionOrderResultRow[])[0];
+      if (!result?.order_record) {
+        throw new ServerOrderError("CREATE_FAILED", "Runia no devolvió el pedido creado.", { status: 502 });
+      }
+      return { order: mapOrder(result.order_record), reused: result.reused };
+    }
+    const rows = Array.isArray(responsePayload) ? responsePayload as OrderRow[] : [responsePayload as OrderRow];
     if (!rows[0]) {
       throw new ServerOrderError("CREATE_FAILED", "Runia no devolvió el pedido creado.", {
         status: 502,

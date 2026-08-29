@@ -142,6 +142,11 @@ export function parseCreateOrderInput(value: unknown): CreateOrderInput {
     invalidRequest("Elegí retiro o envío.");
   }
 
+  const couponCode = optionalString(value, "couponCode", 40);
+  if (couponCode === null || (couponCode && !/^[A-Za-z0-9][A-Za-z0-9_-]{2,39}$/.test(couponCode))) {
+    invalidRequest("El código de cupón no es válido.");
+  }
+
   return {
     checkoutSessionId,
     idempotencyKey,
@@ -152,5 +157,6 @@ export function parseCreateOrderInput(value: unknown): CreateOrderInput {
       deliveryMethod === "DELIVERY"
         ? parseDeliveryAddress(value.deliveryAddress)
         : undefined,
+    couponCode: couponCode?.toLocaleUpperCase("en-US"),
   };
 }

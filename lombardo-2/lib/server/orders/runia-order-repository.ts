@@ -17,6 +17,8 @@ import type {
 import { ServerOrderError } from "./server-order-error.ts";
 import type { CustomerPricingContext } from "../customers/types.ts";
 import { roundCurrency } from "../../pricing/policy.ts";
+import type { PromotionValidator } from "../promotions/promotion-service.ts";
+import { normalizePromotionCode } from "../../promotions/engine.ts";
 
 interface RuniaOrderRepositoryOptions {
   tenantId: string;
@@ -24,6 +26,7 @@ interface RuniaOrderRepositoryOptions {
   productSource: ServerProductSource;
   deliveryPricing: ServerDeliveryPricing;
   store: RuniaOrderStore;
+  promotionService?: PromotionValidator;
 }
 
 export class RuniaOrderRepository implements ServerOrderRepository {
@@ -32,6 +35,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
   private readonly productSource: ServerProductSource;
   private readonly deliveryPricing: ServerDeliveryPricing;
   readonly store: RuniaOrderStore;
+  private readonly promotionService?: PromotionValidator;
 
   constructor(options: RuniaOrderRepositoryOptions) {
     this.tenantId = options.tenantId;
@@ -39,6 +43,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
     this.productSource = options.productSource;
     this.deliveryPricing = options.deliveryPricing;
     this.store = options.store;
+    this.promotionService = options.promotionService;
   }
 
   private matchesPricingIdentity(order: OrderDraft) {
@@ -50,8 +55,9 @@ export class RuniaOrderRepository implements ServerOrderRepository {
     );
   }
 
-  private assertPricingIdentity(order: OrderDraft) {
-    if (!this.matchesPricingIdentity(order)) {
+  private assertPricingIdentity(order: OrderDraft, couponCode?: string) {
+    const expectedCoupon = couponCode ? normalizePromotionCode(couponCode) : undefined;
+    if (!this.matchesPricingIdentity(order) || order.couponCode !== expectedCoupon) {
       throw new ServerOrderError(
         "DUPLICATE_SESSION",
         "La sesión de checkout pertenece a otra cuenta o política. Recargá el carrito.",
@@ -118,17 +124,25 @@ export class RuniaOrderRepository implements ServerOrderRepository {
         sourceProductId: product.sourceProductId,
         sku: product.sku,
         name: product.name,
+        categorySlug: product.category.slug,
         baseUnitPrice: product.basePrice,
         priceType: product.priceType,
         pricingPolicy: product.pricingPolicy,
         discountPercent: product.discountPercent,
         discountAmount: roundCurrency(product.basePrice - product.price),
+        commercialUnitPrice: product.price,
+        policyDiscountAmount: roundCurrency(product.basePrice - product.price),
+        couponDiscountAmount: 0,
+        finalUnitPrice: product.price,
         unitPrice: product.price,
         quantity: item.quantity,
         lineBaseTotal: roundCurrency(product.basePrice * item.quantity),
         lineDiscount: roundCurrency(
           (product.basePrice - product.price) * item.quantity,
         ),
+        lineCommercialTotal: roundCurrency(product.price * item.quantity),
+        lineCouponDiscount: 0,
+        lineFinalTotal: roundCurrency(product.price * item.quantity),
         lineTotal: roundCurrency(product.price * item.quantity),
       });
     }
@@ -145,6 +159,25 @@ export class RuniaOrderRepository implements ServerOrderRepository {
     return { valid: true, items: snapshots };
   }
 
+  async quotePromotion(code: string, items: CreateOrderInput["items"], customerEmail?: string) {
+    const validation = await this.validateCart({ items } as CreateOrderInput);
+    if (!validation.valid) return validation;
+    if (!this.promotionService) {
+      return { valid: false as const, code: "NOT_FOUND" as const, message: "El código ingresado no es válido." };
+    }
+    return this.promotionService.validate({
+      code,
+      pricingContext: this.pricingContext,
+      customerEmail,
+      lines: validation.items.map((item) => ({
+        productId: item.productId,
+        categorySlug: item.categorySlug ?? "",
+        quantity: item.quantity,
+        commercialUnitPrice: item.commercialUnitPrice ?? item.unitPrice,
+      })),
+    });
+  }
+
   async createOrder(input: CreateOrderInput): Promise<AtomicInsertResult> {
     const existing = await this.store.findByIdempotency(
       this.tenantId,
@@ -152,7 +185,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       input.idempotencyKey,
     );
     if (existing) {
-      this.assertPricingIdentity(existing);
+      this.assertPricingIdentity(existing, input.couponCode);
       return { order: existing, reused: true };
     }
 
@@ -177,6 +210,65 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       (sum, item) => sum + item.lineTotal,
       0,
     ));
+    let items = validation.items;
+    const commercialSubtotal = subtotal;
+    let couponDiscountAmount = 0;
+    let promotionId: string | undefined;
+    let couponCode: string | undefined;
+    let couponDiscountType: "PERCENTAGE" | "FIXED_AMOUNT" | undefined;
+    let couponDiscountValue: number | undefined;
+    let couponStackable: boolean | undefined;
+    if (input.couponCode) {
+      if (!this.promotionService) {
+        throw new ServerOrderError("PROMOTION_NOT_FOUND", "El código ingresado no es válido.", { status: 422 });
+      }
+      const promotion = await this.promotionService.validate({
+        code: input.couponCode,
+        pricingContext: this.pricingContext,
+        customerEmail: input.customer.email,
+        lines: validation.items.map((item) => ({
+          productId: item.productId,
+          categorySlug: item.categorySlug ?? "",
+          quantity: item.quantity,
+          commercialUnitPrice: item.commercialUnitPrice ?? item.unitPrice,
+        })),
+      });
+      if (!promotion.valid) {
+        const errorCodes = {
+          NOT_FOUND: "PROMOTION_NOT_FOUND",
+          INACTIVE: "PROMOTION_INACTIVE",
+          SCHEDULED: "PROMOTION_SCHEDULED",
+          EXPIRED: "PROMOTION_EXPIRED",
+          MINIMUM_NOT_MET: "PROMOTION_MINIMUM",
+          EXHAUSTED: "PROMOTION_EXHAUSTED",
+          ALREADY_USED: "PROMOTION_ALREADY_USED",
+          NOT_APPLICABLE: "PROMOTION_NOT_APPLICABLE",
+          NOT_STACKABLE: "PROMOTION_NOT_STACKABLE",
+          FIRST_ORDER_ONLY: "PROMOTION_FIRST_ORDER_ONLY",
+        } as const;
+        throw new ServerOrderError(errorCodes[promotion.code], promotion.message, { status: 422 });
+      }
+      const byProduct = new Map(promotion.promotion.lines.map((line) => [line.productId, line]));
+      items = validation.items.map((item) => {
+        const quote = byProduct.get(item.productId)!;
+        return {
+          ...item,
+          couponDiscountAmount: roundCurrency(quote.discountAmount / item.quantity),
+          finalUnitPrice: quote.finalUnitPrice,
+          unitPrice: quote.finalUnitPrice,
+          lineCouponDiscount: quote.discountAmount,
+          lineFinalTotal: quote.finalLineTotal,
+          lineTotal: quote.finalLineTotal,
+        };
+      });
+      promotionId = promotion.promotion.promotionId;
+      couponCode = promotion.promotion.code;
+      couponDiscountType = promotion.promotion.discountType;
+      couponDiscountValue = promotion.promotion.discountValue;
+      couponDiscountAmount = promotion.promotion.discountAmount;
+      couponStackable = promotion.promotion.stackable;
+    }
+    const finalSubtotal = roundCurrency(commercialSubtotal - couponDiscountAmount);
 
     if (!this.pricingContext.tenantRecordId) {
       throw new ServerOrderError(
@@ -195,7 +287,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       discountPercent: this.pricingContext.discountPercent,
       checkoutSessionId: input.checkoutSessionId,
       idempotencyKey: input.idempotencyKey,
-      items: validation.items,
+      items,
       customer: input.customer,
       deliveryMethod: input.deliveryMethod,
       deliveryAddress:
@@ -203,15 +295,22 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       deliveryCostMode: deliveryQuote.mode,
       baseSubtotal,
       pricingDiscountAmount,
-      subtotal,
+      commercialSubtotal,
+      promotionId,
+      couponCode,
+      couponDiscountType,
+      couponDiscountValue,
+      couponDiscountAmount,
+      couponStackable,
+      subtotal: finalSubtotal,
       deliveryCost: deliveryQuote.amount,
-      total: subtotal + deliveryQuote.amount,
+      total: finalSubtotal + deliveryQuote.amount,
       currency: "ARS",
       orderStatus: "pending_payment",
       paymentStatus: "pending",
       paymentMethod: "mercado_pago",
     });
-    if (result.reused) this.assertPricingIdentity(result.order);
+    if (result.reused) this.assertPricingIdentity(result.order, input.couponCode);
     return result;
   }
 

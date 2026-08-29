@@ -13,6 +13,11 @@ import type {
   CustomerAccountType,
   CustomerPricingPolicy,
 } from "../customers/types";
+import type {
+  PromotionAppliesTo,
+  PromotionCustomerScope,
+  PromotionDiscountType,
+} from "../../promotions/types";
 
 export type FulfillmentStatus =
   | "new"
@@ -41,6 +46,11 @@ export interface AdminOrder {
   customer: CheckoutCustomer;
   items: OrderItemSnapshot[];
   subtotal: number;
+  baseSubtotal?: number;
+  pricingDiscountAmount?: number;
+  commercialSubtotal?: number;
+  couponCode?: string;
+  couponDiscountAmount?: number;
   deliveryCost: number;
   total: number;
   currency: OrderCurrency;
@@ -254,6 +264,64 @@ export interface AdminCustomerInput {
   pricingPolicy: CustomerPricingPolicy;
   discountPercent: number;
   status: AdminCustomer["status"];
+}
+
+export interface AdminPromotion {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  status: "ACTIVE" | "INACTIVE";
+  discountType: PromotionDiscountType;
+  discountValue: number;
+  startAt?: string;
+  endAt?: string;
+  minimumOrderAmount: number;
+  maxTotalUses?: number;
+  maxUsesPerCustomer?: number;
+  appliesTo: PromotionAppliesTo;
+  customerScope: PromotionCustomerScope;
+  stackable: boolean;
+  firstOrderOnly: boolean;
+  productIds: string[];
+  categorySlugs: string[];
+  customerAccountIds: string[];
+  reservedUses: number;
+  consumedUses: number;
+  createdAt: string;
+  updatedAt: string;
+  uses: Array<{
+    id: string;
+    orderId: string;
+    customerAccountId?: string;
+    status: "RESERVED" | "CONSUMED" | "RELEASED";
+    discountAmount: number;
+    reservedAt: string;
+    reservationExpiresAt: string;
+    consumedAt?: string;
+    releasedAt?: string;
+  }>;
+}
+
+export interface AdminPromotionInput {
+  code: string;
+  name: string;
+  description: string;
+  status: AdminPromotion["status"];
+  discountType: PromotionDiscountType;
+  discountValue: number;
+  startAt?: string;
+  endAt?: string;
+  minimumOrderAmount: number;
+  maxTotalUses?: number;
+  maxUsesPerCustomer?: number;
+  appliesTo: PromotionAppliesTo;
+  customerScope: PromotionCustomerScope;
+  stackable: boolean;
+  firstOrderOnly: boolean;
+  productIds: string[];
+  categorySlugs: string[];
+  customerAccountIds: string[];
 }
 
 export interface FulfillmentTransitionResult {

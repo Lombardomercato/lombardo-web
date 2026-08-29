@@ -53,6 +53,7 @@ export interface CreateOrderInput {
   customer: CheckoutCustomer;
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: DeliveryAddress;
+  couponCode?: string;
 }
 
 export interface OrderItemSnapshot {
@@ -60,15 +61,23 @@ export interface OrderItemSnapshot {
   sourceProductId?: string;
   sku: string;
   name: string;
+  categorySlug?: string;
   baseUnitPrice: number;
   priceType: SupplierSalePriceType;
   pricingPolicy: CustomerPricingPolicy;
   discountPercent: number;
   discountAmount: number;
+  commercialUnitPrice?: number;
+  policyDiscountAmount?: number;
+  couponDiscountAmount?: number;
+  finalUnitPrice?: number;
   unitPrice: number;
   quantity: number;
   lineBaseTotal: number;
   lineDiscount: number;
+  lineCommercialTotal?: number;
+  lineCouponDiscount?: number;
+  lineFinalTotal?: number;
   lineTotal: number;
 }
 
@@ -94,6 +103,13 @@ export interface CheckoutDraft {
   deliveryCostMode: DeliveryCostMode;
   baseSubtotal: number;
   pricingDiscountAmount: number;
+  commercialSubtotal?: number;
+  promotionId?: string;
+  couponCode?: string;
+  couponDiscountType?: "PERCENTAGE" | "FIXED_AMOUNT";
+  couponDiscountValue?: number;
+  couponDiscountAmount?: number;
+  couponStackable?: boolean;
   subtotal: number;
   deliveryCost: number;
   total: number;
@@ -160,7 +176,17 @@ export type CartValidationErrorCode =
   | "INVALID_PRODUCT"
   | "PRODUCT_UNAVAILABLE"
   | "QUANTITY_INVALID"
-  | "PRICE_CHANGED";
+  | "PRICE_CHANGED"
+  | "PROMOTION_NOT_FOUND"
+  | "PROMOTION_INACTIVE"
+  | "PROMOTION_SCHEDULED"
+  | "PROMOTION_EXPIRED"
+  | "PROMOTION_MINIMUM"
+  | "PROMOTION_EXHAUSTED"
+  | "PROMOTION_ALREADY_USED"
+  | "PROMOTION_NOT_APPLICABLE"
+  | "PROMOTION_NOT_STACKABLE"
+  | "PROMOTION_FIRST_ORDER_ONLY";
 
 export type CartValidationResult =
   | { valid: true; items: OrderItemSnapshot[] }

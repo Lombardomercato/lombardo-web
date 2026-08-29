@@ -11,6 +11,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { trackCommerceEvent } from "@/lib/analytics/commerce-events";
+import type { AppliedPromotion, PromotionValidationResult } from "@/lib/promotions/types";
 import type { CartItem, Product } from "@/types/commerce";
 
 const STORAGE_KEY = "lombardo-cart-v1";
@@ -24,10 +25,13 @@ interface CartState {
   pricingContextKey: string;
   drawerOpen: boolean;
   announcement: string;
+  appliedPromotion: AppliedPromotion | null;
+  promotionStatus: "idle" | "loading" | "applied" | "error";
+  promotionMessage: string;
 }
 
 type CartAction =
-  | { type: "hydrate"; items: CartItem[] }
+  | { type: "hydrate"; items: CartItem[]; appliedPromotion?: AppliedPromotion }
   | { type: "add"; product: Product; quantity: number }
   | { type: "remove"; productId: string }
   | { type: "update"; productId: string; quantity: number }
@@ -38,11 +42,16 @@ type CartAction =
   | { type: "retry-catalog" }
   | { type: "clear" }
   | { type: "open" }
-  | { type: "close" };
+  | { type: "close" }
+  | { type: "promotion-loading" }
+  | { type: "promotion-applied"; promotion: AppliedPromotion; message: string }
+  | { type: "promotion-error"; message: string }
+  | { type: "promotion-clear" };
 
 interface StoredCart {
   version: number;
   items: CartItem[];
+  appliedPromotion?: AppliedPromotion;
 }
 
 interface CartContextValue {
@@ -53,6 +62,9 @@ interface CartContextValue {
   isDrawerOpen: boolean;
   announcement: string;
   pricingContextKey: string;
+  appliedPromotion: AppliedPromotion | null;
+  promotionStatus: CartState["promotionStatus"];
+  promotionMessage: string;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -63,6 +75,9 @@ interface CartContextValue {
   openCart: () => void;
   closeCart: () => void;
   retryCatalog: () => void;
+  applyCoupon: (code: string) => Promise<void>;
+  removeCoupon: () => void;
+  getFinalSubtotal: () => number;
 }
 
 const initialState: CartState = {
@@ -73,6 +88,9 @@ const initialState: CartState = {
   pricingContextKey: "",
   drawerOpen: false,
   announcement: "",
+  appliedPromotion: null,
+  promotionStatus: "idle",
+  promotionMessage: "",
 };
 
 const clampQuantity = (quantity: number) =>
@@ -85,6 +103,8 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ...state,
         items: action.items,
         hydrated: true,
+        appliedPromotion: action.appliedPromotion ?? null,
+        promotionStatus: action.appliedPromotion ? "applied" : "idle",
         pricingContextKey:
           action.items[0]?.product.pricingContextKey ?? state.pricingContextKey,
       };
@@ -108,6 +128,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           action.product.pricingContextKey ?? state.pricingContextKey,
         drawerOpen: true,
         announcement: `${quantity} ${quantity === 1 ? "unidad agregada" : "unidades agregadas"}: ${action.product.name}`,
+        appliedPromotion: null,
+        promotionStatus: "idle",
+        promotionMessage: "",
       };
     }
     case "remove": {
@@ -118,6 +141,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ...state,
         items: state.items.filter((item) => item.product.id !== action.productId),
         announcement: removed ? `${removed.product.name} eliminado del carrito` : "",
+        appliedPromotion: null,
+        promotionStatus: "idle",
+        promotionMessage: "",
       };
     }
     case "update": {
@@ -133,6 +159,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         announcement: updated
           ? `${updated.product.name}: ${quantity} ${quantity === 1 ? "unidad" : "unidades"}`
           : "",
+        appliedPromotion: null,
+        promotionStatus: "idle",
+        promotionMessage: "",
       };
     }
     case "sync-prices":
@@ -145,6 +174,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
             : { ...item, product: { ...item.product, price } };
         }),
         announcement: "Actualizamos los precios del carrito.",
+        appliedPromotion: null,
+        promotionStatus: "idle",
+        promotionMessage: "",
       };
     case "catalog-loading":
       return { ...state, catalogStatus: "loading" };
@@ -157,14 +189,24 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         return product ? [{ ...item, product }] : [];
       });
       const removed = state.items.length - items.length;
+      const nextPricingContextKey =
+        action.pricingContextKey ??
+        action.products[0]?.pricingContextKey ??
+        state.pricingContextKey;
+      const pricingChanged = Boolean(
+        state.pricingContextKey && nextPricingContextKey !== state.pricingContextKey,
+      ) || items.some((item) => {
+        const previous = state.items.find((current) => current.product.id === item.product.id);
+        return previous?.product.price !== item.product.price;
+      });
       return {
         ...state,
         items,
         catalogStatus: "ready",
-        pricingContextKey:
-          action.pricingContextKey ??
-          action.products[0]?.pricingContextKey ??
-          state.pricingContextKey,
+        pricingContextKey: nextPricingContextKey,
+        appliedPromotion: pricingChanged || removed ? null : state.appliedPromotion,
+        promotionStatus: pricingChanged || removed ? "idle" : state.promotionStatus,
+        promotionMessage: pricingChanged || removed ? "" : state.promotionMessage,
         announcement: removed
           ? "Quitamos del carrito productos que ya no están disponibles."
           : state.announcement,
@@ -179,29 +221,38 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         catalogRequest: state.catalogRequest + 1,
       };
     case "clear":
-      return { ...state, items: [], announcement: "Carrito vaciado" };
+      return { ...state, items: [], appliedPromotion: null, promotionStatus: "idle", promotionMessage: "", announcement: "Carrito vaciado" };
     case "open":
       return { ...state, drawerOpen: true };
     case "close":
       return { ...state, drawerOpen: false };
+    case "promotion-loading":
+      return { ...state, promotionStatus: "loading", promotionMessage: "Validando cupón…" };
+    case "promotion-applied":
+      return { ...state, appliedPromotion: action.promotion, promotionStatus: "applied", promotionMessage: action.message };
+    case "promotion-error":
+      return { ...state, appliedPromotion: null, promotionStatus: "error", promotionMessage: action.message };
+    case "promotion-clear":
+      return { ...state, appliedPromotion: null, promotionStatus: "idle", promotionMessage: "" };
   }
 }
 
-function readStoredCart(): CartItem[] {
+function readStoredCart(): StoredCart {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) return { version: STORAGE_VERSION, items: [] };
     const parsed = JSON.parse(raw) as StoredCart;
-    if (parsed.version !== STORAGE_VERSION || !Array.isArray(parsed.items)) return [];
-    return parsed.items.filter(
+    if (parsed.version !== STORAGE_VERSION || !Array.isArray(parsed.items)) return { version: STORAGE_VERSION, items: [] };
+    const items = parsed.items.filter(
       (item) =>
         item?.product?.id &&
         item.product.slug &&
         Number.isInteger(item.quantity) &&
         item.quantity > 0,
     );
+    return { version: STORAGE_VERSION, items, appliedPromotion: parsed.appliedPromotion };
   } catch {
-    return [];
+    return { version: STORAGE_VERSION, items: [] };
   }
 }
 
@@ -212,14 +263,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    dispatch({ type: "hydrate", items: readStoredCart() });
+    const stored = readStoredCart();
+    dispatch({ type: "hydrate", items: stored.items, appliedPromotion: stored.appliedPromotion });
   }, []);
 
   useEffect(() => {
     if (!state.hydrated) return;
-    const storedCart: StoredCart = { version: STORAGE_VERSION, items: state.items };
+    const storedCart: StoredCart = { version: STORAGE_VERSION, items: state.items, appliedPromotion: state.appliedPromotion ?? undefined };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(storedCart));
-  }, [state.hydrated, state.items]);
+  }, [state.hydrated, state.items, state.appliedPromotion]);
 
   const productIds = useMemo(
     () => state.items.map((item) => item.product.id).sort().join(","),
@@ -317,6 +369,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => state.items.reduce((count, item) => count + item.quantity, 0),
     [state.items],
   );
+  const applyCoupon = useCallback(async (code: string) => {
+    dispatch({ type: "promotion-loading" });
+    try {
+      const response = await fetch("/api/promotions/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          items: state.items.map(({ product, quantity }) => ({
+            productId: product.id,
+            quantity,
+            expectedUnitPrice: product.price,
+          })),
+        }),
+      });
+      const result = (await response.json()) as PromotionValidationResult;
+      if (!response.ok || !result.valid) {
+        dispatch({ type: "promotion-error", message: result.message });
+        return;
+      }
+      dispatch({ type: "promotion-applied", promotion: result.promotion, message: result.message });
+    } catch {
+      dispatch({ type: "promotion-error", message: "No pudimos validar el cupón en este momento." });
+    }
+  }, [state.items]);
+  const removeCoupon = useCallback(() => dispatch({ type: "promotion-clear" }), []);
+  const getFinalSubtotal = useCallback(
+    () => Math.max(0, getSubtotal() - (state.appliedPromotion?.discountAmount ?? 0)),
+    [getSubtotal, state.appliedPromotion],
+  );
 
   const value = useMemo<CartContextValue>(
     () => ({
@@ -327,6 +409,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       isDrawerOpen: state.drawerOpen,
       announcement: state.announcement,
       pricingContextKey: state.pricingContextKey,
+      appliedPromotion: state.appliedPromotion,
+      promotionStatus: state.promotionStatus,
+      promotionMessage: state.promotionMessage,
       addItem,
       removeItem,
       updateQuantity,
@@ -337,6 +422,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       openCart,
       closeCart,
       retryCatalog,
+      applyCoupon,
+      removeCoupon,
+      getFinalSubtotal,
     }),
     [
       state.items,
@@ -345,6 +433,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       state.drawerOpen,
       state.announcement,
       state.pricingContextKey,
+      state.appliedPromotion,
+      state.promotionStatus,
+      state.promotionMessage,
       addItem,
       removeItem,
       updateQuantity,
@@ -355,6 +446,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       openCart,
       closeCart,
       retryCatalog,
+      applyCoupon,
+      removeCoupon,
+      getFinalSubtotal,
     ],
   );
 

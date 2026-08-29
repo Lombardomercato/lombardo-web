@@ -18,6 +18,8 @@ import { RuniaOrderRepository } from "./orders/runia-order-repository";
 import { EnvironmentDeliveryPricing } from "./orders/server-delivery-pricing";
 import { ServerOrderError } from "./orders/server-order-error";
 import { SupabaseOrderStore } from "./orders/supabase-order-store";
+import { PromotionService } from "./promotions/promotion-service";
+import { SupabasePromotionStore } from "./promotions/promotion-store";
 import { MercadoPagoAdapter } from "./payments/mercado-pago-adapter";
 import { OrderPaymentCoordinator } from "./payments/order-payment-coordinator";
 import type { PaymentGateway } from "./payments/payment-gateway";
@@ -35,14 +37,19 @@ export function createOrderServices(pricingContext?: CustomerPricingContext) {
     url: configuration.url,
     secretKey: configuration.secretKey,
   });
+  const promotionService = new PromotionService(new SupabasePromotionStore({
+    url: configuration.url,
+    secretKey: configuration.secretKey,
+  }));
   const orders = new RuniaOrderRepository({
     tenantId,
     pricingContext: resolvedPricingContext,
     productSource: new RuniaCommerceProvider(configuration, resolvedPricingContext),
     deliveryPricing: new EnvironmentDeliveryPricing(),
     store,
+    promotionService,
   });
-  return { tenantId, store, orders };
+  return { tenantId, store, orders, promotionService };
 }
 
 export function createPaymentGateway(): PaymentGateway | null {

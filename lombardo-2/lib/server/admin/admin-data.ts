@@ -72,3 +72,13 @@ export async function loadAdminCustomer(customerId: string) {
   await requireAdminSession();
   return createAdminStore().getCustomer(customerId);
 }
+
+export async function loadAdminPromotions() {
+  await requireAdminSession();
+  return createAdminStore().listPromotions();
+}
+
+export async function loadAdminPromotion(promotionId: string) {
+  await requireAdminSession();
+  return createAdminStore().getPromotion(promotionId);
+}

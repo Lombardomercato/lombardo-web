@@ -37,6 +37,8 @@ import type {
   AdminProductMedia,
   AdminProductPrice,
   AdminProductPage,
+  AdminPromotion,
+  AdminPromotionInput,
   AdminSession,
   FulfillmentStatus,
   FulfillmentTransitionResult,
@@ -78,6 +80,11 @@ interface OrderRow {
   customer: CheckoutCustomer;
   items: OrderItemSnapshot[];
   subtotal: number | string;
+  base_subtotal?: number | string;
+  pricing_discount_amount?: number | string;
+  commercial_subtotal?: number | string;
+  coupon_code?: string | null;
+  coupon_discount_amount?: number | string;
   delivery_cost: number | string;
   total: number | string;
   currency: OrderCurrency;
@@ -111,6 +118,27 @@ interface CustomerAccountRow {
   pricing_policy: AdminCustomer["pricingPolicy"];
   discount_percent: number | string;
   status: AdminCustomer["status"];
+  created_at: string;
+  updated_at: string;
+}
+
+interface PromotionRow {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  status: AdminPromotion["status"];
+  discount_type: AdminPromotion["discountType"];
+  discount_value: number | string;
+  start_at: string | null;
+  end_at: string | null;
+  minimum_order_amount: number | string;
+  max_total_uses: number | null;
+  max_uses_per_customer: number | null;
+  applies_to: AdminPromotion["appliesTo"];
+  customer_scope: AdminPromotion["customerScope"];
+  stackable: boolean;
+  first_order_only: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -290,6 +318,11 @@ const ORDER_SELECT = [
   "customer",
   "items",
   "subtotal",
+  "base_subtotal",
+  "pricing_discount_amount",
+  "commercial_subtotal",
+  "coupon_code",
+  "coupon_discount_amount",
   "delivery_cost",
   "total",
   "currency",
@@ -327,6 +360,11 @@ function mapOrder(row: OrderRow): AdminOrder {
     customer: row.customer,
     items: row.items,
     subtotal: Number(row.subtotal),
+    baseSubtotal: row.base_subtotal === undefined ? undefined : Number(row.base_subtotal),
+    pricingDiscountAmount: row.pricing_discount_amount === undefined ? undefined : Number(row.pricing_discount_amount),
+    commercialSubtotal: row.commercial_subtotal === undefined ? undefined : Number(row.commercial_subtotal),
+    couponCode: row.coupon_code ?? undefined,
+    couponDiscountAmount: row.coupon_discount_amount === undefined ? undefined : Number(row.coupon_discount_amount),
     deliveryCost: Number(row.delivery_cost),
     total: Number(row.total),
     currency: row.currency,
@@ -1608,5 +1646,134 @@ export class RuniaAdminStore {
     }
     const updated = (await response.json()) as Array<{ id: string }>;
     if (!updated[0]) throw new AdminStoreError("Cliente no encontrado.", 404);
+  }
+
+  private async promotionRelations(tenantRecordId: string) {
+    const tenant = `tenant_id=eq.${encodeURIComponent(tenantRecordId)}&limit=10000`;
+    const [products, categories, customers, redemptions] = await Promise.all([
+      this.rows<{ promotion_id: string; product_id: string }>(`commerce_promotion_products?select=promotion_id,product_id&${tenant}`, "No pudimos cargar los productos de promociones."),
+      this.rows<{ promotion_id: string; category_slug: string }>(`commerce_promotion_categories?select=promotion_id,category_slug&${tenant}`, "No pudimos cargar las categorías de promociones."),
+      this.rows<{ promotion_id: string; customer_account_id: string }>(`commerce_promotion_customers?select=promotion_id,customer_account_id&${tenant}`, "No pudimos cargar los clientes de promociones."),
+      this.rows<{ id: number; promotion_id: string; order_id: number; customer_account_id: string | null; status: "RESERVED" | "CONSUMED" | "RELEASED"; discount_amount: number | string; reserved_at: string; reservation_expires_at: string; consumed_at: string | null; released_at: string | null }>(`commerce_promotion_redemptions?select=id,promotion_id,order_id,customer_account_id,status,discount_amount,reserved_at,reservation_expires_at,consumed_at,released_at&${tenant}`, "No pudimos cargar los usos de promociones."),
+    ]);
+    return { products: products.rows, categories: categories.rows, customers: customers.rows, redemptions: redemptions.rows };
+  }
+
+  async listPromotions(): Promise<AdminPromotion[]> {
+    const tenantRecordId = await this.tenantRecordId();
+    const search = new URLSearchParams({
+      select: "id,code,name,description,status,discount_type,discount_value,start_at,end_at,minimum_order_amount,max_total_uses,max_uses_per_customer,applies_to,customer_scope,stackable,first_order_only,created_at,updated_at",
+      tenant_id: `eq.${tenantRecordId}`,
+      order: "updated_at.desc",
+      limit: "1000",
+    });
+    const [{ rows }, relations] = await Promise.all([
+      this.rows<PromotionRow>(`commerce_promotions?${search}`, "No pudimos cargar las promociones."),
+      this.promotionRelations(tenantRecordId),
+    ]);
+    const now = Date.now();
+    return rows.map((row) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      description: row.description,
+      status: row.status,
+      discountType: row.discount_type,
+      discountValue: Number(row.discount_value),
+      startAt: row.start_at ?? undefined,
+      endAt: row.end_at ?? undefined,
+      minimumOrderAmount: Number(row.minimum_order_amount),
+      maxTotalUses: row.max_total_uses ?? undefined,
+      maxUsesPerCustomer: row.max_uses_per_customer ?? undefined,
+      appliesTo: row.applies_to,
+      customerScope: row.customer_scope,
+      stackable: row.stackable,
+      firstOrderOnly: row.first_order_only,
+      productIds: relations.products.filter((item) => item.promotion_id === row.id).map((item) => item.product_id),
+      categorySlugs: relations.categories.filter((item) => item.promotion_id === row.id).map((item) => item.category_slug),
+      customerAccountIds: relations.customers.filter((item) => item.promotion_id === row.id).map((item) => item.customer_account_id),
+      reservedUses: relations.redemptions.filter((item) => item.promotion_id === row.id && item.status === "RESERVED" && new Date(item.reservation_expires_at).getTime() > now).length,
+      consumedUses: relations.redemptions.filter((item) => item.promotion_id === row.id && item.status === "CONSUMED").length,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      uses: relations.redemptions.filter((item) => item.promotion_id === row.id).map((item) => ({
+        id: String(item.id),
+        orderId: String(item.order_id),
+        customerAccountId: item.customer_account_id ?? undefined,
+        status: item.status,
+        discountAmount: Number(item.discount_amount),
+        reservedAt: item.reserved_at,
+        reservationExpiresAt: item.reservation_expires_at,
+        consumedAt: item.consumed_at ?? undefined,
+        releasedAt: item.released_at ?? undefined,
+      })),
+    }));
+  }
+
+  async getPromotion(promotionId: string) {
+    if (!UUID_PATTERN.test(promotionId)) return null;
+    return (await this.listPromotions()).find((promotion) => promotion.id === promotionId) ?? null;
+  }
+
+  private async replacePromotionScopes(tenantRecordId: string, promotionId: string, input: AdminPromotionInput) {
+    const query = `tenant_id=eq.${encodeURIComponent(tenantRecordId)}&promotion_id=eq.${encodeURIComponent(promotionId)}`;
+    for (const table of ["commerce_promotion_products", "commerce_promotion_categories", "commerce_promotion_customers"]) {
+      const response = await this.request(`${table}?${query}`, { method: "DELETE" });
+      if (!response.ok) throw new AdminStoreError("No pudimos actualizar el alcance de la promoción.", 502);
+    }
+    const inserts: Array<[string, object[]]> = [
+      ["commerce_promotion_products", input.productIds.map((productId) => ({ tenant_id: tenantRecordId, promotion_id: promotionId, product_id: productId }))],
+      ["commerce_promotion_categories", input.categorySlugs.map((categorySlug) => ({ tenant_id: tenantRecordId, promotion_id: promotionId, category_slug: categorySlug }))],
+      ["commerce_promotion_customers", input.customerAccountIds.map((customerAccountId) => ({ tenant_id: tenantRecordId, promotion_id: promotionId, customer_account_id: customerAccountId }))],
+    ];
+    for (const [table, body] of inserts) {
+      if (!body.length) continue;
+      const response = await this.request(table, { method: "POST", body: JSON.stringify(body) });
+      if (!response.ok) throw new AdminStoreError("No pudimos guardar el alcance de la promoción.", 502);
+    }
+  }
+
+  private promotionPayload(input: AdminPromotionInput) {
+    return {
+      code: input.code,
+      name: input.name,
+      description: input.description,
+      status: input.status,
+      discount_type: input.discountType,
+      discount_value: input.discountValue,
+      start_at: input.startAt ?? null,
+      end_at: input.endAt ?? null,
+      minimum_order_amount: input.minimumOrderAmount,
+      max_total_uses: input.maxTotalUses ?? null,
+      max_uses_per_customer: input.maxUsesPerCustomer ?? null,
+      applies_to: input.appliesTo,
+      customer_scope: input.customerScope,
+      stackable: input.stackable,
+      first_order_only: input.firstOrderOnly,
+    };
+  }
+
+  async createPromotion(input: AdminPromotionInput, operatorUserId: string) {
+    const tenantRecordId = await this.tenantRecordId();
+    const response = await this.request("commerce_promotions?select=id", {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: tenantRecordId, created_by: operatorUserId, ...this.promotionPayload(input) }),
+    }, "return=representation");
+    if (!response.ok) throw new AdminStoreError(response.status === 409 ? "Ya existe una promoción con ese código." : "No pudimos crear la promoción.", response.status === 409 ? 409 : 502);
+    const rows = (await response.json()) as Array<{ id: string }>;
+    if (!rows[0]?.id) throw new AdminStoreError("Runia no devolvió la promoción creada.", 502);
+    await this.replacePromotionScopes(tenantRecordId, rows[0].id, input);
+    return rows[0].id;
+  }
+
+  async updatePromotion(promotionId: string, input: AdminPromotionInput) {
+    if (!UUID_PATTERN.test(promotionId)) throw new AdminStoreError("Promoción inválida.", 422);
+    const tenantRecordId = await this.tenantRecordId();
+    const search = new URLSearchParams({ id: `eq.${promotionId}`, tenant_id: `eq.${tenantRecordId}`, select: "id" });
+    const response = await this.request(`commerce_promotions?${search}`, { method: "PATCH", body: JSON.stringify(this.promotionPayload(input)) }, "return=representation");
+    if (!response.ok) throw new AdminStoreError(response.status === 409 ? "Ya existe una promoción con ese código." : "No pudimos actualizar la promoción.", response.status === 409 ? 409 : 502);
+    const rows = (await response.json()) as Array<{ id: string }>;
+    if (!rows[0]) throw new AdminStoreError("Promoción no encontrada.", 404);
+    await this.replacePromotionScopes(tenantRecordId, promotionId, input);
   }
 }

@@ -1274,6 +1274,21 @@
   opacity: 0.4;
 }
 
+.promotionRow {
+  min-height: 5rem;
+  padding: 0.9rem 1rem;
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.5fr) 0.55fr 0.8fr 0.75fr 0.75fr;
+  gap: 1rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.18);
+}
+
+.promotionRow small { display: block; margin-top: 0.25rem; opacity: 0.65; }
+
+.checkboxField { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.7rem; }
+.checkboxField input { width: 1.1rem !important; height: 1.1rem; }
+
 @media (max-width: 1100px) {
   .metricGrid {
     grid-template-columns: repeat(3, minmax(10rem, 1fr));
@@ -1332,6 +1347,9 @@
   .customerAccountRow {
     grid-template-columns: minmax(12rem, 1.5fr) 0.75fr 0.9fr 0.75fr;
   }
+
+  .promotionRow { grid-template-columns: minmax(12rem, 1.5fr) 0.55fr 0.8fr 0.75fr; }
+  .promotionRow > :last-child { display: none; }
 
   .customerAccountRow > :nth-child(2),
   .customerAccountRow > :nth-child(6),
@@ -1456,6 +1474,9 @@
   .customerOrderRow {
     grid-template-columns: 1fr;
   }
+
+  .promotionRow { grid-template-columns: 1fr auto; }
+  .promotionRow > :nth-child(4), .promotionRow > :nth-child(5) { display: block; grid-column: 1 / -1; }
 
   .customerAccountRow > :nth-child(2),
   .customerAccountRow > :nth-child(6),
