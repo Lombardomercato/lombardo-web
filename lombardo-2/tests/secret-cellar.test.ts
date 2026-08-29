@@ -186,3 +186,20 @@ test("el acierto crea un cupón estándar del Promotion Engine, no un descuento 
   assert.match(migration, /'CAVA-' \|\| upper/i);
   assert.doesNotMatch(migration, /alter table public\.commerce_orders[\s\S]*secret_cellar/i);
 });
+
+test("el revelado final es editorial, breve y accesible sin cambiar la mecánica", async () => {
+  const [component, stylesheet] = await Promise.all([
+    readFile(new URL("../components/secret-cellar/SecretCellarGame.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/secret-cellar/SecretCellarGame.module.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(component, /setRevealing\(true\)/);
+  assert.match(component, /1_450/);
+  assert.match(component, /prefers-reduced-motion: reduce/);
+  assert.match(component, /LA ENCONTRASTE\./);
+  assert.match(component, /LA BOTELLA ERA ESTA\./);
+  assert.match(component, /ABRIENDO LA CAVA…/);
+  assert.match(stylesheet, /\.revealTransition/);
+  assert.match(stylesheet, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.revealTransition[\s\S]*animation: none/);
+  assert.doesNotMatch(`${component}\n${stylesheet}`, /confetti|ne[oó]n|casino|roulette|audio|sound|glow/i);
+});

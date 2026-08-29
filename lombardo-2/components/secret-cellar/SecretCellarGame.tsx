@@ -44,6 +44,7 @@ export function SecretCellarGame({
   const [contactKind, setContactKind] = useState<"EMAIL" | "WHATSAPP">("EMAIL");
   const [contact, setContact] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [revealing, setRevealing] = useState(false);
   const [result, setResult] = useState<SecretCellarAttemptResult | null>(null);
   const [error, setError] = useState("");
   const [shared, setShared] = useState(false);
@@ -81,7 +82,9 @@ export function SecretCellarGame({
 
     setLockedSelectionId(answerId);
     setSubmitting(true);
+    setRevealing(true);
     setError("");
+    const revealStartedAt = performance.now();
     try {
       const response = await fetch("/api/cava-secreta/attempt", {
         method: "POST",
@@ -95,11 +98,18 @@ export function SecretCellarGame({
       });
       const payload = (await response.json()) as SecretCellarAttemptResult & { message?: string };
       if (!response.ok) throw new Error(payload.message || "No pudimos comprobar la botella.");
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const remainingRevealTime = (prefersReducedMotion ? 0 : 1_450) - (performance.now() - revealStartedAt);
+      if (remainingRevealTime > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remainingRevealTime));
+      }
       setResult(payload);
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
       setIdentifying(false);
     } catch (attemptError) {
       setError(attemptError instanceof Error ? attemptError.message : "No pudimos comprobar la botella.");
     } finally {
+      setRevealing(false);
       setSubmitting(false);
     }
   };
@@ -124,33 +134,39 @@ export function SecretCellarGame({
     return (
       <section className={styles.reveal} data-found={found}>
         <div className={styles.revealCopy}>
-          <p>{found ? "LA ENCONTRASTE." : "CASI."}</p>
-          <h1>{found ? "LA CAVA SE ABRE PARA VOS." : "LA CAVA CAMBIA MAÑANA."}</h1>
+          <p>{found ? "DESCUBIERTA." : "CASI."}</p>
+          <h1>{found ? "LA ENCONTRASTE." : "LA BOTELLA ERA ESTA."}</h1>
           <p>
             {found
-              ? `Tu premio es ${challenge.rewardPercentage}% OFF para una compra retail. Tenés ${challenge.rewardValidHours} horas.`
-              : "La botella de hoy estaba más cerca de lo que parecía. Mañana escondemos otra."}
+              ? `La botella estaba ahí. Tenés ${challenge.rewardPercentage}% OFF para llevártela durante ${challenge.rewardValidHours} horas.`
+              : "Hoy se escondió mejor. Mañana hay otra."}
           </p>
+        </div>
+        <article className={styles.secretBottle}>
+          <div><CandidateArtwork candidate={result.secret} /></div>
+          <span>{found ? "LA BOTELLA DESCUBIERTA" : "LA BOTELLA DE HOY"}</span>
+          <h2>{result.secret.name}</h2>
+          <p>{result.secret.brand} · {result.secret.presentation}</p>
+        </article>
+        <div className={styles.revealDetails}>
           {result.couponCode ? (
             <div className={styles.coupon}>
-              <span>TU CÓDIGO ÚNICO</span>
+              <span>TU CÓDIGO</span>
               <strong>{result.couponCode}</strong>
-              <small>1 uso · retail · no acumulable</small>
+              <small>{challenge.rewardPercentage}% OFF · 1 USO · RETAIL · {challenge.rewardValidHours} HORAS · NO ACUMULABLE</small>
             </div>
           ) : null}
           <div className={styles.revealActions}>
             <Link href={`/productos/${result.secret.slug}`}>VER PRODUCTO →</Link>
-            <button type="button" onClick={share}>
-              {shared ? "LINK COPIADO" : "COMPARTIR"}
-            </button>
+            {found ? (
+              <button type="button" onClick={share}>
+                {shared ? "LINK COPIADO" : "COMPARTIR"}
+              </button>
+            ) : (
+              <Link className={styles.returnTomorrow} href="/">VOLVER MAÑANA</Link>
+            )}
           </div>
         </div>
-        <article className={styles.secretBottle}>
-          <div><CandidateArtwork candidate={result.secret} /></div>
-          <span>LA BOTELLA DE HOY</span>
-          <h2>{result.secret.name}</h2>
-          <p>{result.secret.brand} · {result.secret.presentation}</p>
-        </article>
       </section>
     );
   }
@@ -159,7 +175,7 @@ export function SecretCellarGame({
   const activeCount = challenge.candidates.length - discarded.size;
 
   return (
-    <section className={styles.game}>
+    <section className={styles.game} aria-busy={revealing}>
       <header className={styles.intro}>
         <div className={styles.introTitle}>
           <p><span>04</span> EXPERIENCIA LOMBARDO</p>
@@ -267,6 +283,17 @@ export function SecretCellarGame({
           </>
         )}
       </div>
+
+      {revealing && selected ? (
+        <div className={styles.revealTransition} role="status" aria-live="polite">
+          <div className={styles.revealFocus}>
+            <span>LA BOTELLA ELEGIDA</span>
+            <div className={styles.revealFocusImage}><CandidateArtwork candidate={selected} /></div>
+            <strong>{selected.name}</strong>
+            <small>ABRIENDO LA CAVA…</small>
+          </div>
+        </div>
+      ) : null}
 
       {identifying ? (
         <div className={styles.identityBackdrop}>
