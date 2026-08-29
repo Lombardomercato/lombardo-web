@@ -3,6 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { generateSecretCellarChallenge } from "../lib/secret-cellar/generator.ts";
+import {
+  selectActiveBottle,
+  toggleDiscardedBottle,
+} from "../lib/secret-cellar/game-state.ts";
 import type { Product } from "../types/commerce.ts";
 
 function product(index: number, overrides: Partial<Product> = {}): Product {
@@ -122,6 +126,29 @@ test("falla cerrado si no hay entre 8 y 12 candidatos elegibles", () => {
     }),
     /suficientes botellas SAFE/,
   );
+});
+
+test("el descarte no tiene límite y cada botella puede recuperarse", () => {
+  let discarded = new Set<string>();
+  for (const id of ["01", "02", "03", "04", "05", "06", "07", "08"]) {
+    discarded = toggleDiscardedBottle(discarded, id);
+  }
+  assert.equal(discarded.size, 8);
+
+  discarded = toggleDiscardedBottle(discarded, "02");
+  discarded = toggleDiscardedBottle(discarded, "05");
+  assert.equal(discarded.size, 6);
+  assert.equal(discarded.has("02"), false);
+  assert.equal(discarded.has("05"), false);
+});
+
+test("la respuesta final sólo acepta botellas activas y puede cambiar antes de confirmar", () => {
+  const discarded = new Set(["03"]);
+  let selected = selectActiveBottle(discarded, "01");
+  assert.equal(selected, "01");
+  selected = selectActiveBottle(discarded, "02");
+  assert.equal(selected, "02");
+  assert.equal(selectActiveBottle(discarded, "03"), "");
 });
 
 test("challenge, intentos y RPC quedan server-only con RLS forzado", async () => {
