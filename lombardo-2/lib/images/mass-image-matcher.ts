@@ -30,6 +30,11 @@ export interface ImageMatchResult {
   needsReview: boolean;
 }
 
+export interface ImageReviewRisk {
+  rank: 1 | 2 | 3 | 4;
+  reason: string;
+}
+
 const STOP_WORDS = new Set([
   "vino", "vinos", "bebida", "bebidas", "botella", "botellas", "unidad", "unidades",
   "unid", "u", "x", "de", "del", "la", "las", "el", "los", "con", "sin", "para",
@@ -47,6 +52,7 @@ const LINE_MARKERS = [
   "gran reserva", "grand reserve", "single vineyard", "estate", "reserva", "reserve",
   "coleccion", "collection", "alta", "altitud", "raices", "pasionado", "primus",
   "icono", "icon", "roble", "premium", "clasico", "classic", "family reserve",
+  "maria carmen", "maría carmen", "founders reserve", "limited edition", "edicion limitada",
 ] as const;
 
 const SPIRITS_PREFIXES = [
@@ -64,10 +70,37 @@ function replaceAliases(value: string) {
     .replace(/\bsauv[.]?\s*blanc\b/g, "sauvignon blanc")
     .replace(/\bpinot\s*noire?\b/g, "pinot noir")
     .replace(/\bpetit\s*verdot\b/g, "petit verdot")
+    .replace(/\bchardon+ay\b/g, "chardonnay")
+    .replace(/\btorront[eé]s\b/g, "torrontes")
+    .replace(/\bwhiskey\b/g, "whisky")
     .replace(/\b(?:rva|rsv|reserv)\b/g, "reserva")
     .replace(/\b(?:est|estuche)\s*x?\s*1\b/g, "estuche")
     .replace(/\bc[.]?c[.]?\b/g, "ml")
     .replace(/\blts?\b/g, "l");
+}
+
+export function reviewRiskForMatch(match: ImageMatchResult): ImageReviewRisk {
+  const productText = `${match.product.name} ${match.product.presentation}`;
+  const externalText = `${match.external?.name ?? ""} ${match.external?.presentation ?? ""}`;
+  const productVolume = volumeMl(productText);
+  const externalVolume = volumeMl(externalText);
+  const productPackaging = packaging(productText);
+  const externalPackaging = packaging(externalText);
+  if ((productVolume && !externalVolume) || !sameSet(productPackaging, externalPackaging)) {
+    return { rank: 1, reason: "Revisar presentación/volumen del master" };
+  }
+  const productVarietals = markers(productText, VARIETALS);
+  const externalVarietals = markers(externalText, VARIETALS);
+  const productLines = markers(productText, LINE_MARKERS);
+  const externalLines = markers(externalText, LINE_MARKERS);
+  if ((productVarietals.length && !sameSet(productVarietals, externalVarietals))
+    || (productLines.length && !sameSet(productLines, externalLines))) {
+    return { rank: 2, reason: "Revisar varietal/línea del master" };
+  }
+  if (match.band === "medium" && match.confidence < 0.82) {
+    return { rank: 3, reason: "MEDIUM de menor confianza" };
+  }
+  return { rank: 4, reason: "Revisión general" };
 }
 
 export function normalizeImageMatchText(value: string) {
@@ -161,7 +194,9 @@ export function comparePublicCatalogImage(
   if (productVarietals.length && externalVarietals.length && !sameSet(productVarietals, externalVarietals)) {
     hardConflicts.push("varietal diferente");
   }
-  if (productLines.length && !sameSet(productLines, externalLines)) hardConflicts.push("línea claramente diferente");
+  if ((productLines.length || externalLines.length) && !sameSet(productLines, externalLines)) {
+    hardConflicts.push("línea claramente diferente");
+  }
   if (!sameSet(productPackaging, externalPackaging)) {
     if (productPackaging.includes("pack") || externalPackaging.includes("pack")) hardConflicts.push("pack/unidad");
     if (productPackaging.includes("estuche") || externalPackaging.includes("estuche")) hardConflicts.push("estuche/botella");

@@ -5,6 +5,7 @@ import {
   bestPublicCatalogMatch,
   comparePublicCatalogImage,
   normalizeImageMatchText,
+  reviewRiskForMatch,
   visualVariantForSku,
   type ImageMatchProduct,
   type ImageMatchResult,
@@ -33,6 +34,15 @@ interface SearchCacheRecord {
   matchedFields: string[];
   hardConflicts: string[];
   needsReview: boolean;
+}
+
+interface PriorCandidate {
+  id: string;
+  productId: string;
+  productName: string;
+  source: string;
+  sourceUrl: string;
+  imageUrl: string;
 }
 
 const SOURCES: SourceDefinition[] = [
@@ -72,19 +82,20 @@ const baseUrl = (process.env.IMAGE_JOB_BASE_URL || "").replace(/\/$/, "");
 const jobId = process.env.IMAGE_JOB_ID || "";
 const token = process.env.IMAGE_JOB_TOKEN || "";
 const confirmation = process.env.MASS_IMAGE_RUN_CONFIRM;
-const searchCachePath = process.env.MASS_IMAGE_SEARCH_CACHE_PATH || "docs/mass-image-search-cache-v3-2026-08-29.json";
+const searchCachePath = process.env.MASS_IMAGE_SEARCH_CACHE_PATH || "docs/mass-image-search-cache-phase2-2026-08-29.json";
 const searchFallbackLimit = Number.parseInt(process.env.MASS_IMAGE_SEARCH_LIMIT || "0", 10);
 const searchDisabled = process.env.MASS_IMAGE_DISABLE_SEARCH === "1";
 const duckSearchEnabled = process.env.MASS_IMAGE_ENABLE_DDG === "1";
-const runId = `mass-image-coverage-v1-${new Date().toISOString().slice(0, 10)}`;
+const runId = `mass-image-coverage-phase2-${new Date().toISOString().slice(0, 10)}`;
+const expectedPhase2Products = 1_633;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const execFile = promisify(execFileCallback);
 
 if (!baseUrl.startsWith("https://") || !uuidPattern.test(jobId) || token.length < 43) {
   throw new Error("Configuración incompleta para el trabajo protegido de imágenes.");
 }
-if (mode === "execute" && confirmation !== "RUN_ONCE_APPROVED_2026_08_29") {
-  throw new Error("La corrida masiva requiere la confirmación única aprobada.");
+if (mode === "execute" && confirmation !== "RUN_PHASE2_ONCE_APPROVED_2026_08_29") {
+  throw new Error("La única corrida Phase 2 requiere la confirmación aprobada.");
 }
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -127,6 +138,20 @@ async function loadProducts() {
     offset += page.limit;
   }
   return products;
+}
+
+async function loadPriorCandidates(queue: "published" | "rejected") {
+  const candidates: PriorCandidate[] = [];
+  let offset = 0;
+  while (true) {
+    const response = await jobRequest(`?queue=${queue}&offset=${offset}&limit=100`);
+    if (!response.ok) throw new Error(`No se pudo leer la cola ${queue}: HTTP ${response.status}.`);
+    const page = await response.json() as { candidates: PriorCandidate[]; hasMore: boolean; limit: number };
+    candidates.push(...page.candidates);
+    if (!page.hasMore || !page.candidates.length) break;
+    offset += page.limit;
+  }
+  return candidates;
 }
 
 function decodeXml(value: string) {
@@ -350,12 +375,31 @@ function searchSource(url: URL, product: ImageMatchProduct) {
   };
 }
 
-function publicSearchQuery(product: ImageMatchProduct) {
-  return `${product.name} ${product.presentation} botella`
-    .replace(/c[.]?c[.]?/gi, "ml")
-    .replace(/\blt?\b/gi, "litros")
+function productNameWithoutAccessories(product: ImageMatchProduct) {
+  return product.name
+    .replace(/\b(?:estuche|est[.]?|bolsa|copa|vaso|regalo|combo|pack)\b[\s\S]*$/i, " ")
+    .replace(/\bx\s*\d+(?:[.,]\d+)?\s*(?:c[.]?c[.]?|ml|cl|l|lt|unidades?|u)?\b/gi, " ")
+    .replace(/\b(?:esp[.]?|v[.]?|b[.]?|t[.]?|rva[.]?)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function publicSearchQueries(product: ImageMatchProduct, preferredDomains: string[]) {
+  const fullName = product.name.replace(/c[.]?c[.]?/gi, "ml").replace(/\s+/g, " ").trim();
+  const coreName = productNameWithoutAccessories(product);
+  const normalizedCore = normalizeImageMatchText(coreName);
+  const presentation = product.presentation.replace(/c[.]?c[.]?/gi, "ml").trim();
+  const family = normalizeImageMatchText(coreName).split(" ").filter((token) =>
+    token.length > 1 && !INDEX_STOP_WORDS.has(token) && !/^\d+$/.test(token)).slice(0, 3).join(" ");
+  const queries = [
+    `"${coreName}" ${presentation}`,
+    `${fullName} producto`,
+    `${family} ${presentation}`,
+    normalizedCore,
+    ...preferredDomains.slice(0, 2).map((domain) => `site:${domain} ${coreName}`),
+    `${coreName} ${product.sku}`,
+  ];
+  return [...new Set(queries.map((query) => query.replace(/\s+/g, " ").trim()).filter(Boolean))].slice(0, 6);
 }
 
 function duckDuckGoResults(html: string, product: ImageMatchProduct) {
@@ -445,6 +489,33 @@ function braveImageResults(html: string, product: ImageMatchProduct) {
   return records;
 }
 
+function bingImageResults(html: string, product: ImageMatchProduct) {
+  const records: PublicCatalogImage[] = [];
+  for (const match of html.matchAll(/<a[^>]+class=["'][^"']*iusc[^"']*["'][^>]+m=["']([^"']+)["'][^>]*>/gi)) {
+    try {
+      const metadata = JSON.parse(decodeHtml(match[1])) as { murl?: unknown; purl?: unknown; t?: unknown };
+      if (typeof metadata.murl !== "string" || typeof metadata.purl !== "string") continue;
+      const sourceUrl = new URL(metadata.purl);
+      const imageUrl = new URL(metadata.murl);
+      if (sourceUrl.protocol !== "https:" || imageUrl.protocol !== "https:") continue;
+      const source = searchSource(sourceUrl, product);
+      const name = typeof metadata.t === "string" ? decodeHtml(metadata.t) : pageName(sourceUrl.href);
+      records.push({
+        key: `${sourceUrl.href}#bing-${records.length}`,
+        source: source.source,
+        tier: source.tier,
+        sourceUrl: sourceUrl.href,
+        imageUrl: imageUrl.href,
+        name,
+        presentation: name,
+      });
+    } catch {
+      // Ignore malformed Bing metadata.
+    }
+  }
+  return records;
+}
+
 function bestSearchResult(product: ImageMatchProduct, candidates: PublicCatalogImage[]) {
   const ranked = candidates
     .map((external, index) => ({ match: comparePublicCatalogImage(product, external), index }))
@@ -477,21 +548,39 @@ function bestSearchResult(product: ImageMatchProduct, candidates: PublicCatalogI
   };
 }
 
-async function imageSearchFallback(product: ImageMatchProduct) {
-  const query = encodeURIComponent(publicSearchQuery(product));
-  try {
-    const { stdout } = await execFile("/usr/bin/curl", [
-      "-sL",
-      "--compressed",
-      "--max-time", "20",
-      "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36",
-      `https://search.brave.com/images?q=${query}&source=web`,
-    ], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024, timeout: 25_000 });
-    return bestSearchResult(product, braveImageResults(stdout, product));
-  } catch {
-    // Continue with the secondary public index.
+async function imageSearchFallback(
+  product: ImageMatchProduct,
+  preferredDomains: string[],
+  rejectedUrls: Set<string>,
+) {
+  const candidates: PublicCatalogImage[] = [];
+  for (const rawQuery of publicSearchQueries(product, preferredDomains)) {
+    const query = encodeURIComponent(rawQuery);
+    const [brave, bing] = await Promise.all([
+      execFile("/usr/bin/curl", [
+        "-sL", "--compressed", "--max-time", "20",
+        "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+        `https://search.brave.com/images?q=${query}&source=web`,
+      ], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024, timeout: 25_000 }).then(({ stdout }) => braveImageResults(stdout, product)).catch(() => []),
+      execFile("/usr/bin/curl", [
+        "-sL", "--compressed", "--max-time", "20",
+        "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+        `https://www.bing.com/images/search?q=${query}&form=HDRSC3&first=1`,
+      ], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024, timeout: 25_000 }).then(({ stdout }) => bingImageResults(stdout, product)).catch(() => []),
+    ]);
+    candidates.push(...brave, ...bing);
+    const usable = [...new Map(candidates
+      .filter((candidate) => !rejectedUrls.has(candidate.imageUrl) && !rejectedUrls.has(candidate.sourceUrl))
+      .map((candidate) => [candidate.imageUrl, candidate])).values()];
+    const best = bestSearchResult(product, usable);
+    if (best?.band === "high" || (best?.band === "medium" && usable.length >= 6)) return best;
+    await delay(150);
   }
+  const best = bestSearchResult(product, candidates.filter((candidate) =>
+    !rejectedUrls.has(candidate.imageUrl) && !rejectedUrls.has(candidate.sourceUrl)));
+  if (best) return best;
   if (!duckSearchEnabled) return undefined;
+  const query = encodeURIComponent(publicSearchQueries(product, preferredDomains)[0]);
   try {
     const searchPage = await fetchWithRetry(`https://duckduckgo.com/?q=${query}&iax=images&ia=images`, {
       headers: {
@@ -517,13 +606,17 @@ async function imageSearchFallback(product: ImageMatchProduct) {
   }
 }
 
-async function searchFallback(product: ImageMatchProduct): Promise<ImageMatchResult> {
-  const imageMatch = await imageSearchFallback(product);
+async function searchFallback(
+  product: ImageMatchProduct,
+  preferredDomains: string[],
+  rejectedUrls: Set<string>,
+): Promise<ImageMatchResult> {
+  const imageMatch = await imageSearchFallback(product, preferredDomains, rejectedUrls);
   if (imageMatch) return imageMatch;
   if (!duckSearchEnabled) {
     return { product, confidence: 0, band: "none", exact: false, matchedFields: [], hardConflicts: [], needsReview: false };
   }
-  const query = encodeURIComponent(publicSearchQuery(product));
+  const query = encodeURIComponent(publicSearchQueries(product, preferredDomains)[0]);
   let response: Response;
   try {
     response = await fetchWithRetry(`https://lite.duckduckgo.com/lite/?q=${query}&kl=ar-es`, {
@@ -599,14 +692,21 @@ function chooseBySourcePriority(product: ImageMatchProduct, catalogs: Array<{
   source: SourceDefinition;
   products: SitemapRecord[];
   index: Map<string, SitemapRecord[]>;
-}>) {
+}>, preferredSources: Set<string>, rejectedUrls: Set<string>) {
   let medium: ImageMatchResult | undefined;
   let low: ImageMatchResult | undefined;
   const corroboratedLow: ImageMatchResult[] = [];
-  const key = distinctiveToken(product.name);
-  for (const catalog of catalogs) {
-    const candidates = key ? catalog.index.get(key) ?? [] : [];
-    const match = bestPublicCatalogMatch(product, candidates);
+  const tokens = normalizeImageMatchText(productNameWithoutAccessories(product)).split(" ")
+    .filter((token) => token.length > 1 && !INDEX_STOP_WORDS.has(token) && !/^\d+$/.test(token));
+  const tierRank: Record<ImageSourceTier, number> = { positano: 0, official: 1, distributor: 2, commercial: 3 };
+  const orderedCatalogs = [...catalogs].sort((left, right) =>
+    tierRank[left.source.tier] - tierRank[right.source.tier]
+    || Number(preferredSources.has(right.source.key)) - Number(preferredSources.has(left.source.key)));
+  for (const catalog of orderedCatalogs) {
+    const candidates = [...new Map(tokens.flatMap((token) => catalog.index.get(token) ?? [])
+      .map((candidate) => [candidate.sourceUrl, candidate])).values()];
+    const match = bestPublicCatalogMatch(product, candidates.filter((candidate) =>
+      !rejectedUrls.has(candidate.sourceUrl) && !rejectedUrls.has(candidate.imageUrl)));
     if (match.hardConflicts.length) continue;
     if (match.band === "high") return match;
     if (match.band === "medium" && !medium) medium = match;
@@ -654,15 +754,69 @@ async function publish(candidateIds: string[]) {
   return { published, failures };
 }
 
+async function importResilient(items: Array<Record<string, unknown>>) {
+  const candidateIds: string[] = [];
+  const failures: Array<{ productId: string; reason: string }> = [];
+  async function importBatch(batch: Array<Record<string, unknown>>): Promise<void> {
+    const response = await jobRequest("", { method: "PUT", body: JSON.stringify({ items: batch }) });
+    if (!response.ok) {
+      if (batch.length === 1) {
+        failures.push({ productId: String(batch[0].productId || ""), reason: `HTTP ${response.status}` });
+        return;
+      }
+      const middle = Math.ceil(batch.length / 2);
+      await importBatch(batch.slice(0, middle));
+      await importBatch(batch.slice(middle));
+      return;
+    }
+    const result = await response.json() as { imported: Array<{ candidate_id: string; auto_publish: boolean }> };
+    candidateIds.push(...result.imported.filter((item) => item.auto_publish).map((item) => item.candidate_id));
+  }
+  for (let index = 0; index < items.length; index += 25) {
+    await importBatch(items.slice(index, index + 25));
+    if ((index + 25) % 250 === 0 || index + 25 >= items.length) {
+      console.log(JSON.stringify({ stage: "import", processed: Math.min(index + 25, items.length), total: items.length, failures: failures.length }));
+    }
+  }
+  return { candidateIds, failures };
+}
+
 const products = await loadProducts();
 console.log(JSON.stringify({ stage: "products", count: products.length }));
+if (products.length !== expectedPhase2Products) {
+  throw new Error(`Preflight Phase 2 bloqueado: se esperaban ${expectedPhase2Products} productos y se recibieron ${products.length}.`);
+}
+const [publishedBefore, rejectedBefore] = await Promise.all([
+  loadPriorCandidates("published"),
+  loadPriorCandidates("rejected"),
+]);
+const rejectedUrls = new Set(rejectedBefore.flatMap((candidate) => [candidate.sourceUrl, candidate.imageUrl]).filter(Boolean));
+const familyDomains = new Map<string, string[]>();
+const familySources = new Map<string, Set<string>>();
+for (const candidate of publishedBefore) {
+  const family = distinctiveToken(candidate.productName);
+  if (!family) continue;
+  try {
+    const domain = new URL(candidate.sourceUrl).hostname.replace(/^www[.]/, "");
+    familyDomains.set(family, [...new Set([...(familyDomains.get(family) ?? []), domain])]);
+  } catch {
+    // Keep family discovery resilient to historic malformed URLs.
+  }
+  const sources = familySources.get(family) ?? new Set<string>();
+  sources.add(candidate.source);
+  familySources.set(family, sources);
+}
+console.log(JSON.stringify({ stage: "family-discovery", publishedReferences: publishedBefore.length, rejectedReferences: rejectedBefore.length, families: familyDomains.size }));
 const relevantTokens = new Set(products.map((product) => distinctiveToken(product.name)).filter((token): token is string => Boolean(token)));
 const sourceCatalogs = await mapLimit(SOURCES, 4, async (source) => {
   const catalog = await loadSourceCatalog(source, relevantTokens);
   console.log(JSON.stringify({ stage: "source", source: source.key, products: catalog.length }));
   return { source, products: catalog, index: catalogIndex(catalog) };
 });
-const initial = products.map((product) => chooseBySourcePriority(product, sourceCatalogs));
+const initial = products.map((product) => {
+  const family = distinctiveToken(product.name) || "";
+  return chooseBySourcePriority(product, sourceCatalogs, familySources.get(family) ?? new Set(), rejectedUrls);
+});
 const selectedRecords = new Map<string, SitemapRecord>();
 for (const match of initial) {
   const record = match.external as SitemapRecord | undefined;
@@ -692,9 +846,10 @@ console.log(JSON.stringify({ stage: "search", unresolved: unresolved.length, cac
 let searchedCount = 0;
 for (let index = 0; index < searchQueue.length; index += 100) {
   const batch = searchQueue.slice(index, index + 100);
-  const searched = await mapLimit(batch, 2, async (match) => {
-    const result = await searchFallback(match.product);
-    await delay(350);
+  const searched = await mapLimit(batch, 4, async (match) => {
+    const family = distinctiveToken(match.product.name) || "";
+    const result = await searchFallback(match.product, familyDomains.get(family) ?? [], rejectedUrls);
+    await delay(200);
     return result;
   });
   for (const match of searched) searchCache.set(match.product.id, match);
@@ -717,9 +872,9 @@ const medium = publishable.filter((match) => match.band === "medium");
 const low = finalMatches.filter((match) => match.band === "low");
 const noMatch = finalMatches.filter((match) => match.band === "none");
 let automaticPublication = { published: 0, failures: [] as string[] };
+let importFailures: Array<{ productId: string; reason: string }> = [];
 
 if (mode === "execute") {
-  const autoCandidateIds: string[] = [];
   const items = publishable.map((match) => ({
     productId: match.product.id,
     source: match.external?.source,
@@ -737,18 +892,13 @@ if (mode === "execute") {
     mismatchWarnings: [],
     hardConflicts: match.hardConflicts,
     visualVariant: visualVariantForSku(match.product.sku),
+    reviewRiskRank: reviewRiskForMatch(match).rank,
+    reviewRiskReason: reviewRiskForMatch(match).reason,
     runId,
   }));
-  for (let index = 0; index < items.length; index += 25) {
-    const response = await jobRequest("", { method: "PUT", body: JSON.stringify({ items: items.slice(index, index + 25) }) });
-    if (!response.ok) throw new Error(`Falló la persistencia del lote ${index / 25 + 1}: HTTP ${response.status}.`);
-    const result = await response.json() as { imported: Array<{ candidate_id: string; auto_publish: boolean }> };
-    autoCandidateIds.push(...result.imported.filter((item) => item.auto_publish).map((item) => item.candidate_id));
-    if ((index + 25) % 250 === 0 || index + 25 >= items.length) {
-      console.log(JSON.stringify({ stage: "import", processed: Math.min(index + 25, items.length), total: items.length }));
-    }
-  }
-  automaticPublication = await publish(autoCandidateIds);
+  const imported = await importResilient(items);
+  importFailures = imported.failures;
+  automaticPublication = await publish(imported.candidateIds);
   await jobRequest("", { method: "PATCH", body: JSON.stringify({ complete: true }) });
 }
 
@@ -770,6 +920,7 @@ const report = {
   noImageFound: noMatch.length + low.length,
   autoPublished: automaticPublication.published,
   publicationFailures: automaticPublication.failures,
+  importFailures,
   projectedCoverageAdded: publishable.length,
   matches: finalMatches.map((match) => ({
     productId: match.product.id,
@@ -785,5 +936,5 @@ const report = {
     hardConflicts: match.hardConflicts,
   })),
 };
-await writeFile(`docs/mass-image-coverage-${mode}-2026-08-29.json`, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+await writeFile(`docs/mass-image-coverage-phase2-${mode}-2026-08-29.json`, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ ...report, matches: undefined }));

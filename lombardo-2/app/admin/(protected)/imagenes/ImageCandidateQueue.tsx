@@ -90,6 +90,9 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
               <span className={styles.confidenceBadge} data-band={candidate.confidenceBand}>
                 {candidate.confidenceBand.toLocaleUpperCase("es-AR")} · {Math.round(candidate.confidence * 100)}%
               </span>
+              {candidate.qualityStatus === "needs_review" ? (
+                <span>RIESGO {candidate.reviewRiskRank} · {candidate.reviewRiskReason.toLocaleUpperCase("es-AR")}</span>
+              ) : null}
               <span>{candidate.qualityStatus.toLocaleUpperCase("es-AR")}</span>
             </div>
 
