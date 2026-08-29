@@ -55,12 +55,9 @@ export async function generateMetadata({ params }: GuidePageProps): Promise<Meta
 }
 
 function formattedDate(date: string) {
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "America/Argentina/Cordoba",
-  }).format(new Date(`${date}T12:00:00-03:00`)).replaceAll(".", "").toUpperCase();
+  const [year, month, day] = date.split("-");
+  const months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+  return `${day} ${months[Number(month) - 1]} ${year}`;
 }
 
 export default async function GuidePage({ params }: GuidePageProps) {
@@ -115,7 +112,11 @@ export default async function GuidePage({ params }: GuidePageProps) {
         <header className={styles.articleHero}>
           <div className={styles.heroCopy}>
             <p>{guide.eyebrow}</p>
-            <h1>{guide.title}</h1>
+            <h1 aria-label={guide.title}>
+              {guide.titleLines.map((line) => (
+                <span className={line.length > 12 ? styles.longTitleLine : undefined} key={line} aria-hidden="true">{line}</span>
+              ))}
+            </h1>
             <p>{guide.dek}</p>
             <dl>
               <div><dt>FECHA</dt><dd>{formattedDate(guide.publishedAt)}</dd></div>

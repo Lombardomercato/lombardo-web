@@ -109,13 +109,22 @@ export async function loadGuideProducts(
 export async function loadGuideCoverProducts(
   pricingContext: CustomerPricingContext,
 ) {
-  const page = await commerceProvider.getProductPage(
-    { categorySlug: "vinos", limit: 24 },
-    pricingContext,
-  );
+  const [general, malbec, bonarda, cabernetFranc] = await Promise.all([
+    commerceProvider.getProductPage({ categorySlug: "vinos", limit: 24 }, pricingContext),
+    commerceProvider.getProductPage({ categorySlug: "vinos", search: "malbec", limit: 8 }, pricingContext),
+    commerceProvider.getProductPage({ categorySlug: "vinos", search: "bonarda", limit: 8 }, pricingContext),
+    commerceProvider.getProductPage({ categorySlug: "vinos", search: "cabernet franc", limit: 8 }, pricingContext),
+  ]);
+  const fallback = general.products.filter((product) => canRecommend(product) && product.images.length > 0);
+  const cover = (products: Product[], fallbackIndex: number) =>
+    products.find((product) => canRecommend(product) && product.images.length > 0) ?? fallback[fallbackIndex];
 
-  return diverseSelection(
-    page.products.filter((product) => canRecommend(product) && product.images.length > 0),
-    8,
-  );
+  return [
+    cover(general.products, 0),
+    cover(general.products.slice(1), 1),
+    cover(general.products.slice(2), 2),
+    cover(malbec.products, 3),
+    cover(bonarda.products, 4),
+    cover(cabernetFranc.products, 5),
+  ].filter((product): product is Product => Boolean(product));
 }

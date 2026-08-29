@@ -103,6 +103,8 @@
 .heroCopy { grid-column: 1 / 7; display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
 .heroCopy > p:first-child { color: var(--guide-accent); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; }
 .heroCopy h1 { max-width: 10.5ch; margin: 1.5rem 0; font-family: var(--font-display); font-size: clamp(4rem, 7.8vw, 8.6rem); line-height: 0.78; letter-spacing: -0.06em; text-transform: uppercase; text-wrap: balance; }
+.heroCopy h1 span { display: block; white-space: nowrap; }
+.heroCopy h1 .longTitleLine { font-size: 0.7em; line-height: 1; }
 .heroCopy > p:nth-of-type(2) { max-width: 38rem; font-size: clamp(1.05rem, 1.6vw, 1.35rem); line-height: 1.42; }
 .heroCopy dl { margin: clamp(2.5rem, 5vw, 5rem) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid currentColor; }
 .heroCopy dl > div { padding: 0.9rem 0; }

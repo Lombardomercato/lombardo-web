@@ -84,6 +84,7 @@ test("las cinco piezas editoriales tienen metadatos, lectura, visuales y catálo
   for (const guide of FEATURED_GUIDES) {
     assert.equal(guide.sections.length, 4);
     assert.equal(guide.visualCaptions.length, 2);
+    assert.ok(guide.titleLines.length >= 3);
     assert.ok(guide.readingMinutes >= 5);
     assert.equal(guide.publishedAt, "2026-08-29");
   }

@@ -33,6 +33,7 @@ export interface GuideDefinition {
   cluster: GuideCluster;
   intent: "informacional" | "comercial" | "transaccional";
   title: string;
+  titleLines: readonly string[];
   cardTitle: string;
   description: string;
   eyebrow: string;
@@ -64,6 +65,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     cluster: "Ocasiones",
     intent: "comercial",
     title: "Te invitaron a comer. ¿Qué vino llevás?",
+    titleLines: ["Te invitaron", "a comer.", "¿Qué vino llevás?"],
     cardTitle: "Te invitaron a comer. ¿Qué vino llevás?",
     description: "Una guía directa para elegir qué vino llevar a una cena y acertar sin conocer el menú completo.",
     eyebrow: "OCASIONES / MESA AJENA",
@@ -122,6 +124,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     cluster: "Precio",
     intent: "transaccional",
     title: "10 vinos por menos de $20.000 que compraríamos hoy",
+    titleLines: ["10 vinos", "por menos", "de $20.000", "que", "compraríamos", "hoy"],
     cardTitle: "10 vinos por menos de $20.000 que compraríamos hoy",
     description: "Diez vinos de buena relación precio-calidad por menos de $20.000, seleccionados con precios vivos del catálogo Lombardo.",
     eyebrow: "PRECIO / CATÁLOGO VIVO",
@@ -176,6 +179,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     cluster: "Aprender",
     intent: "comercial",
     title: "Malbec: 7 botellas para entender por qué no todos saben igual",
+    titleLines: ["Malbec:", "7 botellas", "para entender", "por qué no todos", "saben igual"],
     cardTitle: "Malbec: 7 botellas para entender por qué no todos saben igual",
     description: "Siete Malbec argentinos para reconocer diferencias de lugar, altura, cosecha y estilo sin convertir la copa en un examen.",
     eyebrow: "APRENDER / MALBEC",
@@ -231,6 +235,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     cluster: "Regalos",
     intent: "comercial",
     title: "Regalar vino sin saber de vino. Una guía para quedar bien.",
+    titleLines: ["Regalar vino", "sin saber", "de vino.", "Una guía para", "quedar bien."],
     cardTitle: "Regalar vino sin saber de vino",
     description: "Cómo elegir vinos para regalar sin conocer etiquetas: presupuesto, estilo, presentación y entrega en Rosario.",
     eyebrow: "REGALOS / QUEDAR BIEN",
@@ -285,6 +290,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     cluster: "Ocasiones",
     intent: "comercial",
     title: "El asado no pide siempre Malbec",
+    titleLines: ["El asado", "no pide siempre", "Malbec"],
     cardTitle: "El asado no pide siempre Malbec",
     description: "Qué vino tomar con asado según el corte, el fuego, las achuras y la mesa: alternativas al Malbec que funcionan de verdad.",
     eyebrow: "OCASIONES / ASADO",
@@ -343,6 +349,7 @@ const FOUNDATION_GUIDES: readonly GuideDefinition[] = [
     cluster: "Comprar Online Rosario",
     intent: "transaccional",
     title: "Guía para comprar vinos online en Rosario",
+    titleLines: ["Guía para", "comprar vinos", "online en Rosario"],
     cardTitle: "Comprar vinos online en Rosario",
     description: "Cómo recorrer catálogo y precios actualizados, elegir por ocasión y comprar vinos online en Rosario sin vueltas.",
     eyebrow: "COMPRAR ONLINE / ROSARIO",
@@ -367,6 +374,7 @@ const FOUNDATION_GUIDES: readonly GuideDefinition[] = [
     cluster: "Regalos",
     intent: "comercial",
     title: "Regalos empresariales con vino en Rosario",
+    titleLines: ["Regalos", "empresariales", "con vino", "en Rosario"],
     cardTitle: "Regalos empresariales en Rosario",
     description: "Criterio y selección actual para regalos empresariales con vino en Rosario: clientes, equipos y fechas especiales.",
     eyebrow: "REGALOS / EMPRESAS",
