@@ -198,3 +198,13 @@ test("historial de destacados compone ambos límites sobre selection_date", asyn
   assert.match(store, /search\.append\("selection_date", `lt\./);
   assert.doesNotMatch(store, /"selection_date\.lt"/);
 });
+
+test("guardas SAFE privadas sólo son ejecutables por service_role", async () => {
+  const permissions = await readFile(
+    new URL("../supabase/migrations/20260829224500_automation_private_permissions.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(permissions, /grant usage on schema lombardo_private to service_role/i);
+  assert.match(permissions, /grant execute on function lombardo_private\.assert_safe_automation_product[\s\S]*to service_role/i);
+  assert.doesNotMatch(permissions, /grant[^;]*to\s+(anon|authenticated)/i);
+});
