@@ -20,6 +20,11 @@ export interface ProductPage {
   queryTimeMs: number;
 }
 
+export interface IndexableProduct {
+  slug: string;
+  categorySlug: string;
+}
+
 export interface CommerceProvider {
   getProductPage(
     query?: ProductPageQuery,
@@ -33,5 +38,6 @@ export interface CommerceProvider {
     slug: string,
     pricingContext?: CustomerPricingContext,
   ): Promise<Product | null>;
+  getIndexableProducts(): Promise<IndexableProduct[]>;
   getCategories(): Promise<Category[]>;
 }

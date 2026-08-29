@@ -89,7 +89,7 @@ export function CommercialDiscovery({
             <Link
               key={category.id}
               className={`${styles.categoryCard} ${categoryTone[category.slug] ?? ""}`}
-              href={`/productos?categoria=${category.slug}`}
+              href={`/categorias/${category.slug}`}
             >
               <span>{String(index + 1).padStart(2, "0")}</span>
               <h3>{category.name}</h3>

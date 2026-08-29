@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Footer } from "@/components/layout/Footer";
 import { CommercialDiscovery } from "@/components/home/CommercialDiscovery";
 import { FirstAct } from "@/components/home/FirstAct";
@@ -6,10 +7,21 @@ import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import type { CustomerPricingContext } from "@/lib/server/customers/types";
 import type { Category } from "@/types/commerce";
+import { onlineStoreStructuredData } from "@/lib/seo/structured-data";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
+  title: "Comprar vinos online en Rosario",
+  description:
+    "Comprá vinos, destilados y regalos online en Rosario con catálogo y precios actualizados. Quedar bien es fácil.",
   alternates: { canonical: "/" },
+  openGraph: {
+    title: "Comprar vinos online en Rosario | LOMBARDO.",
+    description:
+      "Vinos, destilados y regalos para comprar online en Rosario con catálogo y precios actualizados.",
+    url: "/",
+    type: "website",
+  },
 };
 
 export const dynamic = "force-dynamic";
@@ -58,6 +70,7 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd data={onlineStoreStructuredData()} />
       <main className={styles.home}>
         <FirstAct />
         <CommercialDiscovery {...discovery} />

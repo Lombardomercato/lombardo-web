@@ -145,7 +145,7 @@
 }
 
 .modeSwitch button,
-.categoryBar button {
+.categoryBar a {
   min-height: 2.75rem;
   padding: 0;
   border: 0;
@@ -160,7 +160,7 @@
 }
 
 .modeSwitch button[aria-pressed="true"],
-.categoryBar button[aria-pressed="true"] {
+.categoryBar a[aria-current="page"] {
   border-color: var(--lombardo-red);
   color: var(--lombardo-blue);
 }
@@ -178,10 +178,12 @@
   display: none;
 }
 
-.categoryBar button {
+.categoryBar a {
   flex: 1 0 auto;
   min-width: clamp(7rem, 13vw, 13rem);
   padding-inline: 1rem;
+  display: grid;
+  place-items: center;
   border-right: 1px solid rgba(0, 58, 112, 0.2);
 }
 
@@ -722,7 +724,7 @@
     padding-left: var(--page-gutter);
   }
 
-  .categoryBar button {
+  .categoryBar a {
     min-width: 8.4rem;
   }
 

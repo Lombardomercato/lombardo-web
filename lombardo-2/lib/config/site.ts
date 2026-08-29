@@ -3,8 +3,12 @@ const configuredWhatsAppUrl = process.env.NEXT_PUBLIC_WHATSAPP_URL?.trim();
 
 export const SITE = {
   name: "LOMBARDO.",
+  alternateName: "Lombardo Mercato",
   url: configuredUrl || "https://www.lombardomercato.com",
-  description: "Vinos, regalos y cosas buenas en Rosario. Quedar bien es fácil.",
+  description:
+    "Tienda online de vinos, destilados y regalos en Rosario. Catálogo y precios actualizados para comprar sin vueltas.",
+  logoPath: "/brand/logo-reducido-azul.png",
+  locale: "es_AR",
 } as const;
 
 export const SITE_CONTACT = {
