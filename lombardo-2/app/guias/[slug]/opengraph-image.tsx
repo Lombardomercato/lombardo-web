@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { getGuide } from "@/lib/seo/guides";
 
@@ -15,18 +13,12 @@ const colors = {
   beige: { background: "#eee1c9", foreground: "#003a70", accent: "#d85343" },
 } as const;
 
-const fontFiles = Promise.all([
-  readFile(join(process.cwd(), "public/fonts/GopherDisplay-Regular.woff2")),
-  readFile(join(process.cwd(), "public/fonts/GopherDisplay-Bold.woff2")),
-]);
-
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const guide = getGuide((await params).slug);
   const palette = colors[guide?.heroTone ?? "blue"];
-  const [regular, bold] = await fontFiles;
 
   return new ImageResponse(
-    <div style={{ width: "100%", height: "100%", padding: "54px 64px", display: "flex", flexDirection: "column", justifyContent: "space-between", background: palette.background, color: palette.foreground, fontFamily: "Gopher" }}>
+    <div style={{ width: "100%", height: "100%", padding: "54px 64px", display: "flex", flexDirection: "column", justifyContent: "space-between", background: palette.background, color: palette.foreground, fontFamily: "Arial, sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 22, letterSpacing: "0.12em", fontWeight: 700 }}>
         <span>LOMBARDO™ / GUÍAS</span><span>{guide?.cluster.toUpperCase() ?? "PARA ELEGIR MEJOR"}</span>
       </div>
@@ -38,6 +30,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         <span style={{ color: palette.accent, fontSize: 168, lineHeight: 0.7, fontWeight: 700 }}>.</span>
       </div>
     </div>,
-    { ...size, fonts: [{ name: "Gopher", data: regular, weight: 400 }, { name: "Gopher", data: bold, weight: 700 }] },
+    size,
   );
 }
