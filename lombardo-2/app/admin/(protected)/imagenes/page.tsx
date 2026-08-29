@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { reviewImageCandidateAction } from "@/app/admin/actions";
+import { publishImageCandidateAction, reviewImageCandidateAction } from "@/app/admin/actions";
 import { loadAdminImageCandidates } from "@/lib/server/admin/admin-data";
 import type { MatchReviewStatus } from "@/lib/server/admin/types";
 import styles from "../../admin.module.css";
@@ -41,7 +41,7 @@ export default async function AdminImageCandidatesPage({ searchParams }: { searc
         <Link data-active={status === "approved"} href={pageHref("approved")}>MATCH APROBADO</Link>
         <Link data-active={status === "rejected"} href={pageHref("rejected")}>RECHAZADOS</Link>
       </nav>
-      <p className={styles.readOnlyNotice}>PUBLICACIÓN EXTERNA = 0 · Los candidatos conservan derechos “desconocidos” y nunca entran a la vista pública.</p>
+      <p className={styles.readOnlyNotice}>PUBLICACIÓN AUTOMÁTICA = 0 · Sólo un match aprobado puede publicarse mediante una segunda acción humana.</p>
 
       {page.candidates.length ? <div className={styles.candidateList}>
         {page.candidates.map((candidate) => <article className={styles.candidateCard} key={candidate.id}>
@@ -72,6 +72,10 @@ export default async function AdminImageCandidatesPage({ searchParams }: { searc
               <button className={styles.primaryButton} name="decision" value="approved" disabled={candidate.matchReviewStatus === "approved"}>APROBAR MATCH</button>
               <button className={styles.dangerButton} name="decision" value="rejected" disabled={candidate.matchReviewStatus === "rejected"}>RECHAZAR</button>
             </form>
+            {candidate.matchReviewStatus === "approved" && candidate.publicationStatus === "pending" ? <form action={publishImageCandidateAction}>
+              <input type="hidden" name="candidateId" value={candidate.id} />
+              <button className={styles.primaryButton}>PUBLICAR IMAGEN</button>
+            </form> : null}
             <small>DERECHOS: {candidate.rightsStatus.toLocaleUpperCase("es-AR")} · PUBLICACIÓN: {candidate.publicationStatus.toLocaleUpperCase("es-AR")}</small>
           </div>
         </article>)}
