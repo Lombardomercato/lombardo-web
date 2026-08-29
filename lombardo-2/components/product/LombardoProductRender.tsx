@@ -1,5 +1,4 @@
 import Image from "next/image";
-import type { CSSProperties } from "react";
 import styles from "./LombardoProductRender.module.css";
 
 export type LombardoImageVariant = "wine" | "spirits" | "beer" | "gourmet" | "gifts";
@@ -11,7 +10,6 @@ interface LombardoProductRenderProps {
   sku: string;
   presentation: string;
   variant: LombardoImageVariant;
-  scale?: number;
   priority?: boolean;
   showMaster?: boolean;
 }
@@ -31,15 +29,12 @@ export function LombardoProductRender({
   sku,
   presentation,
   variant,
-  scale = 0.82,
   priority = false,
   showMaster = false,
 }: LombardoProductRenderProps) {
-  const customProperties = { "--product-scale": String(scale) } as CSSProperties;
-
   if (showMaster) {
     return (
-      <div className={styles.master} style={customProperties}>
+      <div className={styles.master}>
         <Image src={src} alt={alt} fill priority={priority} sizes="(max-width: 700px) 92vw, 25vw" />
         <span>SOURCE MASTER · SIN INTERVENCIÓN</span>
       </div>
@@ -49,7 +44,6 @@ export function LombardoProductRender({
   return (
     <div
       className={`${styles.render} ${styles[variant]}`}
-      style={customProperties}
       role="img"
       aria-label={`${name}, presentación visual Lombardo`}
     >

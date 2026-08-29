@@ -1213,7 +1213,6 @@ export class RuniaAdminStore {
       if (!product || !master) return [];
       const editorial = asArray(product.editorial)[0];
       const price = Number(asArray(product.retail_prices).find((item) => item.price_type === "retail")?.current_price);
-      const configuredScale = Number(row.render_config?.scale);
       return [{
         id: row.id,
         productId: product.id,
@@ -1227,7 +1226,6 @@ export class RuniaAdminStore {
         source: master.source,
         sourceUrl: master.source_url ?? undefined,
         variant: row.visual_variant,
-        scale: Number.isFinite(configuredScale) ? Math.min(1.1, Math.max(0.55, configuredScale)) : 0.82,
         renderVersion: row.render_version,
       }];
     }).sort((a, b) => {

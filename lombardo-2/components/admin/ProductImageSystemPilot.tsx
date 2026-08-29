@@ -26,7 +26,6 @@ export function ProductImageSystemPilot({ products }: { products: AdminProductIm
               sku={product.sku}
               presentation={product.presentation}
               variant={product.variant}
-              scale={product.scale}
               priority={index < 2}
               showMaster={view === "master"}
             />

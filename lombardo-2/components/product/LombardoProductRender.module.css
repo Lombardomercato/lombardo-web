@@ -20,16 +20,7 @@
 }
 
 .render::after {
-  position: absolute;
-  z-index: 1;
-  content: "";
-  left: 24%;
-  right: 24%;
-  bottom: 8%;
-  height: 3%;
-  border-radius: 50%;
-  background: rgb(0 22 44 / 13%);
-  filter: blur(11px);
+  display: none;
 }
 
 .wine,
@@ -81,19 +72,12 @@
   position: absolute;
   z-index: 2;
   inset: 12% 8% 12%;
-  transform: scale(var(--product-scale));
-  transform-origin: center bottom;
 }
 
 .product img {
   object-fit: contain;
   object-position: center bottom;
   mix-blend-mode: multiply;
-  filter: drop-shadow(0.7rem 1rem 0.8rem rgb(0 22 44 / 16%));
-}
-
-.gifts .product {
-  inset-inline: 4%;
 }
 
 .master {
@@ -135,7 +119,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .product {
-    transform: scale(var(--product-scale));
-  }
+  .product { transform: none; }
 }

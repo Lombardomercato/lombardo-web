@@ -225,7 +225,6 @@ export interface AdminProductImageRender {
   source: string;
   sourceUrl?: string;
   variant: "wine" | "spirits" | "beer" | "gourmet" | "gifts";
-  scale: number;
   renderVersion: number;
 }
 

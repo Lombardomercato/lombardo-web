@@ -39,7 +39,9 @@ test("pilot uses one visual grammar with five controlled variants", async () => 
   }
   assert.match(styles, /object-fit: contain/);
   assert.match(styles, /mix-blend-mode: multiply/);
-  assert.match(styles, /drop-shadow/);
+  assert.match(styles, /inset: 12% 8% 12%/);
+  assert.doesNotMatch(styles, /drop-shadow/);
+  assert.doesNotMatch(render, /scale=/);
   assert.match(pilot, /products\.length === 12/);
   assert.doesNotMatch(pilot, /ProductVisual/);
 });
