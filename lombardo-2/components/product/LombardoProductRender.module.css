@@ -1,0 +1,199 @@
+.render,
+.master {
+  --stage: #f0e8e2;
+  --field: #eea28f;
+  --ink: #003a70;
+  --accent: #d8ee89;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--stage);
+  isolation: isolate;
+}
+
+.render::before {
+  position: absolute;
+  z-index: -3;
+  content: "";
+  inset: 18% 0 0 23%;
+  background: var(--field);
+}
+
+.render::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  left: 20%;
+  right: 11%;
+  bottom: 9%;
+  height: 7%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 24%, transparent);
+  filter: blur(14px);
+  transform: skewX(-15deg);
+}
+
+.wine {
+  --stage: #efe6e1;
+  --field: #f0a08b;
+  --ink: #003a70;
+  --accent: #d7ed88;
+}
+
+.spirits {
+  --stage: #eadfda;
+  --field: #003a70;
+  --ink: #fffaf3;
+  --accent: #ef493d;
+}
+
+.beer {
+  --stage: #e9e2d9;
+  --field: #d8ee89;
+  --ink: #003a70;
+  --accent: #ef493d;
+}
+
+.gourmet {
+  --stage: #efe5d5;
+  --field: #7fa92d;
+  --ink: #003a70;
+  --accent: #f0a08b;
+}
+
+.gifts {
+  --stage: #eadfda;
+  --field: #f0a08b;
+  --ink: #003a70;
+  --accent: #ef493d;
+}
+
+.category,
+.sku,
+.presentation {
+  position: absolute;
+  z-index: 4;
+  color: var(--ink);
+  font-size: clamp(0.58rem, 1vw, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.category {
+  top: 5%;
+  left: 6%;
+}
+
+.sku {
+  bottom: 4.5%;
+  left: 6%;
+}
+
+.presentation {
+  right: 6%;
+  bottom: 4.5%;
+}
+
+.monogram {
+  position: absolute;
+  z-index: -2;
+  top: 15%;
+  right: -0.04em;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(11rem, 24vw, 21rem);
+  font-weight: 700;
+  line-height: 0.72;
+  opacity: 0.11;
+}
+
+.orbit {
+  position: absolute;
+  z-index: -2;
+  top: 23%;
+  right: -4%;
+  width: 43%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.horizon {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 16%;
+  left: 0;
+  height: 1px;
+  background: var(--ink);
+  opacity: 0.42;
+}
+
+.product {
+  position: absolute;
+  z-index: 2;
+  inset: 12% 8% 12%;
+  transform: scale(var(--product-scale));
+  transform-origin: center bottom;
+}
+
+.product img {
+  object-fit: contain;
+  object-position: center bottom;
+  mix-blend-mode: multiply;
+  filter: drop-shadow(1.25rem 1.5rem 1.1rem rgb(0 22 44 / 24%));
+}
+
+.spirits .product img {
+  mix-blend-mode: normal;
+}
+
+.gifts .product {
+  inset-inline: 4%;
+}
+
+.master {
+  border: 1px solid rgb(0 58 112 / 22%);
+  background-image:
+    linear-gradient(45deg, #ece8e2 25%, transparent 25%),
+    linear-gradient(-45deg, #ece8e2 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ece8e2 75%),
+    linear-gradient(-45deg, transparent 75%, #ece8e2 75%);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+}
+
+.master img {
+  padding: 7%;
+  object-fit: contain;
+}
+
+.master span {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  padding: 0.7rem;
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+@media (max-width: 47.99rem) {
+  .render,
+  .master {
+    aspect-ratio: 4 / 5.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product {
+    transform: scale(var(--product-scale));
+  }
+}

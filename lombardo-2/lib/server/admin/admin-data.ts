@@ -63,6 +63,11 @@ export async function loadProductsWithoutImageMatch(input: { offset?: number; li
   return createAdminStore().listProductsWithoutImageMatch(input);
 }
 
+export async function loadProductImageSystemPilot() {
+  await requireAdminSession();
+  return createAdminStore().listProductImageSystemPilot();
+}
+
 export async function loadAdminCustomers() {
   await requireAdminSession();
   return createAdminStore().listCustomers();

@@ -27,6 +27,7 @@ export async function POST(
     const altText = String(form.get("altText") || "").trim().slice(0, 240);
     const sourceUrl = String(form.get("sourceUrl") || "").trim().slice(0, 2000);
     const makePrimary = form.get("makePrimary") === "true";
+    const workflow = form.get("workflow") === "source_master" ? "source_master" : "public_media";
     if (!(file instanceof File) || file.size < 20 || file.size > MAX_BYTES || !altText) {
       return Response.json({ error: "Elegí una imagen válida de hasta 5 MB y escribí el texto alternativo." }, { status: 422 });
     }
@@ -37,6 +38,9 @@ export async function POST(
     if (!validImage(bytes, file.type)) {
       return Response.json({ error: "El contenido del archivo no coincide con una imagen JPG, PNG, WebP o AVIF." }, { status: 422 });
     }
+    if (workflow === "source_master" && !sourceUrl) {
+      return Response.json({ error: "El source master necesita una URL de origen." }, { status: 422 });
+    }
     await createAdminStore().uploadProductImage({
       productId,
       bytes,
@@ -44,6 +48,7 @@ export async function POST(
       altText,
       sourceUrl: sourceUrl || undefined,
       makePrimary,
+      workflow,
       operatorUserId: session.authUserId,
     });
     return Response.json({ ok: true });

@@ -34,6 +34,7 @@ import type {
   AdminProduct,
   AdminProductDetail,
   AdminProductEditorial,
+  AdminProductImageRender,
   AdminProductMedia,
   AdminProductPrice,
   AdminProductPage,
@@ -202,6 +203,15 @@ interface ProductAnomalyRow {
   observed_price: number | string | null;
   message: string;
   last_detected_at: string;
+}
+
+interface ProductImageRenderRow {
+  id: string;
+  visual_variant: AdminProductImageRender["variant"];
+  render_version: number;
+  render_config: { scale?: unknown; pilotOrder?: unknown } | null;
+  product: ProductRow | ProductRow[] | null;
+  master: ProductMediaRow | ProductMediaRow[] | null;
 }
 
 interface PublishableImageCandidateRow {
@@ -1119,6 +1129,7 @@ export class RuniaAdminStore {
     altText: string;
     sourceUrl?: string;
     makePrimary: boolean;
+    workflow?: "public_media" | "source_master";
     operatorUserId: string;
   }) {
     const product = await this.getProduct(input.productId);
@@ -1133,7 +1144,13 @@ export class RuniaAdminStore {
     if (!extension || input.bytes.byteLength < 20 || input.bytes.byteLength > 5 * 1024 * 1024) {
       throw new AdminStoreError("La imagen debe ser JPG, PNG, WebP o AVIF y pesar hasta 5 MB.", 422);
     }
-    const path = `${input.productId}/${randomUUID()}.${extension}`;
+    const sourceMaster = input.workflow === "source_master";
+    if (sourceMaster && !input.sourceUrl) {
+      throw new AdminStoreError("El source master necesita una URL de origen.", 422);
+    }
+    const path = sourceMaster
+      ? `${input.productId}/masters/${randomUUID()}.${extension}`
+      : `${input.productId}/${randomUUID()}.${extension}`;
     const storageHeaders: Record<string, string> = {
       apikey: this.secretKey,
       "Content-Type": input.mimeType,
@@ -1147,7 +1164,16 @@ export class RuniaAdminStore {
     );
     if (!upload.ok) throw new AdminStoreError("No pudimos subir la imagen.", 502);
     try {
-      await this.rpc("supplier_attach_product_media", {
+      await this.rpc(sourceMaster ? "supplier_attach_product_source_master" : "supplier_attach_product_media", sourceMaster ? {
+        p_supplier_product_id: input.productId,
+        p_bucket_id: "product-media",
+        p_storage_path: path,
+        p_mime_type: input.mimeType,
+        p_byte_size: input.bytes.byteLength,
+        p_alt_text: input.altText,
+        p_source_url: input.sourceUrl,
+        p_created_by: input.operatorUserId,
+      } : {
         p_supplier_product_id: input.productId,
         p_bucket_id: "product-media",
         p_storage_path: path,
@@ -1163,6 +1189,52 @@ export class RuniaAdminStore {
       await this.deleteStorageObject("product-media", path).catch(() => undefined);
       throw error;
     }
+  }
+
+  async listProductImageSystemPilot(): Promise<AdminProductImageRender[]> {
+    const supplierId = await this.supplierId();
+    const search = new URLSearchParams({
+      select:
+        "id,visual_variant,render_version,render_config,product:supplier_product_id!inner(id,supplier_id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status)),master:source_media_id!inner(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status)",
+      status: "eq.pilot",
+      "product.supplier_id": `eq.${supplierId}`,
+      "product.active": "eq.true",
+      "product.eligibility_status": "eq.safe",
+      limit: "20",
+    });
+    const { rows } = await this.rows<ProductImageRenderRow>(
+      `supplier_product_image_renders?${search}`,
+      "No pudimos cargar el piloto visual.",
+    );
+
+    return rows.flatMap((row): AdminProductImageRender[] => {
+      const product = asArray(row.product)[0];
+      const master = asArray(row.master)[0];
+      if (!product || !master) return [];
+      const editorial = asArray(product.editorial)[0];
+      const price = Number(asArray(product.retail_prices).find((item) => item.price_type === "retail")?.current_price);
+      const configuredScale = Number(row.render_config?.scale);
+      return [{
+        id: row.id,
+        productId: product.id,
+        sku: product.supplier_sku,
+        name: editorial?.name_override?.trim() || product.name_raw,
+        brand: editorial?.brand_name?.trim() || inferBrand(product.name_raw).name,
+        presentation: product.normalized_presentation || product.presentation_raw || "Unidad",
+        price: Number.isFinite(price) && price > 0 ? price : null,
+        masterUrl: this.mediaUrl(master),
+        masterAlt: master.alt_text,
+        source: master.source,
+        sourceUrl: master.source_url ?? undefined,
+        variant: row.visual_variant,
+        scale: Number.isFinite(configuredScale) ? Math.min(1.1, Math.max(0.55, configuredScale)) : 0.82,
+        renderVersion: row.render_version,
+      }];
+    }).sort((a, b) => {
+      const aRow = rows.find((row) => row.id === a.id);
+      const bRow = rows.find((row) => row.id === b.id);
+      return Number(aRow?.render_config?.pilotOrder ?? 0) - Number(bRow?.render_config?.pilotOrder ?? 0);
+    });
   }
 
   private async deleteStorageObject(bucket: string, path: string) {

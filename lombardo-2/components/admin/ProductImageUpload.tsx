@@ -64,6 +64,9 @@ export function ProductImageUpload({ productId, hasImages }: { productId: string
       <label className={styles.checkField}>
         <input name="makePrimary" type="checkbox" defaultChecked={!hasImages} /> USAR COMO PRINCIPAL
       </label>
+      <label className={styles.checkField}>
+        <input name="workflow" type="checkbox" value="source_master" /> SOURCE MASTER · PILOTO, NO PUBLICAR
+      </label>
       {error ? <p className={styles.formError} role="alert">{error}</p> : null}
       <button className={styles.primaryButton} type="submit" disabled={pending}>
         {pending ? "SUBIENDO…" : "SUBIR IMAGEN"}

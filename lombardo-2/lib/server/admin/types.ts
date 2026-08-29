@@ -212,6 +212,23 @@ export interface AdminImageCandidatePage {
   hasMore: boolean;
 }
 
+export interface AdminProductImageRender {
+  id: string;
+  productId: string;
+  sku: string;
+  name: string;
+  brand: string;
+  presentation: string;
+  price: number | null;
+  masterUrl: string;
+  masterAlt: string;
+  source: string;
+  sourceUrl?: string;
+  variant: "wine" | "spirits" | "beer" | "gourmet" | "gifts";
+  scale: number;
+  renderVersion: number;
+}
+
 export interface AdminUnmatchedImageProduct {
   id: string;
   sku: string;

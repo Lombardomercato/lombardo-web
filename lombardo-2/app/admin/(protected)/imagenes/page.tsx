@@ -55,7 +55,7 @@ export default async function AdminImageCandidatesPage({ searchParams }: { searc
     <>
       <header className={styles.pageHeader}>
         <div><p className={styles.eyebrow}>MATCHING · POSITANO</p><h1>IMÁGENES.</h1></div>
-        <p>Origen y estado de publicación visibles. Los matches dudosos siempre requieren revisión humana.</p>
+        <p>Origen y estado de publicación visibles. Los matches dudosos siempre requieren revisión humana. <Link href="/admin/imagenes/sistema-lombardo">VER PILOTO VISUAL LOMBARDO →</Link></p>
       </header>
       {success ? <p className={styles.notice}>{success}</p> : null}
       {error ? <p className={styles.errorNotice}>{error}</p> : null}

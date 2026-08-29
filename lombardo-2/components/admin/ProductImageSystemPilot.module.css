@@ -1,0 +1,127 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 1.4rem 0 2rem;
+  padding-block: 0.8rem;
+  border-block: 1px solid #003a70;
+}
+
+.toolbar p {
+  margin: 0 auto 0 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.toolbar button {
+  min-height: 2.65rem;
+  border: 1px solid #003a70;
+  padding: 0.65rem 0.9rem;
+  background: transparent;
+  color: #003a70;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.toolbar button[data-active="true"] {
+  background: #003a70;
+  color: #fffdf9;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid #003a70;
+  border-left: 1px solid #003a70;
+}
+
+.card {
+  min-width: 0;
+  border-right: 1px solid #003a70;
+  border-bottom: 1px solid #003a70;
+  background: #fffdf9;
+}
+
+.info {
+  min-height: 11.5rem;
+  padding: 1rem;
+  color: #003a70;
+}
+
+.info p,
+.info h2,
+.info span,
+.info small {
+  display: block;
+  margin: 0;
+}
+
+.info p,
+.info small {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.info h2 {
+  min-height: 3.4em;
+  margin: 0.65rem 0 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2vw, 2rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.info span {
+  margin-bottom: 0.65rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.info small {
+  color: #70777c;
+}
+
+@media (max-width: 70rem) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .toolbar p {
+    flex-basis: 100%;
+    margin-bottom: 0.35rem;
+  }
+
+  .toolbar button {
+    flex: 1;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .info {
+    min-height: 10.5rem;
+    padding: 0.8rem;
+  }
+
+  .info h2 {
+    font-size: clamp(1.15rem, 5.4vw, 1.55rem);
+  }
+}
+
+@media (max-width: 23rem) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
