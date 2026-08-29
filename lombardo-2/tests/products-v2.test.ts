@@ -41,6 +41,12 @@ test("Productos V2 separa verdad VINROS de editorial Lombardo", () => {
   assert.doesNotMatch(migration, /delete from public\.supplier_prices/);
 });
 
+test("la ficha consulta el nombre real de la marca temporal de última presencia", () => {
+  assert.match(adminStore, /source_raw,last_seen_at,retail_prices/);
+  assert.match(adminStore, /lastSeen: row\.last_seen_at/);
+  assert.doesNotMatch(adminStore, /source_raw,last_seen,retail_prices/);
+});
+
 test("la vista pública sólo entrega imágenes aprobadas para productos SAFE activos", () => {
   assert.match(migration, /create view public\.supplier_product_public_media/);
   assert.match(migration, /product\.active = true/);

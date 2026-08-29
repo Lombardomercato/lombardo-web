@@ -101,7 +101,7 @@ interface ProductRow {
   active: boolean;
   eligibility_status: AdminProduct["eligibilityStatus"];
   source_raw?: unknown;
-  last_seen?: string;
+  last_seen_at?: string;
   retail_prices:
     | Array<{ price_type: string; current_price: number | string }>
     | { price_type: string; current_price: number | string }
@@ -757,7 +757,7 @@ export class RuniaAdminStore {
     const supplierId = await this.supplierId();
     const search = new URLSearchParams({
       select:
-        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,source_raw,last_seen,retail_prices:supplier_prices(price_type,current_price),all_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status),anomalies:supplier_anomalies(id,anomaly_type,severity,status,price_type,observed_price,message,last_detected_at)",
+        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,source_raw,last_seen_at,retail_prices:supplier_prices(price_type,current_price),all_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status),anomalies:supplier_anomalies(id,anomaly_type,severity,status,price_type,observed_price,message,last_detected_at)",
       id: `eq.${productId}`,
       supplier_id: `eq.${supplierId}`,
       "anomalies.status": "eq.open",
@@ -828,7 +828,7 @@ export class RuniaAdminStore {
         observedPrice: anomaly.observed_price === null ? undefined : Number(anomaly.observed_price),
         lastDetectedAt: anomaly.last_detected_at,
       })),
-      lastSeen: row.last_seen || "",
+      lastSeen: row.last_seen_at || "",
     };
   }
 
