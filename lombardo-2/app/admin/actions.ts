@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import {
   authenticateAdminCredentials,
   createAdminStore,
+  requireAdminRole,
   requireAdminSession,
   revokeAdminSession,
 } from "@/lib/server/admin/admin-auth";
@@ -17,6 +18,14 @@ import {
   createNewOrderNotifier,
   createOrderServices,
 } from "@/lib/server/services";
+import {
+  createCustomerWithInvite,
+  updateCustomer,
+} from "@/lib/server/customers/customer-admin";
+import {
+  CustomerAdminValidationError,
+  parseAdminCustomerInput,
+} from "@/lib/server/customers/customer-admin-validation";
 
 export interface AdminLoginState {
   error?: string;
@@ -80,6 +89,46 @@ export async function loginAdminAction(
 export async function logoutAdminAction() {
   await revokeAdminSession();
   redirect("/admin/login");
+}
+
+export async function createCustomerAction(formData: FormData) {
+  let destination = "/admin/clientes";
+  try {
+    await requireAdminRole("admin");
+    const input = parseAdminCustomerInput(formData);
+    const customerId = await createCustomerWithInvite(input);
+    revalidatePath("/admin/clientes");
+    destination = `/admin/clientes/${customerId}?success=${encodeURIComponent(
+      "Cliente creado. Enviamos la invitación para definir su contraseña.",
+    )}`;
+  } catch (error) {
+    const message =
+      error instanceof AdminStoreError || error instanceof CustomerAdminValidationError
+        ? error.message
+        : "No pudimos crear el cliente.";
+    destination = `/admin/clientes/nuevo?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+export async function updateCustomerAction(formData: FormData) {
+  const customerId = formText(formData, "customerId", 36);
+  let destination = `/admin/clientes/${customerId}`;
+  try {
+    await requireAdminRole("admin");
+    const input = parseAdminCustomerInput(formData);
+    await updateCustomer(input, customerId);
+    revalidatePath("/admin/clientes");
+    revalidatePath(`/admin/clientes/${customerId}`);
+    destination += `?success=${encodeURIComponent("Cliente actualizado.")}`;
+  } catch (error) {
+    const message =
+      error instanceof AdminStoreError || error instanceof CustomerAdminValidationError
+        ? error.message
+        : "No pudimos actualizar el cliente.";
+    destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
 }
 
 export async function transitionOrderAction(formData: FormData) {

@@ -21,17 +21,24 @@ import { SupabaseOrderStore } from "./orders/supabase-order-store";
 import { MercadoPagoAdapter } from "./payments/mercado-pago-adapter";
 import { OrderPaymentCoordinator } from "./payments/order-payment-coordinator";
 import type { PaymentGateway } from "./payments/payment-gateway";
+import {
+  retailPricingContext,
+  type CustomerPricingContext,
+} from "./customers/types";
 
-export function createOrderServices() {
+export function createOrderServices(pricingContext?: CustomerPricingContext) {
   const configuration = readRuniaConfiguration();
   const tenantId = configuration.tenantSlug;
+  const resolvedPricingContext =
+    pricingContext ?? retailPricingContext(configuration.tenantSlug);
   const store = new SupabaseOrderStore({
     url: configuration.url,
     secretKey: configuration.secretKey,
   });
   const orders = new RuniaOrderRepository({
     tenantId,
-    productSource: new RuniaCommerceProvider(configuration),
+    pricingContext: resolvedPricingContext,
+    productSource: new RuniaCommerceProvider(configuration, resolvedPricingContext),
     deliveryPricing: new EnvironmentDeliveryPricing(),
     store,
   });
@@ -49,8 +56,8 @@ export function createPaymentGateway(): PaymentGateway | null {
   });
 }
 
-export function createCheckoutCoordinator() {
-  const services = createOrderServices();
+export function createCheckoutCoordinator(pricingContext: CustomerPricingContext) {
+  const services = createOrderServices(pricingContext);
   const newOrderNotifiers = [
     createNewOrderNotifier(),
     createCustomerOrderConfirmationNotifier(),

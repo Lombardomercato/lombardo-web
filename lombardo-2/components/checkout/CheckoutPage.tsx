@@ -36,12 +36,19 @@ import type {
 import styles from "./CheckoutPage.module.css";
 
 const SESSION_STORAGE_KEY = "lombardo-checkout-session-v1";
-const SESSION_STORAGE_VERSION = 2;
+const SESSION_STORAGE_VERSION = 3;
+
+export interface CheckoutCustomerDefaults {
+  name: string;
+  email: string;
+  whatsapp: string;
+}
 
 interface StoredCheckoutSession {
   version: number;
   checkoutSessionId: string;
   idempotencyKey: string;
+  pricingContextKey: string;
   form: CheckoutFormValues;
   order?: OrderDraft;
   orderedCartSignature?: string;
@@ -105,8 +112,22 @@ const initialState: CheckoutState = {
   coordinationError: "",
 };
 
-const cloneEmptyForm = (): CheckoutFormValues => ({
-  customer: { ...emptyCheckoutForm.customer },
+function splitCustomerName(name: string) {
+  const [firstName = "", ...lastName] = name.trim().split(/\s+/);
+  return { firstName, lastName: lastName.join(" ") };
+}
+
+const cloneEmptyForm = (
+  customerDefaults?: CheckoutCustomerDefaults,
+): CheckoutFormValues => ({
+  customer: customerDefaults
+    ? {
+        ...emptyCheckoutForm.customer,
+        ...splitCustomerName(customerDefaults.name),
+        email: customerDefaults.email,
+        whatsapp: customerDefaults.whatsapp,
+      }
+    : { ...emptyCheckoutForm.customer },
   deliveryMethod: emptyCheckoutForm.deliveryMethod,
   deliveryAddress: { ...emptyCheckoutForm.deliveryAddress },
 });
@@ -126,7 +147,15 @@ function checkoutReducer(
     case "hydrate":
       return action.order
         ? { ...state, phase: "prepared", form: action.form, order: action.order }
-        : { ...state, phase: "editing", form: action.form };
+        : {
+            ...state,
+            phase: "editing",
+            form: action.form,
+            order: null,
+            paymentError: null,
+            whatsappUrl: "",
+            coordinationError: "",
+          };
     case "update-customer":
       return {
         ...state,
@@ -250,11 +279,15 @@ function checkoutReducer(
 const createIdentifier = (prefix: string) =>
   `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
 
-function createCheckoutSession(form: CheckoutFormValues): StoredCheckoutSession {
+function createCheckoutSession(
+  form: CheckoutFormValues,
+  pricingContextKey: string,
+): StoredCheckoutSession {
   return {
     version: SESSION_STORAGE_VERSION,
     checkoutSessionId: createIdentifier("checkout"),
     idempotencyKey: createIdentifier("idempotency"),
+    pricingContextKey,
     form,
   };
 }
@@ -268,6 +301,7 @@ function readCheckoutSession(): StoredCheckoutSession | null {
       parsed.version !== SESSION_STORAGE_VERSION ||
       !parsed.checkoutSessionId ||
       !parsed.idempotencyKey ||
+      typeof parsed.pricingContextKey !== "string" ||
       !parsed.form
     ) {
       return null;
@@ -480,14 +514,39 @@ function OrderPrepared({
   );
 }
 
+function getCartPricingContextKey(
+  items: ReturnType<typeof useCart>["items"],
+) {
+  const keys = [
+    ...new Set(
+      items
+        .map((item) => item.product.pricingContextKey)
+        .filter((key): key is string => Boolean(key)),
+    ),
+  ].toSorted();
+  if (keys.length !== 1 || items.some((item) => !item.product.pricingContextKey)) {
+    return "";
+  }
+  return keys[0];
+}
+
 function getCartSignature(items: ReturnType<typeof useCart>["items"]) {
   return items
-    .map((item) => `${item.product.id}:${item.quantity}`)
+    .map(
+      (item) =>
+        `${item.product.id}:${item.quantity}:${item.product.price}:${item.product.pricingContextKey ?? ""}`,
+    )
     .toSorted()
     .join("|");
 }
 
-export function CheckoutPage() {
+export function CheckoutPage({
+  customerDefaults,
+  pricingContextKey: expectedPricingContextKey,
+}: {
+  customerDefaults?: CheckoutCustomerDefaults;
+  pricingContextKey: string;
+}) {
   const { items, isHydrated, syncPrices, clearCart, getSubtotal, getItemCount } = useCart();
   const router = useRouter();
   const [state, dispatch] = useReducer(checkoutReducer, initialState);
@@ -499,11 +558,37 @@ export function CheckoutPage() {
   const subtotal = getSubtotal();
   const itemCount = getItemCount();
   const cartSignature = getCartSignature(items);
+  const pricingContextKey = items.length
+    ? getCartPricingContextKey(items)
+    : expectedPricingContextKey;
   const deliveryQuote = getDeliveryQuote(state.form.deliveryMethod);
   const total = subtotal + deliveryQuote.amount;
 
   useEffect(() => {
-    if (!isHydrated || hydratedRef.current) return;
+    if (
+      !isHydrated ||
+      !pricingContextKey ||
+      pricingContextKey !== expectedPricingContextKey
+    ) {
+      return;
+    }
+
+    if (hydratedRef.current) {
+      const currentSession = sessionRef.current;
+      if (
+        currentSession &&
+        currentSession.pricingContextKey !== pricingContextKey
+      ) {
+        const session = createCheckoutSession(
+          cloneEmptyForm(customerDefaults),
+          pricingContextKey,
+        );
+        sessionRef.current = session;
+        writeCheckoutSession(session);
+        dispatch({ type: "hydrate", form: session.form });
+      }
+      return;
+    }
     hydratedRef.current = true;
     let cancelled = false;
 
@@ -512,6 +597,7 @@ export function CheckoutPage() {
 
       if (
         stored?.order &&
+        stored.pricingContextKey === pricingContextKey &&
         stored.orderedCartSignature === cartSignature
       ) {
         try {
@@ -543,9 +629,14 @@ export function CheckoutPage() {
       }
 
       const session =
-        stored && !stored.order
+        stored &&
+        !stored.order &&
+        stored.pricingContextKey === pricingContextKey
           ? stored
-          : createCheckoutSession(cloneEmptyForm());
+          : createCheckoutSession(
+              cloneEmptyForm(customerDefaults),
+              pricingContextKey,
+            );
       sessionRef.current = session;
       writeCheckoutSession(session);
       if (!cancelled) dispatch({ type: "hydrate", form: session.form });
@@ -555,7 +646,14 @@ export function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [cartSignature, isHydrated, repository]);
+  }, [
+    cartSignature,
+    customerDefaults,
+    expectedPricingContextKey,
+    isHydrated,
+    pricingContextKey,
+    repository,
+  ]);
 
   useEffect(() => {
     if (
@@ -571,7 +669,8 @@ export function CheckoutPage() {
   }, [isHydrated, itemCount, items.length, state.phase, subtotal]);
 
   const persistForm = (form: CheckoutFormValues) => {
-    const session = sessionRef.current ?? createCheckoutSession(form);
+    const session =
+      sessionRef.current ?? createCheckoutSession(form, pricingContextKey);
     const nextSession = { ...session, form };
     sessionRef.current = nextSession;
     writeCheckoutSession(nextSession);
@@ -712,7 +811,8 @@ export function CheckoutPage() {
     }
 
     const session =
-      sessionRef.current ?? createCheckoutSession(validation.normalized);
+      sessionRef.current ??
+      createCheckoutSession(validation.normalized, pricingContextKey);
     sessionRef.current = session;
     await submitOrder(
       buildCreateOrderInput(validation.normalized, session),

@@ -15,9 +15,12 @@ import type {
   ServerProductSource,
 } from "./order-dependencies.ts";
 import { ServerOrderError } from "./server-order-error.ts";
+import type { CustomerPricingContext } from "../customers/types.ts";
+import { roundCurrency } from "../../pricing/policy.ts";
 
 interface RuniaOrderRepositoryOptions {
   tenantId: string;
+  pricingContext: CustomerPricingContext;
   productSource: ServerProductSource;
   deliveryPricing: ServerDeliveryPricing;
   store: RuniaOrderStore;
@@ -25,15 +28,36 @@ interface RuniaOrderRepositoryOptions {
 
 export class RuniaOrderRepository implements ServerOrderRepository {
   private readonly tenantId: string;
+  private readonly pricingContext: CustomerPricingContext;
   private readonly productSource: ServerProductSource;
   private readonly deliveryPricing: ServerDeliveryPricing;
   readonly store: RuniaOrderStore;
 
   constructor(options: RuniaOrderRepositoryOptions) {
     this.tenantId = options.tenantId;
+    this.pricingContext = options.pricingContext;
     this.productSource = options.productSource;
     this.deliveryPricing = options.deliveryPricing;
     this.store = options.store;
+  }
+
+  private matchesPricingIdentity(order: OrderDraft) {
+    return (
+      (order.customerAccountId ?? null) ===
+        (this.pricingContext.customerAccountId ?? null) &&
+      order.pricingPolicy === this.pricingContext.policy &&
+      order.discountPercent === this.pricingContext.discountPercent
+    );
+  }
+
+  private assertPricingIdentity(order: OrderDraft) {
+    if (!this.matchesPricingIdentity(order)) {
+      throw new ServerOrderError(
+        "DUPLICATE_SESSION",
+        "La sesión de checkout pertenece a otra cuenta o política. Recargá el carrito.",
+        { status: 409 },
+      );
+    }
   }
 
   async validateCart(input: CreateOrderInput): Promise<CartValidationResult> {
@@ -94,9 +118,18 @@ export class RuniaOrderRepository implements ServerOrderRepository {
         sourceProductId: product.sourceProductId,
         sku: product.sku,
         name: product.name,
+        baseUnitPrice: product.basePrice,
+        priceType: product.priceType,
+        pricingPolicy: product.pricingPolicy,
+        discountPercent: product.discountPercent,
+        discountAmount: roundCurrency(product.basePrice - product.price),
         unitPrice: product.price,
         quantity: item.quantity,
-        lineTotal: product.price * item.quantity,
+        lineBaseTotal: roundCurrency(product.basePrice * item.quantity),
+        lineDiscount: roundCurrency(
+          (product.basePrice - product.price) * item.quantity,
+        ),
+        lineTotal: roundCurrency(product.price * item.quantity),
       });
     }
 
@@ -118,7 +151,10 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       input.checkoutSessionId,
       input.idempotencyKey,
     );
-    if (existing) return { order: existing, reused: true };
+    if (existing) {
+      this.assertPricingIdentity(existing);
+      return { order: existing, reused: true };
+    }
 
     const validation = await this.validateCart(input);
     if (!validation.valid) {
@@ -129,14 +165,34 @@ export class RuniaOrderRepository implements ServerOrderRepository {
     }
 
     const deliveryQuote = this.deliveryPricing.getQuote(input.deliveryMethod);
-    const subtotal = validation.items.reduce(
+    const baseSubtotal = roundCurrency(validation.items.reduce(
+      (sum, item) => sum + item.lineBaseTotal,
+      0,
+    ));
+    const pricingDiscountAmount = roundCurrency(validation.items.reduce(
+      (sum, item) => sum + item.lineDiscount,
+      0,
+    ));
+    const subtotal = roundCurrency(validation.items.reduce(
       (sum, item) => sum + item.lineTotal,
       0,
-    );
+    ));
 
-    return this.store.insertOrderAtomic({
+    if (!this.pricingContext.tenantRecordId) {
+      throw new ServerOrderError(
+        "SERVER_NOT_CONFIGURED",
+        "Runia no pudo resolver el tenant del checkout.",
+        { status: 503 },
+      );
+    }
+
+    const result = await this.store.insertOrderAtomic({
       publicId: crypto.randomUUID(),
       tenantId: this.tenantId,
+      tenantRecordId: this.pricingContext.tenantRecordId,
+      customerAccountId: this.pricingContext.customerAccountId,
+      pricingPolicy: this.pricingContext.policy,
+      discountPercent: this.pricingContext.discountPercent,
       checkoutSessionId: input.checkoutSessionId,
       idempotencyKey: input.idempotencyKey,
       items: validation.items,
@@ -145,6 +201,8 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       deliveryAddress:
         input.deliveryMethod === "DELIVERY" ? input.deliveryAddress : undefined,
       deliveryCostMode: deliveryQuote.mode,
+      baseSubtotal,
+      pricingDiscountAmount,
       subtotal,
       deliveryCost: deliveryQuote.amount,
       total: subtotal + deliveryQuote.amount,
@@ -153,6 +211,8 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       paymentStatus: "pending",
       paymentMethod: "mercado_pago",
     });
+    if (result.reused) this.assertPricingIdentity(result.order);
+    return result;
   }
 
   getByPublicId(publicId: string) {

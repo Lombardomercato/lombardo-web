@@ -10,6 +10,7 @@ import type {
   PaymentMethod,
   PaymentStatus,
 } from "../../../types/checkout.ts";
+import type { CustomerPricingPolicy } from "../customers/types.ts";
 import type {
   AppliedPaymentEvent,
   AtomicInsertResult,
@@ -30,8 +31,14 @@ interface OrderRow {
   id: string | number;
   public_id: string;
   tenant_id: string;
+  tenant_record_id: string;
+  customer_account_id: string | null;
+  pricing_policy: CustomerPricingPolicy;
+  discount_percent: number | string;
   customer: CheckoutCustomer;
   items: OrderItemSnapshot[];
+  base_subtotal: number | string;
+  pricing_discount_amount: number | string;
   subtotal: number;
   delivery_cost: number;
   total: number;
@@ -61,8 +68,14 @@ function mapOrder(row: OrderRow): OrderDraft {
     id: String(row.id),
     publicId: row.public_id,
     tenantId: row.tenant_id,
+    tenantRecordId: row.tenant_record_id,
+    customerAccountId: row.customer_account_id ?? undefined,
+    pricingPolicy: row.pricing_policy,
+    discountPercent: Number(row.discount_percent),
     customer: row.customer,
     items: row.items,
+    baseSubtotal: Number(row.base_subtotal),
+    pricingDiscountAmount: Number(row.pricing_discount_amount),
     subtotal: Number(row.subtotal),
     deliveryCost: Number(row.delivery_cost),
     total: Number(row.total),
@@ -170,8 +183,14 @@ export class SupabaseOrderStore implements RuniaOrderStore {
       body: JSON.stringify({
         public_id: record.publicId,
         tenant_id: record.tenantId,
+        tenant_record_id: record.tenantRecordId,
+        customer_account_id: record.customerAccountId ?? null,
+        pricing_policy: record.pricingPolicy,
+        discount_percent: record.discountPercent,
         customer: record.customer,
         items: record.items,
+        base_subtotal: record.baseSubtotal,
+        pricing_discount_amount: record.pricingDiscountAmount,
         subtotal: record.subtotal,
         delivery_cost: record.deliveryCost,
         total: record.total,

@@ -1,4 +1,5 @@
 import type { Category, Product } from "@/types/commerce";
+import type { CustomerPricingContext } from "@/lib/server/customers/types";
 
 export const CATALOG_PAGE_SIZE = 24;
 export const CATALOG_MAX_PAGE_SIZE = 48;
@@ -20,8 +21,17 @@ export interface ProductPage {
 }
 
 export interface CommerceProvider {
-  getProductPage(query?: ProductPageQuery): Promise<ProductPage>;
-  getProductsByIds(productIds: string[]): Promise<Product[]>;
-  getProductBySlug(slug: string): Promise<Product | null>;
+  getProductPage(
+    query?: ProductPageQuery,
+    pricingContext?: CustomerPricingContext,
+  ): Promise<ProductPage>;
+  getProductsByIds(
+    productIds: string[],
+    pricingContext?: CustomerPricingContext,
+  ): Promise<Product[]>;
+  getProductBySlug(
+    slug: string,
+    pricingContext?: CustomerPricingContext,
+  ): Promise<Product | null>;
   getCategories(): Promise<Category[]>;
 }

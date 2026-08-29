@@ -49,6 +49,17 @@ import type {
   PaymentPreferenceResult,
 } from "../types/checkout.ts";
 import type { Product } from "../types/commerce.ts";
+import type { CustomerPricingContext } from "../lib/server/customers/types.ts";
+
+const retailPricingContext: CustomerPricingContext = {
+  tenantRecordId: "11111111-1111-4111-8111-111111111111",
+  tenantSlug: "lombardo-test",
+  accountType: "RETAIL",
+  policy: "RETAIL",
+  basePriceType: "retail",
+  discountPercent: 0,
+  contextKey: "guest:RETAIL",
+};
 
 function product(overrides: Partial<Product> = {}): Product {
   return {
@@ -61,6 +72,11 @@ function product(overrides: Partial<Product> = {}): Product {
     brand: { id: "brand-1", slug: "brand", name: "Brand" },
     category: { id: "category-1", slug: "test", name: "Test" },
     price: 10_000,
+    basePrice: 10_000,
+    priceType: "retail",
+    pricingPolicy: "RETAIL",
+    discountPercent: 0,
+    pricingContextKey: "guest:RETAIL",
     availability: "AVAILABLE_NOW",
     stock: { available: true, quantity: 20 },
     images: [],
@@ -268,10 +284,14 @@ class FakeNewOrderNotifier implements NewOrderNotifier {
   }
 }
 
-function setup(products = [product()]) {
+function setup(
+  products = [product()],
+  pricingContext: CustomerPricingContext = retailPricingContext,
+) {
   const store = new FakeOrderStore();
   const repository = new RuniaOrderRepository({
     tenantId: "lombardo-test",
+    pricingContext,
     productSource: new FakeProductSource(products),
     deliveryPricing: new FreeDelivery(),
     store,
@@ -360,6 +380,90 @@ test("un total manipulado del navegador se ignora y se recalcula", async () => {
   const result = await repository.createOrder(parsed);
   assert.equal(result.order.subtotal, 20_000);
   assert.equal(result.order.total, 20_000);
+  assert.equal(result.order.baseSubtotal, 20_000);
+  assert.equal(result.order.pricingDiscountAmount, 0);
+  assert.equal(result.order.items[0].baseUnitPrice, 10_000);
+  assert.equal(result.order.items[0].pricingPolicy, "RETAIL");
+});
+
+test("CUSTOM_DISCOUNT persiste base, política, descuento y precio final", async () => {
+  const context: CustomerPricingContext = {
+    ...retailPricingContext,
+    authUserId: "22222222-2222-4222-8222-222222222222",
+    customerAccountId: "33333333-3333-4333-8333-333333333333",
+    policy: "CUSTOM_DISCOUNT",
+    discountPercent: 10,
+    contextKey: "customer:33333333:CUSTOM_DISCOUNT:10",
+  };
+  const discounted = product({
+    price: 11_745.05,
+    basePrice: 13_050.05,
+    pricingPolicy: "CUSTOM_DISCOUNT",
+    discountPercent: 10,
+    pricingContextKey: context.contextKey,
+  });
+  const { repository } = setup([discounted], context);
+  const result = await repository.createOrder(
+    input({
+      items: [
+        {
+          productId: discounted.id,
+          quantity: 1,
+          expectedUnitPrice: discounted.price,
+        },
+      ],
+    }),
+  );
+
+  assert.equal(result.order.customerAccountId, context.customerAccountId);
+  assert.equal(result.order.pricingPolicy, "CUSTOM_DISCOUNT");
+  assert.equal(result.order.discountPercent, 10);
+  assert.equal(result.order.baseSubtotal, 13_050.05);
+  assert.equal(result.order.pricingDiscountAmount, 1_305);
+  assert.equal(result.order.subtotal, 11_745.05);
+  assert.deepEqual(
+    {
+      baseUnitPrice: result.order.items[0].baseUnitPrice,
+      discountAmount: result.order.items[0].discountAmount,
+      finalUnitPrice: result.order.items[0].unitPrice,
+      priceType: result.order.items[0].priceType,
+      pricingPolicy: result.order.items[0].pricingPolicy,
+    },
+    {
+      baseUnitPrice: 13_050.05,
+      discountAmount: 1_305,
+      finalUnitPrice: 11_745.05,
+      priceType: "retail",
+      pricingPolicy: "CUSTOM_DISCOUNT",
+    },
+  );
+});
+
+test("la idempotencia no cruza cuentas ni políticas", async () => {
+  const { store, repository } = setup();
+  await repository.createOrder(input());
+  const otherContext: CustomerPricingContext = {
+    ...retailPricingContext,
+    authUserId: "22222222-2222-4222-8222-222222222222",
+    customerAccountId: "33333333-3333-4333-8333-333333333333",
+    accountType: "WHOLESALE",
+    policy: "WHOLESALE",
+    basePriceType: "wholesale",
+    contextKey: "customer:33333333:WHOLESALE:0",
+  };
+  const otherRepository = new RuniaOrderRepository({
+    tenantId: "lombardo-test",
+    pricingContext: otherContext,
+    productSource: new FakeProductSource([]),
+    deliveryPricing: new FreeDelivery(),
+    store,
+  });
+
+  await assert.rejects(
+    otherRepository.createOrder(input()),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "DUPLICATE_SESSION",
+  );
 });
 
 test("sin gateway la orden queda pendiente y pasa a coordinación por WhatsApp", async () => {

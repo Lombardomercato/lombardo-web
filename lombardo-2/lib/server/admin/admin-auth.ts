@@ -96,6 +96,14 @@ export async function requireAdminSession() {
   return session;
 }
 
+export async function requireAdminRole(role: "admin") {
+  const session = await requireAdminSession();
+  if (session.role !== role) {
+    throw new Error("Esta acción requiere permisos de administrador.");
+  }
+  return session;
+}
+
 export async function revokeAdminSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE)?.value;

@@ -7,6 +7,7 @@ import { parseCreateOrderInput } from "@/lib/server/orders/order-input";
 import { checkRateLimit, getRequestIp } from "@/lib/server/rate-limit";
 import { readJsonBody } from "@/lib/server/request-body";
 import { createCheckoutCoordinator } from "@/lib/server/services";
+import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 
 const MAX_ORDER_BODY_BYTES = 32_000;
 
@@ -49,7 +50,8 @@ export async function POST(request: Request) {
         "El pedido recibido es demasiado grande.",
       ),
     );
-    const { coordinator } = createCheckoutCoordinator();
+    const pricingContext = await getCurrentCustomerPricingContext();
+    const { coordinator } = createCheckoutCoordinator(pricingContext);
     const result = await coordinator.createOrder(input);
     return noStoreJson(result, {
       status: result.reused ? 200 : 201,

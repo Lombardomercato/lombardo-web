@@ -1,0 +1,80 @@
+.form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.55rem;
+  color: var(--lombardo-blue);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.field input {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.32);
+  border-radius: 0;
+  background: rgba(255, 253, 249, 0.88);
+  color: var(--neutral-ink);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.field input:focus-visible {
+  border-color: var(--lombardo-red);
+}
+
+.feedback {
+  min-height: 2.5rem;
+  color: #9c241d;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.success {
+  min-height: 2.5rem;
+  color: var(--lombardo-blue);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.submit {
+  min-height: 3.7rem;
+  padding: 0.9rem 1.25rem;
+  border: 1px solid var(--lombardo-blue);
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
+  cursor: pointer;
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: transparent;
+  color: var(--lombardo-blue);
+}
+
+.submit:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.secondaryLink {
+  justify-self: start;
+  color: var(--lombardo-blue);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+}

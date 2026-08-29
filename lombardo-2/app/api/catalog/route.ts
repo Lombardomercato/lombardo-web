@@ -5,6 +5,7 @@ import {
   commerceProvider,
 } from "@/lib/commerce";
 import { getRequestId, logCommerceError } from "@/lib/server/dev-commerce-logger";
+import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,12 @@ export async function GET(request: Request) {
 
   try {
     const startedAt = performance.now();
+    const pricingContext = await getCurrentCustomerPricingContext();
     if (ids?.length) {
-      const products = await commerceProvider.getProductsByIds(ids.slice(0, 99));
+      const products = await commerceProvider.getProductsByIds(
+        ids.slice(0, 99),
+        pricingContext,
+      );
       const requestTimeMs = Math.round((performance.now() - startedAt) * 10) / 10;
       return NextResponse.json(
         { products, requestTimeMs },
@@ -52,12 +57,15 @@ export async function GET(request: Request) {
       Math.max(requestedLimit, 1),
       CATALOG_MAX_PAGE_SIZE,
     );
-    const page = await commerceProvider.getProductPage({
-      offset,
-      limit,
-      search: searchParams.get("q")?.trim() || undefined,
-      categorySlug,
-    });
+    const page = await commerceProvider.getProductPage(
+      {
+        offset,
+        limit,
+        search: searchParams.get("q")?.trim() || undefined,
+        categorySlug,
+      },
+      pricingContext,
+    );
     const requestTimeMs = Math.round((performance.now() - startedAt) * 10) / 10;
     return NextResponse.json(
       { ...page, requestTimeMs },

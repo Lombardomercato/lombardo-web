@@ -1,36 +1,81 @@
-import { loadAdminCustomers } from "@/lib/server/admin/admin-data";
+import Link from "next/link";
+
 import { formatAdminDate } from "@/lib/admin/presentation";
+import { loadAdminCustomers } from "@/lib/server/admin/admin-data";
+import { requireAdminSession } from "@/lib/server/admin/admin-auth";
 import { formatCurrency } from "@/lib/utils/format-currency";
+
 import styles from "../../admin.module.css";
 
-function whatsappUrl(phoneValue: string) {
-  let phone = phoneValue.replace(/\D/g, "");
-  if (phone.startsWith("0")) phone = phone.slice(1);
-  if (!phone.startsWith("54")) phone = `54${phone}`;
-  return `https://wa.me/${phone}`;
+function policyLabel(policy: string, discountPercent: number) {
+  return policy === "CUSTOM_DISCOUNT"
+    ? `RETAIL −${discountPercent}%`
+    : policy;
 }
 
 export default async function AdminCustomersPage() {
-  const customers = await loadAdminCustomers();
+  const [customers, session] = await Promise.all([
+    loadAdminCustomers(),
+    requireAdminSession(),
+  ]);
+
   return (
     <>
       <header className={styles.pageHeader}>
-        <div><p className={styles.eyebrow}>VISTA OPERATIVA SIMPLE</p><h1>CLIENTES.</h1></div>
-        <p>{customers.length} clientes agrupados por WhatsApp o email.</p>
+        <div>
+          <p className={styles.eyebrow}>CUENTAS Y PRECIOS</p>
+          <h1>CLIENTES.</h1>
+        </div>
+        <div className={styles.headerActions}>
+          <p>{customers.length} cuentas configuradas en Runia.</p>
+          {session.role === "admin" ? (
+            <Link className={styles.primaryLink} href="/admin/clientes/nuevo">
+              CREAR CLIENTE →
+            </Link>
+          ) : null}
+        </div>
       </header>
+
       {customers.length ? (
         <div className={styles.customerList}>
           {customers.map((customer) => (
-            <article className={styles.customerRow} key={customer.key}>
-              <strong>{customer.name}</strong>
-              <a href={whatsappUrl(customer.whatsapp)} target="_blank" rel="noreferrer">{customer.whatsapp}</a>
-              <span>{customer.orderCount} {customer.orderCount === 1 ? "pedido" : "pedidos"}</span>
-              <span>{formatAdminDate(customer.lastOrderAt)}</span>
+            <Link
+              className={styles.customerAccountRow}
+              href={`/admin/clientes/${customer.id}`}
+              key={customer.id}
+            >
+              <span>
+                <strong>{customer.name}</strong>
+                <small>{customer.email}</small>
+              </span>
+              <span>{customer.whatsapp}</span>
+              <span>{customer.accountType}</span>
+              <strong>
+                {policyLabel(customer.pricingPolicy, customer.discountPercent)}
+              </strong>
+              <span className={styles.statusBadge} data-status={customer.status}>
+                {customer.status.toUpperCase()}
+              </span>
+              <span>
+                {customer.orderCount} {customer.orderCount === 1 ? "pedido" : "pedidos"}
+                <small>
+                  {customer.lastOrderAt
+                    ? `Último ${formatAdminDate(customer.lastOrderAt)}`
+                    : "Sin pedidos"}
+                </small>
+              </span>
               <strong>{formatCurrency(customer.historicalTotal)}</strong>
-            </article>
+            </Link>
           ))}
         </div>
-      ) : <p className={styles.emptyState}>Todavía no hay clientes.</p>}
+      ) : (
+        <div className={styles.emptyState}>
+          <p>Todavía no hay cuentas de clientes.</p>
+          {session.role === "admin" ? (
+            <Link href="/admin/clientes/nuevo">Crear la primera cuenta →</Link>
+          ) : null}
+        </div>
+      )}
     </>
   );
 }

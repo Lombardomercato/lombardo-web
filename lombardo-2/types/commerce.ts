@@ -1,3 +1,8 @@
+import type {
+  CustomerPricingPolicy,
+  SupplierSalePriceType,
+} from "@/lib/server/customers/types";
+
 export interface Brand {
   id: string;
   slug: string;
@@ -44,6 +49,16 @@ export interface Product {
   brand: Brand;
   category: Category;
   price: number;
+  /** Price before the account policy is applied. */
+  basePrice: number;
+  /** Supplier list used as the base for this resolved price. */
+  priceType: SupplierSalePriceType;
+  /** Server-resolved policy used to produce `price`. */
+  pricingPolicy: CustomerPricingPolicy;
+  /** Server-resolved percentage applied to `basePrice`. */
+  discountPercent: number;
+  /** Changes whenever the authenticated pricing identity changes. */
+  pricingContextKey: string;
   compareAtPrice?: number;
   availability: AvailabilityStatus;
   stock: Stock;

@@ -7,6 +7,7 @@ import {
   NEXT_FULFILLMENT_ACTIONS,
 } from "../lib/admin/presentation.ts";
 import type { AdminOrder } from "../lib/server/admin/types.ts";
+import { parseAdminCustomerInput } from "../lib/server/customers/customer-admin-validation.ts";
 
 const schemaPath = fileURLToPath(
   new URL("../supabase/schema/lombardo_admin_v1.sql", import.meta.url),
@@ -102,4 +103,51 @@ test("notificación de pedido tiene outbox idempotente y server-only", () => {
     /p_allow_retry and v_notification\.status = 'failed'/,
   );
   assert.doesNotMatch(notificationSchema, /p_allow_retry.*status = 'unknown'/);
+});
+
+function customerForm(values: Record<string, string>) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(values)) form.set(key, value);
+  return form;
+}
+
+test("Admin acepta retail -10% y normaliza los datos comerciales", () => {
+  const input = parseAdminCustomerInput(
+    customerForm({
+      name: "  Cliente VIP  ",
+      email: "VIP@Example.com",
+      whatsapp: "+54 9 341 555 1234",
+      accountType: "RETAIL",
+      pricingPolicy: "CUSTOM_DISCOUNT",
+      discountPercent: "10",
+      status: "active",
+    }),
+  );
+  assert.deepEqual(input, {
+    name: "Cliente VIP",
+    email: "vip@example.com",
+    whatsapp: "+5493415551234",
+    accountType: "RETAIL",
+    pricingPolicy: "CUSTOM_DISCOUNT",
+    discountPercent: 10,
+    status: "active",
+  });
+});
+
+test("Admin rechaza combinaciones incoherentes de tipo, lista y descuento", () => {
+  assert.throws(
+    () =>
+      parseAdminCustomerInput(
+        customerForm({
+          name: "Mayorista inválido",
+          email: "mayorista@example.com",
+          whatsapp: "+5493415551234",
+          accountType: "WHOLESALE",
+          pricingPolicy: "CUSTOM_DISCOUNT",
+          discountPercent: "10",
+          status: "active",
+        }),
+      ),
+    /no son coherentes/,
+  );
 });

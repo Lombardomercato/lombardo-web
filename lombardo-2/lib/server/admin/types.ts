@@ -9,6 +9,10 @@ import type {
   PaymentStatus,
 } from "../../../types/checkout";
 import type { OrderNotification } from "../notifications/types";
+import type {
+  CustomerAccountType,
+  CustomerPricingPolicy,
+} from "../customers/types";
 
 export type FulfillmentStatus =
   | "new"
@@ -31,6 +35,7 @@ export interface AdminSession {
 
 export interface AdminOrder {
   id: string;
+  customerAccountId?: string;
   publicId: string;
   displayId: string;
   customer: CheckoutCustomer;
@@ -205,12 +210,34 @@ export interface AdminProductPage {
 }
 
 export interface AdminCustomer {
-  key: string;
+  id: string;
+  authUserId?: string;
   name: string;
+  email: string;
   whatsapp: string;
+  accountType: CustomerAccountType;
+  pricingPolicy: CustomerPricingPolicy;
+  discountPercent: number;
+  status: "active" | "inactive" | "pending" | "blocked";
   orderCount: number;
-  lastOrderAt: string;
+  lastOrderAt?: string;
   historicalTotal: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCustomerDetail extends AdminCustomer {
+  orders: AdminOrder[];
+}
+
+export interface AdminCustomerInput {
+  name: string;
+  email: string;
+  whatsapp: string;
+  accountType: CustomerAccountType;
+  pricingPolicy: CustomerPricingPolicy;
+  discountPercent: number;
+  status: AdminCustomer["status"];
 }
 
 export interface FulfillmentTransitionResult {

@@ -1,4 +1,8 @@
 import type { Category, ProductImage } from "../../types/commerce.ts";
+import {
+  retailPricingContext,
+  type CustomerPricingContext,
+} from "../server/customers/types.ts";
 import type { ServerProductSource } from "../server/orders/order-dependencies.ts";
 import { ServerOrderError } from "../server/orders/server-order-error.ts";
 import {
@@ -70,13 +74,18 @@ export class RuniaCommerceProvider
   private readonly secretKey: string;
   private readonly tenantSlug: string;
   private readonly fetcher: typeof fetch;
+  private readonly defaultPricingContext: CustomerPricingContext;
   private supplierPromise: Promise<SupplierRow> | null = null;
 
-  constructor(options: RuniaCommerceProviderOptions) {
+  constructor(
+    options: RuniaCommerceProviderOptions,
+    defaultPricingContext = retailPricingContext(options.tenantSlug),
+  ) {
     this.url = options.url.replace(/\/$/, "");
     this.secretKey = options.secretKey;
     this.tenantSlug = options.tenantSlug;
     this.fetcher = options.fetcher ?? fetch;
+    this.defaultPricingContext = defaultPricingContext;
   }
 
   private headers(preferCount = false) {
@@ -136,14 +145,17 @@ export class RuniaCommerceProvider
     return this.supplierPromise;
   }
 
-  private productSearch(supplierId: string) {
+  private productSearch(
+    supplierId: string,
+    pricingContext: CustomerPricingContext,
+  ) {
     return new URLSearchParams({
       select:
         "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price)",
       supplier_id: `eq.${supplierId}`,
       eligibility_status: "eq.safe",
       active: "is.true",
-      "retail_prices.price_type": "eq.retail",
+      "retail_prices.price_type": `eq.${pricingContext.basePriceType}`,
     });
   }
 
@@ -185,12 +197,19 @@ export class RuniaCommerceProvider
     return { images, queryTimeMs };
   }
 
-  private async mapRows(rows: RuniaSupplierProductRow[]) {
+  private async mapRows(
+    rows: RuniaSupplierProductRow[],
+    pricingContext: CustomerPricingContext,
+  ) {
     try {
       const media = await this.loadImages(rows.map((row) => row.runia_product_id));
       return {
         products: rows.map((row) =>
-          mapRuniaSupplierProduct(row, media.images.get(row.runia_product_id) ?? []),
+          mapRuniaSupplierProduct(
+            row,
+            pricingContext,
+            media.images.get(row.runia_product_id) ?? [],
+          ),
         ),
         imageQueryTimeMs: media.queryTimeMs,
       };
@@ -199,7 +218,10 @@ export class RuniaCommerceProvider
     }
   }
 
-  async getProductPage(query: ProductPageQuery = {}) {
+  async getProductPage(
+    query: ProductPageQuery = {},
+    pricingContext = this.defaultPricingContext,
+  ) {
     const supplier = await this.getSupplier();
     const offset = clampInteger(query.offset, 0, 100_000);
     const limit = clampInteger(
@@ -207,7 +229,7 @@ export class RuniaCommerceProvider
       CATALOG_PAGE_SIZE,
       CATALOG_MAX_PAGE_SIZE,
     ) || CATALOG_PAGE_SIZE;
-    const search = this.productSearch(supplier.id);
+    const search = this.productSearch(supplier.id, pricingContext);
     search.set("order", "normalized_name.asc,id.asc");
     search.set("offset", String(offset));
     search.set("limit", String(limit));
@@ -237,7 +259,7 @@ export class RuniaCommerceProvider
         search,
         true,
       );
-    const mapped = await this.mapRows(rows);
+    const mapped = await this.mapRows(rows, pricingContext);
     const products = mapped.products;
     const total = contentRangeTotal(response, offset + products.length);
 
@@ -251,12 +273,15 @@ export class RuniaCommerceProvider
     };
   }
 
-  async getProductsByIds(productIds: string[]) {
+  async getProductsByIds(
+    productIds: string[],
+    pricingContext = this.defaultPricingContext,
+  ) {
     const ids = Array.from(new Set(productIds)).filter((id) => UUID_PATTERN.test(id));
     if (!ids.length) return [];
 
     const supplier = await this.getSupplier();
-    const search = this.productSearch(supplier.id);
+    const search = this.productSearch(supplier.id, pricingContext);
     search.set("id", `in.(${ids.slice(0, 99).join(",")})`);
     search.set("order", "normalized_name.asc,id.asc");
     search.set("limit", "99");
@@ -264,15 +289,18 @@ export class RuniaCommerceProvider
       "supplier_products",
       search,
     );
-    return (await this.mapRows(rows)).products;
+    return (await this.mapRows(rows, pricingContext)).products;
   }
 
-  async getProductBySlug(slug: string) {
+  async getProductBySlug(
+    slug: string,
+    pricingContext = this.defaultPricingContext,
+  ) {
     const productId = runiaProductIdFromProductSlug(slug);
     if (!productId) return null;
 
     const supplier = await this.getSupplier();
-    const search = this.productSearch(supplier.id);
+    const search = this.productSearch(supplier.id, pricingContext);
     search.set("id", `eq.${productId}`);
     search.set("limit", "2");
     const { rows } = await this.fetchRows<RuniaSupplierProductRow>(
@@ -284,7 +312,7 @@ export class RuniaCommerceProvider
       providerError("Runia devolvió más de un producto para el mismo ID.");
     }
 
-    return (await this.mapRows(rows)).products[0] ?? null;
+    return (await this.mapRows(rows, pricingContext)).products[0] ?? null;
   }
 
   async getCategories(): Promise<Category[]> {

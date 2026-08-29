@@ -1,0 +1,58 @@
+.page {
+  min-height: 100svh;
+  padding: calc(var(--header-height) + var(--space-7)) var(--page-gutter)
+    var(--space-7);
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(228, 213, 211, 0.7), transparent 55%),
+    var(--neutral-paper);
+}
+
+.panel {
+  width: min(100%, 34rem);
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+  border: 1px solid rgba(0, 58, 112, 0.25);
+  background: rgba(255, 253, 249, 0.92);
+}
+
+.eyebrow {
+  margin-bottom: 1rem;
+  color: var(--lombardo-red);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.panel h1 {
+  color: var(--lombardo-blue);
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+}
+
+.intro {
+  margin: 1.3rem 0 2rem;
+  color: var(--neutral-muted);
+  font-size: var(--step-0);
+  line-height: 1.55;
+}
+
+.notice {
+  margin: -0.7rem 0 1.5rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--lombardo-red);
+  background: rgba(228, 213, 211, 0.45);
+  color: var(--lombardo-blue);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 63.99rem) {
+  .page {
+    padding-top: calc(var(--header-height-mobile) + var(--space-6));
+  }
+}

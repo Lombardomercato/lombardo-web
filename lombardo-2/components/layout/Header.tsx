@@ -71,6 +71,14 @@ export function Header() {
           Hablar con nosotros <span aria-hidden="true">↗</span>
         </Link>
 
+        <Link
+          className={styles.accountLink}
+          href="/mi-cuenta"
+          aria-current={pathname === "/mi-cuenta" ? "page" : undefined}
+        >
+          Mi cuenta
+        </Link>
+
         <button
           className={styles.cartPreview}
           type="button"
@@ -121,6 +129,14 @@ export function Header() {
               {item.label}
             </Link>
           ))}
+          <Link
+            href="/mi-cuenta"
+            tabIndex={isOpen ? 0 : -1}
+            onClick={closeMenu}
+          >
+            <span>05</span>
+            Mi cuenta
+          </Link>
           <Link
             className={styles.mobileContact}
             href="/#contacto"

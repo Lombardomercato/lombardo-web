@@ -1,4 +1,8 @@
 import type { AvailabilityStatus } from "./commerce";
+import type {
+  CustomerPricingPolicy,
+  SupplierSalePriceType,
+} from "../lib/server/customers/types";
 
 export type DeliveryMethod = "PICKUP" | "DELIVERY";
 export type DeliveryCostMode = "FREE" | "FLAT_RATE" | "TO_BE_CONFIRMED";
@@ -56,8 +60,15 @@ export interface OrderItemSnapshot {
   sourceProductId?: string;
   sku: string;
   name: string;
+  baseUnitPrice: number;
+  priceType: SupplierSalePriceType;
+  pricingPolicy: CustomerPricingPolicy;
+  discountPercent: number;
+  discountAmount: number;
   unitPrice: number;
   quantity: number;
+  lineBaseTotal: number;
+  lineDiscount: number;
   lineTotal: number;
 }
 
@@ -70,6 +81,10 @@ export interface CartValidationItem {
 
 export interface CheckoutDraft {
   tenantId: string;
+  tenantRecordId: string;
+  customerAccountId?: string;
+  pricingPolicy: CustomerPricingPolicy;
+  discountPercent: number;
   checkoutSessionId: string;
   idempotencyKey: string;
   items: OrderItemSnapshot[];
@@ -77,6 +92,8 @@ export interface CheckoutDraft {
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: DeliveryAddress;
   deliveryCostMode: DeliveryCostMode;
+  baseSubtotal: number;
+  pricingDiscountAmount: number;
   subtotal: number;
   deliveryCost: number;
   total: number;

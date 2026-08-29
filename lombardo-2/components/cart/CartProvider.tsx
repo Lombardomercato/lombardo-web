@@ -9,6 +9,7 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import { trackCommerceEvent } from "@/lib/analytics/commerce-events";
 import type { CartItem, Product } from "@/types/commerce";
 
@@ -20,6 +21,7 @@ interface CartState {
   hydrated: boolean;
   catalogStatus: "idle" | "loading" | "ready" | "error";
   catalogRequest: number;
+  pricingContextKey: string;
   drawerOpen: boolean;
   announcement: string;
 }
@@ -31,7 +33,7 @@ type CartAction =
   | { type: "update"; productId: string; quantity: number }
   | { type: "sync-prices"; prices: Record<string, number> }
   | { type: "catalog-loading" }
-  | { type: "catalog-ready"; products: Product[] }
+  | { type: "catalog-ready"; products: Product[]; pricingContextKey?: string }
   | { type: "catalog-error" }
   | { type: "retry-catalog" }
   | { type: "clear" }
@@ -50,6 +52,7 @@ interface CartContextValue {
   hasCatalogError: boolean;
   isDrawerOpen: boolean;
   announcement: string;
+  pricingContextKey: string;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -67,6 +70,7 @@ const initialState: CartState = {
   hydrated: false,
   catalogStatus: "idle",
   catalogRequest: 0,
+  pricingContextKey: "",
   drawerOpen: false,
   announcement: "",
 };
@@ -77,7 +81,13 @@ const clampQuantity = (quantity: number) =>
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "hydrate":
-      return { ...state, items: action.items, hydrated: true };
+      return {
+        ...state,
+        items: action.items,
+        hydrated: true,
+        pricingContextKey:
+          action.items[0]?.product.pricingContextKey ?? state.pricingContextKey,
+      };
     case "add": {
       const quantity = clampQuantity(action.quantity);
       const existing = state.items.find(
@@ -94,6 +104,8 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return {
         ...state,
         items,
+        pricingContextKey:
+          action.product.pricingContextKey ?? state.pricingContextKey,
         drawerOpen: true,
         announcement: `${quantity} ${quantity === 1 ? "unidad agregada" : "unidades agregadas"}: ${action.product.name}`,
       };
@@ -149,6 +161,10 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ...state,
         items,
         catalogStatus: "ready",
+        pricingContextKey:
+          action.pricingContextKey ??
+          action.products[0]?.pricingContextKey ??
+          state.pricingContextKey,
         announcement: removed
           ? "Quitamos del carrito productos que ya no están disponibles."
           : state.announcement,
@@ -193,6 +209,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const pathname = usePathname();
 
   useEffect(() => {
     dispatch({ type: "hydrate", items: readStoredCart() });
@@ -226,14 +243,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (!response.ok) throw new Error("catalog unavailable");
         return (await response.json()) as { products: Product[] };
       })
-      .then(({ products }) => dispatch({ type: "catalog-ready", products }))
+      .then(({ products }) =>
+        dispatch({
+          type: "catalog-ready",
+          products,
+          pricingContextKey: products[0]?.pricingContextKey,
+        }),
+      )
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         dispatch({ type: "catalog-error" });
       });
 
     return () => controller.abort();
-  }, [productIds, state.catalogRequest, state.hydrated]);
+  }, [pathname, productIds, state.catalogRequest, state.hydrated]);
 
   const addItem = useCallback((product: Product, quantity = 1) => {
     dispatch({ type: "add", product, quantity });
@@ -303,6 +326,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       hasCatalogError: state.catalogStatus === "error",
       isDrawerOpen: state.drawerOpen,
       announcement: state.announcement,
+      pricingContextKey: state.pricingContextKey,
       addItem,
       removeItem,
       updateQuantity,
@@ -320,6 +344,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       state.catalogStatus,
       state.drawerOpen,
       state.announcement,
+      state.pricingContextKey,
       addItem,
       removeItem,
       updateQuantity,

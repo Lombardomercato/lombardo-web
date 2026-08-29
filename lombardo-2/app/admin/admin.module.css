@@ -533,6 +533,118 @@
   background: #fffdf9;
 }
 
+.headerActions {
+  display: grid;
+  justify-items: end;
+  gap: 0.75rem;
+  color: #5b6268;
+}
+
+.primaryLink {
+  display: inline-flex;
+  min-height: 2.85rem;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  background: #003a70;
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.customerAccountRow {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.35fr) minmax(9rem, 0.9fr) 0.65fr 0.85fr 0.7fr 0.85fr 0.75fr;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.18);
+  background: #fffdf9;
+}
+
+.customerAccountRow:hover {
+  border-color: #003a70;
+}
+
+.customerAccountRow small,
+.customerOrderRow small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #70777c;
+  font-size: 0.76rem;
+}
+
+.customerForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: clamp(1rem, 2.5vw, 1.6rem);
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.customerForm label {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+  color: #003a70;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.customerForm input,
+.customerForm select {
+  width: 100%;
+  min-height: 2.85rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba(0, 58, 112, 0.35);
+  border-radius: 0;
+  background: white;
+  color: #15212b;
+}
+
+.customerForm input:read-only,
+.customerForm input:disabled {
+  background: #eeeae1;
+  color: #62676b;
+}
+
+.customerForm label small {
+  color: #70777c;
+  font-size: 0.74rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.customerFormNote {
+  align-self: center;
+  color: #5b6268;
+  line-height: 1.45;
+}
+
+.formSuccess {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #568200;
+  background: #e4f3b8;
+  color: #345400;
+}
+
+.customerOrderRow {
+  display: grid;
+  grid-template-columns: 0.55fr 1fr 0.8fr 0.7fr;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.18);
+  background: #fffdf9;
+}
+
+.customerOrderRow:hover {
+  border-color: #003a70;
+}
+
 .loginRoot {
   display: grid;
   place-items: center;
@@ -1083,6 +1195,16 @@
   .productRow > :nth-child(4) {
     display: none;
   }
+
+  .customerAccountRow {
+    grid-template-columns: minmax(12rem, 1.5fr) 0.75fr 0.9fr 0.75fr;
+  }
+
+  .customerAccountRow > :nth-child(2),
+  .customerAccountRow > :nth-child(6),
+  .customerAccountRow > :nth-child(7) {
+    display: none;
+  }
 }
 
 @media (max-width: 700px) {
@@ -1189,6 +1311,23 @@
   .customerRow > :nth-child(2),
   .customerRow > :nth-child(4) {
     grid-column: 1 / -1;
+  }
+
+  .headerActions {
+    margin-top: 1rem;
+    justify-items: start;
+  }
+
+  .customerAccountRow,
+  .customerForm,
+  .customerOrderRow {
+    grid-template-columns: 1fr;
+  }
+
+  .customerAccountRow > :nth-child(2),
+  .customerAccountRow > :nth-child(6),
+  .customerAccountRow > :nth-child(7) {
+    display: block;
   }
 
   .healthSummary,

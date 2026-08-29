@@ -1,4 +1,6 @@
 import type { Category, Product } from "../../types/commerce.ts";
+import type { CustomerPricingContext } from "../server/customers/types.ts";
+import { resolveCommercialPrice } from "../pricing/policy.ts";
 
 interface CategoryRule {
   category: Category;
@@ -165,22 +167,42 @@ function presentationFor(row: RuniaSupplierProductRow) {
   return fromName || "Unidad";
 }
 
-function retailPrice(row: RuniaSupplierProductRow) {
+function selectedPrice(
+  row: RuniaSupplierProductRow,
+  pricingContext: CustomerPricingContext,
+) {
   const prices = Array.isArray(row.retail_prices)
     ? row.retail_prices
     : row.retail_prices
       ? [row.retail_prices]
       : [];
-  const retail = prices.find((price) => price.price_type === "retail");
-  const price = Number(retail?.current_price);
+  const selected = prices.find(
+    (price) => price.price_type === pricingContext.basePriceType,
+  );
+  const price = Number(selected?.current_price);
   if (!Number.isFinite(price) || price <= 0) {
-    throw new Error("El producto SAFE no tiene un precio retail válido.");
+    throw new Error(
+      `El producto SAFE no tiene un precio ${pricingContext.basePriceType} válido.`,
+    );
   }
   return price;
 }
 
+function assertPricingList(pricingContext: CustomerPricingContext) {
+  const expectedPriceType =
+    pricingContext.policy === "WHOLESALE"
+      ? "wholesale"
+      : pricingContext.policy === "BUSINESS"
+        ? "business"
+        : "retail";
+  if (pricingContext.basePriceType !== expectedPriceType) {
+    throw new Error("La política comercial y la lista de precios no coinciden.");
+  }
+}
+
 export function mapRuniaSupplierProduct(
   row: RuniaSupplierProductRow,
+  pricingContext: CustomerPricingContext,
   images: Product["images"] = [],
 ): Product {
   if (
@@ -198,6 +220,11 @@ export function mapRuniaSupplierProduct(
   const brand = inferBrand(name);
   const productCategory = categoryForSupplierSku(sku);
   const presentation = presentationFor(row);
+  assertPricingList(pricingContext);
+  const resolvedPrice = resolveCommercialPrice(
+    selectedPrice(row, pricingContext),
+    pricingContext,
+  );
 
   return {
     id: row.runia_product_id,
@@ -209,7 +236,17 @@ export function mapRuniaSupplierProduct(
     presentation,
     brand,
     category: productCategory,
-    price: retailPrice(row),
+    price: resolvedPrice.finalUnitPrice,
+    basePrice: resolvedPrice.baseUnitPrice,
+    priceType: resolvedPrice.priceType,
+    pricingPolicy: resolvedPrice.pricingPolicy,
+    discountPercent: resolvedPrice.discountPercent,
+    pricingContextKey: pricingContext.contextKey,
+    compareAtPrice:
+      pricingContext.policy === "CUSTOM_DISCOUNT" &&
+      resolvedPrice.finalUnitPrice < resolvedPrice.baseUnitPrice
+        ? resolvedPrice.baseUnitPrice
+        : undefined,
     availability: "SUPPLIER_AVAILABLE",
     stock: { available: true, quantity: 0 },
     images,

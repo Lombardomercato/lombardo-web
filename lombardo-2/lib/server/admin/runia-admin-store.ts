@@ -20,6 +20,8 @@ import type {
 } from "../../../types/checkout";
 import type {
   AdminCustomer,
+  AdminCustomerDetail,
+  AdminCustomerInput,
   AdminDashboard,
   AdminImageCandidate,
   AdminImageCandidatePage,
@@ -68,6 +70,7 @@ interface AdminSessionRow {
 interface OrderRow {
   id: string | number;
   public_id: string;
+  customer_account_id: string | null;
   customer: CheckoutCustomer;
   items: OrderItemSnapshot[];
   subtotal: number | string;
@@ -88,6 +91,22 @@ interface OrderRow {
   ready_at: string | null;
   delivered_at: string | null;
   cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CustomerAccountRow {
+  id: string;
+  tenant_id: string;
+  auth_user_id: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  whatsapp_phone: string | null;
+  account_type: AdminCustomer["accountType"];
+  pricing_policy: AdminCustomer["pricingPolicy"];
+  discount_percent: number | string;
+  status: AdminCustomer["status"];
   created_at: string;
   updated_at: string;
 }
@@ -249,6 +268,7 @@ function mapNotification(row: NotificationRow): OrderNotification {
 const ORDER_SELECT = [
   "id",
   "public_id",
+  "customer_account_id",
   "customer",
   "items",
   "subtotal",
@@ -283,6 +303,7 @@ function mapOrder(row: OrderRow): AdminOrder {
         : "new");
   return {
     id: String(row.id),
+    customerAccountId: row.customer_account_id ?? undefined,
     publicId: row.public_id,
     displayId: row.public_id.slice(0, 8).toUpperCase(),
     customer: row.customer,
@@ -391,6 +412,7 @@ export class RuniaAdminStore {
   private readonly tenantId: string;
   private readonly fetcher: typeof fetch;
   private supplierIdPromise: Promise<string> | null = null;
+  private tenantRecordIdPromise: Promise<string> | null = null;
 
   constructor(options: RuniaAdminStoreOptions) {
     this.url = options.url.replace(/\/$/, "");
@@ -424,6 +446,29 @@ export class RuniaAdminStore {
     const response = await this.request(path, {}, prefer);
     if (!response.ok) throw new AdminStoreError(fallback, 502);
     return { rows: (await response.json()) as T[], response };
+  }
+
+  private async tenantRecordId() {
+    this.tenantRecordIdPromise ??= (async () => {
+      const search = new URLSearchParams({
+        select: "id",
+        slug: `eq.${this.tenantId}`,
+        status: "eq.active",
+        limit: "2",
+      });
+      const { rows } = await this.rows<{ id: string }>(
+        `tenants?${search}`,
+        "No pudimos resolver el tenant de clientes.",
+      );
+      if (rows.length !== 1 || !UUID_PATTERN.test(rows[0].id)) {
+        throw new AdminStoreError("El tenant de clientes no es válido.", 503);
+      }
+      return rows[0].id;
+    })().catch((error: unknown) => {
+      this.tenantRecordIdPromise = null;
+      throw error;
+    });
+    return this.tenantRecordIdPromise;
   }
 
   async findOperatorByAuthUser(authUserId: string) {
@@ -1155,36 +1200,156 @@ export class RuniaAdminStore {
     if (!response.ok) throw new AdminStoreError("No pudimos guardar la revisión.", 502);
   }
 
-  async listCustomers(): Promise<AdminCustomer[]> {
-    const orders = await this.listOrders({}, 1000);
-    const grouped = new Map<string, AdminCustomer>();
-    for (const order of orders) {
-      const whatsapp = order.customer.whatsapp.trim();
-      const email = order.customer.email.trim().toLocaleLowerCase("es-AR");
-      const key = whatsapp.replace(/\D/g, "") || email;
-      const name = `${order.customer.firstName} ${order.customer.lastName}`.trim();
-      const existing = grouped.get(key);
-      if (!existing) {
-        grouped.set(key, {
-          key,
-          name,
-          whatsapp,
-          orderCount: 1,
-          lastOrderAt: order.createdAt,
-          historicalTotal: order.total,
-        });
-      } else {
-        existing.orderCount += 1;
-        existing.historicalTotal += order.total;
-        if (order.createdAt > existing.lastOrderAt) {
-          existing.lastOrderAt = order.createdAt;
-          existing.name = name;
-          existing.whatsapp = whatsapp;
-        }
-      }
-    }
-    return [...grouped.values()].sort((a, b) =>
-      b.lastOrderAt.localeCompare(a.lastOrderAt),
+  private mapCustomer(
+    row: CustomerAccountRow,
+    orders: AdminOrder[] = [],
+  ): AdminCustomer {
+    return {
+      id: row.id,
+      authUserId: row.auth_user_id ?? undefined,
+      name: row.name,
+      email: row.email ?? "",
+      whatsapp: row.whatsapp_phone ?? row.phone ?? "",
+      accountType: row.account_type,
+      pricingPolicy: row.pricing_policy,
+      discountPercent: Number(row.discount_percent),
+      status: row.status,
+      orderCount: orders.length,
+      lastOrderAt: orders[0]?.createdAt,
+      historicalTotal: orders.reduce((sum, order) => sum + order.total, 0),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private async customerRows(customerId?: string) {
+    const tenantRecordId = await this.tenantRecordId();
+    const search = new URLSearchParams({
+      select:
+        "id,tenant_id,auth_user_id,name,email,phone,whatsapp_phone,account_type,pricing_policy,discount_percent,status,created_at,updated_at",
+      tenant_id: `eq.${tenantRecordId}`,
+      order: "updated_at.desc,id.asc",
+      limit: customerId ? "1" : "1000",
+    });
+    if (customerId) search.set("id", `eq.${customerId}`);
+    return this.rows<CustomerAccountRow>(
+      `customer_accounts?${search}`,
+      "No pudimos cargar las cuentas de clientes.",
     );
+  }
+
+  private async customerOrders(customerId: string) {
+    const search = new URLSearchParams({
+      select: ORDER_SELECT,
+      tenant_id: `eq.${this.tenantId}`,
+      customer_account_id: `eq.${customerId}`,
+      order: "created_at.desc",
+      limit: "1000",
+    });
+    const { rows } = await this.rows<OrderRow>(
+      `commerce_orders?${search}`,
+      "No pudimos cargar los pedidos del cliente.",
+    );
+    return rows.map(mapOrder);
+  }
+
+  async listCustomers(): Promise<AdminCustomer[]> {
+    const { rows } = await this.customerRows();
+    const orders = await this.listOrders({}, 1000);
+    const byCustomer = new Map<string, AdminOrder[]>();
+    for (const order of orders) {
+      if (!order.customerAccountId) continue;
+      const current = byCustomer.get(order.customerAccountId) ?? [];
+      current.push(order);
+      byCustomer.set(order.customerAccountId, current);
+    }
+    return rows.map((row) => this.mapCustomer(row, byCustomer.get(row.id) ?? []));
+  }
+
+  async getCustomer(customerId: string): Promise<AdminCustomerDetail | null> {
+    if (!UUID_PATTERN.test(customerId)) return null;
+    const { rows } = await this.customerRows(customerId);
+    const row = rows[0];
+    if (!row) return null;
+    const orders = await this.customerOrders(row.id);
+    return { ...this.mapCustomer(row, orders), orders };
+  }
+
+  async createCustomerAccount(input: AdminCustomerInput, authUserId: string) {
+    if (!UUID_PATTERN.test(authUserId)) {
+      throw new AdminStoreError("El usuario autenticado del cliente no es válido.", 422);
+    }
+    const tenantRecordId = await this.tenantRecordId();
+    const response = await this.request(
+      "customer_accounts?select=id",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          tenant_id: tenantRecordId,
+          auth_user_id: authUserId,
+          name: input.name,
+          email: input.email,
+          phone: input.whatsapp,
+          whatsapp_phone: input.whatsapp,
+          account_type: input.accountType,
+          pricing_policy: input.pricingPolicy,
+          discount_percent: input.discountPercent,
+          status: input.status,
+        }),
+      },
+      "return=representation",
+    );
+    if (!response.ok) {
+      throw new AdminStoreError(
+        response.status === 409
+          ? "Ya existe una cuenta para ese email."
+          : "No pudimos crear la cuenta del cliente.",
+        response.status === 409 ? 409 : 502,
+      );
+    }
+    const created = (await response.json()) as Array<{ id: string }>;
+    if (!created[0]?.id) {
+      throw new AdminStoreError("Runia no devolvió la cuenta creada.", 502);
+    }
+    return created[0].id;
+  }
+
+  async updateCustomerAccount(customerId: string, input: AdminCustomerInput) {
+    if (!UUID_PATTERN.test(customerId)) {
+      throw new AdminStoreError("Cliente inválido.", 422);
+    }
+    const tenantRecordId = await this.tenantRecordId();
+    const search = new URLSearchParams({
+      id: `eq.${customerId}`,
+      tenant_id: `eq.${tenantRecordId}`,
+      select: "id",
+    });
+    const response = await this.request(
+      `customer_accounts?${search}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: input.name,
+          email: input.email,
+          phone: input.whatsapp,
+          whatsapp_phone: input.whatsapp,
+          account_type: input.accountType,
+          pricing_policy: input.pricingPolicy,
+          discount_percent: input.discountPercent,
+          status: input.status,
+        }),
+      },
+      "return=representation",
+    );
+    if (!response.ok) {
+      throw new AdminStoreError(
+        response.status === 409
+          ? "El email ya pertenece a otra cuenta."
+          : "No pudimos actualizar el cliente.",
+        response.status === 409 ? 409 : 502,
+      );
+    }
+    const updated = (await response.json()) as Array<{ id: string }>;
+    if (!updated[0]) throw new AdminStoreError("Cliente no encontrado.", 404);
   }
 }
