@@ -3,6 +3,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { Footer } from "@/components/layout/Footer";
 import { CommercialDiscovery } from "@/components/home/CommercialDiscovery";
 import { FirstAct } from "@/components/home/FirstAct";
+import { HomeGuides } from "@/components/home/HomeGuides";
 import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import type { CustomerPricingContext } from "@/lib/server/customers/types";
@@ -74,6 +75,7 @@ export default async function Home() {
       <main className={styles.home}>
         <FirstAct />
         <CommercialDiscovery {...discovery} />
+        <HomeGuides products={discovery.products.slice(0, 3)} />
       </main>
       <Footer />
     </>

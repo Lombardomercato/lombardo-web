@@ -1,0 +1,13 @@
+.section { padding: clamp(4rem, 8vw, 8rem) var(--page-gutter); display: grid; grid-template-columns: minmax(15rem, 4fr) minmax(0, 8fr); gap: clamp(2rem, 6vw, 7rem); background: var(--neutral-paper); color: var(--lombardo-blue); }
+.section > div > p { color: var(--lombardo-red); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.09em; }
+.section h2 { max-width: 8ch; margin-top: 1rem; font-family: var(--font-display); font-size: clamp(2.7rem, 5vw, 5.5rem); line-height: 0.86; text-transform: uppercase; }
+.section nav { border-top: 1px solid currentColor; }
+.section nav a { min-height: 8rem; padding: 1rem 0; display: grid; grid-template-columns: 9rem 1fr auto; gap: 1rem; align-items: center; border-bottom: 1px solid currentColor; }
+.section nav span { color: var(--lombardo-red); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.section nav strong { max-width: 20ch; font-family: var(--font-display); font-size: clamp(1.5rem, 2.8vw, 3rem); line-height: 0.9; text-transform: uppercase; }
+.section nav i { font-style: normal; font-size: 1.4rem; }
+@media (max-width: 47.99rem) {
+  .section { grid-template-columns: 1fr; }
+  .section nav a { grid-template-columns: 1fr auto; }
+  .section nav span { grid-column: 1 / -1; }
+}

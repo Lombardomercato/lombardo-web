@@ -9,6 +9,7 @@ import styles from "./Header.module.css";
 const navigation = [
   { label: "Regalos", href: "/categorias/regalos" },
   { label: "Vinos", href: "/categorias/vinos" },
+  { label: "Guías", href: "/guias" },
   { label: "Empresas", href: "/guias/regalos-empresariales-rosario" },
   { label: "Experiencias", href: "/#experiencias" },
 ] as const;
@@ -135,7 +136,7 @@ export function Header() {
             tabIndex={isOpen ? 0 : -1}
             onClick={closeMenu}
           >
-            <span>05</span>
+            <span>06</span>
             Mi cuenta
           </Link>
           <Link
