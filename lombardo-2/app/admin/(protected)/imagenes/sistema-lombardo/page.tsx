@@ -12,7 +12,7 @@ export default async function ProductImageSystemPilotPage() {
       <header className={styles.pageHeader}>
         <div>
           <p className={styles.eyebrow}>PRODUCT IMAGE SYSTEM · PILOTO V1</p>
-          <h1>EL PRODUCTO CAMBIA.<br />EL SISTEMA NO.</h1>
+          <h1 className={styles.imageSystemTitle}>EL PRODUCTO CAMBIA.<br />EL SISTEMA NO.</h1>
         </div>
         <p>Masters intactos y una puesta Lombardo versionada. Este piloto no modifica todavía el catálogo público.</p>
       </header>

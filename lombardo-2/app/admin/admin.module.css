@@ -1384,6 +1384,11 @@
     margin-top: 0.8rem;
   }
 
+  .imageSystemTitle {
+    max-width: 100%;
+    font-size: clamp(1.8rem, 8vw, 2.2rem);
+  }
+
   .metricGrid {
     grid-template-columns: repeat(2, minmax(8.8rem, 1fr));
   }
