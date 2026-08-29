@@ -257,10 +257,10 @@ export class AutomationStore {
       select: "supplier_product_id",
       tenant_id: `eq.${tenantId}`,
       slot_type: "eq.featured_product",
-      selection_date: `gte.${threshold.toISOString().slice(0, 10)}`,
-      "selection_date.lt": beforeDate,
       limit: "1000",
     });
+    search.append("selection_date", `gte.${threshold.toISOString().slice(0, 10)}`);
+    search.append("selection_date", `lt.${beforeDate}`);
     const rows = await this.rows<{ supplier_product_id: string }>(
       `home_daily_slots?${search}`,
       "No pudimos leer el historial de destacados.",

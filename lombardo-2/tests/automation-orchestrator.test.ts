@@ -188,3 +188,13 @@ test("scheduler corre una vez a las 00:05 ART y exige CRON_SECRET", async () => 
   assert.match(route, /timingSafeEqual/);
   assert.doesNotMatch(route, /MERCADO_PAGO|VINROS.*write/i);
 });
+
+test("historial de destacados compone ambos límites sobre selection_date", async () => {
+  const store = await readFile(
+    new URL("../lib/server/automations/automation-store.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(store, /search\.append\("selection_date", `gte\./);
+  assert.match(store, /search\.append\("selection_date", `lt\./);
+  assert.doesNotMatch(store, /"selection_date\.lt"/);
+});
