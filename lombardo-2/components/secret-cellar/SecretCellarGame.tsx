@@ -186,7 +186,7 @@ export function SecretCellarGame({
         <span>{String(activeCount).padStart(2, "0")} ACTIVAS</span>
       </div>
 
-      <div className={styles.candidateGrid} aria-label="Botellas candidatas">
+      <div className={styles.candidateGrid} role="list" aria-label="Botellas candidatas">
         {challenge.candidates.map((candidate, index) => {
           const isDiscarded = discarded.has(candidate.id);
           const isSelected = selectedId === candidate.id;
@@ -201,6 +201,7 @@ export function SecretCellarGame({
               data-discarded={isDiscarded}
               data-selected={isSelected}
               key={candidate.id}
+              role="listitem"
             >
               <span className={styles.candidateNumber}>{String(index + 1).padStart(2, "0")}</span>
               <button
