@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminStore, requireAdminSession } from "./admin-auth";
-import type { AdminOrderFilters, AdminProduct } from "./types";
+import type { AdminOrderFilters, AdminProduct, MatchReviewStatus } from "./types";
 
 export async function loadAdminDashboard() {
   await requireAdminSession();
@@ -44,6 +44,15 @@ export async function loadVinrosReviewProducts(
 ) {
   await requireAdminSession();
   return createAdminStore().listVinrosReviewProducts(status);
+}
+
+export async function loadAdminImageCandidates(input: {
+  offset?: number;
+  limit?: number;
+  status?: MatchReviewStatus;
+} = {}) {
+  await requireAdminSession();
+  return createAdminStore().listImageCandidates(input);
 }
 
 export async function loadAdminCustomers() {

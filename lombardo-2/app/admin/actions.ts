@@ -259,3 +259,33 @@ export async function deleteProductImageAction(formData: FormData) {
   }
   redirect(destination);
 }
+
+export async function reviewImageCandidateAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const candidateId = formText(formData, "candidateId", 36);
+  const decision = formText(formData, "decision", 16);
+  const returnStatus = formText(formData, "returnStatus", 16);
+  const params = new URLSearchParams();
+  if (["pending", "approved", "rejected"].includes(returnStatus)) {
+    params.set("status", returnStatus);
+  }
+  try {
+    if (decision !== "approved" && decision !== "rejected") {
+      throw new AdminStoreError("Decisión inválida.", 400);
+    }
+    await createAdminStore().reviewImageCandidate(candidateId, decision, session.authUserId);
+    params.set(
+      "success",
+      decision === "approved"
+        ? "Match aprobado. La imagen sigue sin publicarse hasta validar derechos."
+        : "Candidato rechazado.",
+    );
+    revalidatePath("/admin/imagenes");
+  } catch (error) {
+    params.set(
+      "error",
+      error instanceof AdminStoreError ? error.message : "No pudimos guardar la revisión.",
+    );
+  }
+  redirect(`/admin/imagenes?${params}`);
+}

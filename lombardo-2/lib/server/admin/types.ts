@@ -163,6 +163,39 @@ export interface VinrosReviewProduct extends AdminProductDetail {
   reviewReason: string;
 }
 
+export type MatchConfidenceBand = "high" | "medium" | "low";
+export type MatchReviewStatus = "pending" | "approved" | "rejected";
+
+export interface AdminImageCandidate {
+  id: string;
+  matchId?: string;
+  productId: string;
+  sku: string;
+  productName: string;
+  presentation: string;
+  category: string;
+  externalProductName: string;
+  source: string;
+  sourceUrl: string;
+  imageUrl: string;
+  confidence: number;
+  confidenceBand: MatchConfidenceBand;
+  evidence: string[];
+  mismatchWarnings: string[];
+  matchReviewStatus: MatchReviewStatus;
+  publicationStatus: "pending" | "approved" | "rejected";
+  rightsStatus: "unknown" | "licensed" | "approved" | "restricted";
+  createdAt: string;
+}
+
+export interface AdminImageCandidatePage {
+  candidates: AdminImageCandidate[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
 export interface AdminProductPage {
   products: AdminProduct[];
   total: number;

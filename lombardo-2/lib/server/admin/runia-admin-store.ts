@@ -21,6 +21,8 @@ import type {
 import type {
   AdminCustomer,
   AdminDashboard,
+  AdminImageCandidate,
+  AdminImageCandidatePage,
   AdminOrder,
   AdminOrderFilters,
   AdminProduct,
@@ -35,6 +37,7 @@ import type {
   SupplierPriceType,
   VinrosHealth,
   VinrosReviewProduct,
+  MatchReviewStatus,
 } from "./types";
 import type {
   OrderNotification,
@@ -172,6 +175,31 @@ interface SyncRunRow {
   finished_at: string | null;
   status: string;
   prices_updated: number;
+}
+
+interface ImageCandidateRow {
+  id: string;
+  external_product_match_id: string | null;
+  source: string;
+  source_url: string;
+  image_url: string;
+  match_confidence: number | string;
+  match_review_status: MatchReviewStatus;
+  approval_status: "pending" | "approved" | "rejected";
+  rights_status: "unknown" | "licensed" | "approved" | "restricted";
+  provenance: {
+    externalProductName?: unknown;
+    matchedFields?: unknown;
+    mismatchWarnings?: unknown;
+  } | null;
+  created_at: string;
+  product: Pick<
+    ProductRow,
+    "id" | "supplier_sku" | "name_raw" | "presentation_raw" | "normalized_presentation"
+  > | Array<Pick<
+    ProductRow,
+    "id" | "supplier_sku" | "name_raw" | "presentation_raw" | "normalized_presentation"
+  >> | null;
 }
 
 interface SupplierRow {
@@ -1031,6 +1059,100 @@ export class RuniaAdminStore {
     if (payload.bucketId && payload.storagePath) {
       await this.deleteStorageObject(payload.bucketId, payload.storagePath);
     }
+  }
+
+  async listImageCandidates(input: {
+    offset?: number;
+    limit?: number;
+    status?: MatchReviewStatus;
+  } = {}): Promise<AdminImageCandidatePage> {
+    const supplierId = await this.supplierId();
+    const offset = Math.max(0, Math.trunc(input.offset ?? 0));
+    const limit = Math.min(100, Math.max(10, Math.trunc(input.limit ?? 25)));
+    const search = new URLSearchParams({
+      select:
+        "id,external_product_match_id,source,source_url,image_url,match_confidence,match_review_status,approval_status,rights_status,provenance,created_at,product:supplier_product_id!inner(id,supplier_sku,name_raw,presentation_raw,normalized_presentation,supplier_id)",
+      "product.supplier_id": `eq.${supplierId}`,
+      order: "match_confidence.desc,created_at.asc,id.asc",
+      offset: String(offset),
+      limit: String(limit),
+    });
+    if (input.status) search.set("match_review_status", `eq.${input.status}`);
+    const { rows, response } = await this.rows<ImageCandidateRow>(
+      `external_image_candidates?${search}`,
+      "No pudimos cargar los candidatos de imágenes.",
+      "count=exact",
+    );
+    const candidates = rows.flatMap((row): AdminImageCandidate[] => {
+      const product = asArray(row.product)[0];
+      if (!product) return [];
+      const confidence = Number(row.match_confidence);
+      const matchedFields = Array.isArray(row.provenance?.matchedFields)
+        ? row.provenance.matchedFields.filter((item): item is string => typeof item === "string")
+        : [];
+      const mismatchWarnings = Array.isArray(row.provenance?.mismatchWarnings)
+        ? row.provenance.mismatchWarnings.filter((item): item is string => typeof item === "string")
+        : [];
+      return [{
+        id: row.id,
+        matchId: row.external_product_match_id ?? undefined,
+        productId: product.id,
+        sku: product.supplier_sku,
+        productName: product.name_raw,
+        presentation: product.normalized_presentation || product.presentation_raw || "Unidad",
+        category: categoryForSupplierSku(product.supplier_sku).name,
+        externalProductName:
+          typeof row.provenance?.externalProductName === "string"
+            ? row.provenance.externalProductName
+            : product.name_raw,
+        source: row.source,
+        sourceUrl: row.source_url,
+        imageUrl: row.image_url,
+        confidence,
+        confidenceBand: confidence >= 0.9 ? "high" : confidence >= 0.72 ? "medium" : "low",
+        evidence: matchedFields,
+        mismatchWarnings,
+        matchReviewStatus: row.match_review_status,
+        publicationStatus: row.approval_status,
+        rightsStatus: row.rights_status,
+        createdAt: row.created_at,
+      }];
+    });
+    const total = contentRangeTotal(response, offset + candidates.length);
+    return { candidates, total, offset, limit, hasMore: offset + candidates.length < total };
+  }
+
+  async reviewImageCandidate(
+    candidateId: string,
+    status: Exclude<MatchReviewStatus, "pending">,
+    reviewerId: string,
+  ) {
+    if (!UUID_PATTERN.test(candidateId)) throw new AdminStoreError("Candidato inválido.", 400);
+    const supplierId = await this.supplierId();
+    const verify = new URLSearchParams({
+      select: "id,product:supplier_product_id!inner(supplier_id)",
+      id: `eq.${candidateId}`,
+      "product.supplier_id": `eq.${supplierId}`,
+      limit: "1",
+    });
+    const { rows } = await this.rows<{ id: string }>(
+      `external_image_candidates?${verify}`,
+      "No pudimos validar el candidato.",
+    );
+    if (!rows[0]) throw new AdminStoreError("Candidato no encontrado.", 404);
+    const response = await this.request(
+      `external_image_candidates?id=eq.${candidateId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          match_review_status: status,
+          reviewed_by: reviewerId,
+          reviewed_at: new Date().toISOString(),
+        }),
+      },
+      "return=minimal",
+    );
+    if (!response.ok) throw new AdminStoreError("No pudimos guardar la revisión.", 502);
   }
 
   async listCustomers(): Promise<AdminCustomer[]> {

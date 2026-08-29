@@ -7,6 +7,32 @@ const migration = readFileSync(
   fileURLToPath(new URL("../supabase/migrations/20260828183715_products_v2_media_and_matching.sql", import.meta.url)),
   "utf8",
 );
+const matchingReviewMigration = readFileSync(
+  fileURLToPath(new URL("../supabase/migrations/20260829005749_image_matching_pilot_review_status.sql", import.meta.url)),
+  "utf8",
+);
+const adminStore = readFileSync(
+  fileURLToPath(new URL("../lib/server/admin/runia-admin-store.ts", import.meta.url)),
+  "utf8",
+);
+const imageQueuePage = readFileSync(
+  fileURLToPath(new URL("../app/admin/(protected)/imagenes/page.tsx", import.meta.url)),
+  "utf8",
+);
+const pilot = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL("../docs/image-matching-pilot-2026-08-28.json", import.meta.url)),
+    "utf8",
+  ),
+) as {
+  products: Array<{
+    sku: string;
+    imageUrl?: string;
+    confidence?: number;
+    sourceTier?: string;
+    discardedFalsePositives?: number;
+  }>;
+};
 
 test("Productos V2 separa verdad VINROS de editorial Lombardo", () => {
   assert.match(migration, /create table public\.supplier_product_editorial/);
@@ -31,6 +57,29 @@ test("media vive en Storage, mantiene una principal e impide publicar externos s
   assert.match(migration, /external_image_candidates_publish_check/);
 });
 
+test("matching humano y publicación de imagen son decisiones separadas", () => {
+  assert.match(
+    matchingReviewMigration,
+    /alter table public\.external_image_candidates[\s\S]*add column match_review_status text not null default 'pending'/,
+  );
+  assert.match(
+    matchingReviewMigration,
+    /external_image_candidates_match_review_status_check[\s\S]*'pending', 'approved', 'rejected'/,
+  );
+  assert.match(
+    migration,
+    /external_image_candidates_publish_check[\s\S]*approval_status <> 'approved' or rights_status in \('licensed', 'approved'\)/,
+  );
+  const reviewMethod = adminStore.match(
+    /async reviewImageCandidate\([\s\S]*?\n  }\n\n  async listCustomers/,
+  )?.[0] || "";
+  assert.match(reviewMethod, /match_review_status: status/);
+  assert.match(reviewMethod, /reviewed_by: reviewerId/);
+  assert.doesNotMatch(reviewMethod, /approval_status:|rights_status:/);
+  assert.match(imageQueuePage, /Aprobar no publica la imagen/);
+  assert.match(imageQueuePage, /PUBLICACIÓN EXTERNA = 0/);
+});
+
 test("tablas editoriales, matching y RPC quedan server-only con RLS forzado", () => {
   for (const table of [
     "supplier_product_editorial",
@@ -43,4 +92,22 @@ test("tablas editoriales, matching y RPC quedan server-only con RLS forzado", ()
   }
   assert.doesNotMatch(migration, /grant .* to anon/);
   assert.doesNotMatch(migration, /grant .* to authenticated/);
+});
+
+test("piloto mantiene 25 productos, 22 candidatos y cero publicación implícita", () => {
+  const candidates = pilot.products.filter((product) => product.imageUrl);
+  assert.equal(pilot.products.length, 25);
+  assert.equal(new Set(pilot.products.map((product) => product.sku)).size, 25);
+  assert.equal(candidates.length, 22);
+  assert.equal(candidates.filter((product) => (product.confidence || 0) >= 0.9).length, 20);
+  assert.equal(candidates.filter((product) => (product.confidence || 0) >= 0.72 && (product.confidence || 0) < 0.9).length, 2);
+  assert.equal(candidates.filter((product) => product.sourceTier === "official").length, 6);
+  assert.equal(
+    pilot.products.reduce((total, product) => total + (product.discardedFalsePositives || 0), 0),
+    5,
+  );
+  assert.equal(
+    pilot.products.some((product) => "approvalStatus" in product || "rightsStatus" in product),
+    false,
+  );
 });
