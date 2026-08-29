@@ -7,6 +7,7 @@ const files = {
   migration: fileURLToPath(new URL("../supabase/migrations/20260829052000_lombardo_product_image_system.sql", import.meta.url)),
   render: fileURLToPath(new URL("../components/product/LombardoProductRender.tsx", import.meta.url)),
   renderStyles: fileURLToPath(new URL("../components/product/LombardoProductRender.module.css", import.meta.url)),
+  publicVisualStyles: fileURLToPath(new URL("../components/product/ProductVisual.module.css", import.meta.url)),
   pilot: fileURLToPath(new URL("../app/admin/(protected)/imagenes/sistema-lombardo/page.tsx", import.meta.url)),
   store: fileURLToPath(new URL("../lib/server/admin/runia-admin-store.ts", import.meta.url)),
 };
@@ -25,6 +26,13 @@ test("product image system separates source masters from versioned renders", asy
   assert.match(migration, /'pending', 'approved'/);
   assert.match(store, /workflow === "source_master"/);
   assert.match(store, /supplier_attach_product_source_master/);
+});
+
+test("public catalog keeps the full source master visible on desktop", async () => {
+  const styles = await readFile(files.publicVisualStyles, "utf8");
+  assert.match(styles, /\.photo img[\s\S]*object-fit: contain/);
+  assert.match(styles, /\.photo img[\s\S]*padding: 12% 8%/);
+  assert.doesNotMatch(styles, /\.photo img[\s\S]*object-fit: cover/);
 });
 
 test("pilot uses one visual grammar with five controlled variants", async () => {

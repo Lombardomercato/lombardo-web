@@ -523,3 +523,27 @@ export async function publishImageCandidateAction(formData: FormData) {
   }
   redirect(`/admin/imagenes?${params}`);
 }
+
+export async function reviewPublishedImageCandidateAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const candidateId = formText(formData, "candidateId", 36);
+  const decision = formText(formData, "decision", 24);
+  const params = new URLSearchParams({ view: "needs_review" });
+  try {
+    if (decision !== "correct" && decision !== "remove" && decision !== "search_other") {
+      throw new AdminStoreError("Acción de imagen inválida.", 400);
+    }
+    await createAdminStore().reviewPublishedImageCandidate(candidateId, decision, session.authUserId);
+    params.set("success", decision === "correct"
+      ? "La imagen quedó marcada como correcta."
+      : decision === "remove"
+        ? "La imagen fue quitada y se restauró el fallback Lombardo."
+        : "La imagen fue quitada y quedó señalada para buscar otra fuente.");
+    revalidatePath("/admin/imagenes");
+    revalidatePath("/admin/productos");
+    revalidatePath("/productos");
+  } catch (error) {
+    params.set("error", error instanceof AdminStoreError ? error.message : "No pudimos actualizar la imagen.");
+  }
+  redirect(`/admin/imagenes?${params}`);
+}

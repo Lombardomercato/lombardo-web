@@ -1,7 +1,6 @@
 import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
-import { Buffer } from "node:buffer";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
@@ -27,6 +26,7 @@ import type {
   AdminDashboard,
   AdminImageCandidate,
   AdminImageCandidatePage,
+  ImageQualityStatus,
   AdminUnmatchedImageProductPage,
   MatchConfidenceBand,
   AdminOrder,
@@ -260,10 +260,12 @@ interface ImageCandidateRow {
   match_review_status: MatchReviewStatus;
   approval_status: "pending" | "approved" | "rejected";
   rights_status: "unknown" | "licensed" | "approved" | "restricted";
+  quality_status: ImageQualityStatus;
   provenance: {
     externalProductName?: unknown;
     matchedFields?: unknown;
     mismatchWarnings?: unknown;
+    hardConflicts?: unknown;
     externalPresentation?: unknown;
     approvalMode?: unknown;
   } | null;
@@ -1160,7 +1162,7 @@ export class RuniaAdminStore {
     if (!this.secretKey.startsWith("sb_secret_")) storageHeaders.Authorization = `Bearer ${this.secretKey}`;
     const upload = await this.fetcher(
       `${this.url}/storage/v1/object/product-media/${path}`,
-      { method: "POST", headers: storageHeaders, body: Buffer.from(input.bytes), cache: "no-store" },
+      { method: "POST", headers: storageHeaders, body: Uint8Array.from(input.bytes).buffer, cache: "no-store" },
     );
     if (!upload.ok) throw new AdminStoreError("No pudimos subir la imagen.", 502);
     try {
@@ -1185,6 +1187,11 @@ export class RuniaAdminStore {
         p_make_primary: input.makePrimary,
         p_created_by: input.operatorUserId,
       });
+      if (!sourceMaster && input.makePrimary) {
+        await this.rpc("supplier_mark_product_image_corrected", {
+          p_supplier_product_id: input.productId,
+        });
+      }
     } catch (error) {
       await this.deleteStorageObject("product-media", path).catch(() => undefined);
       throw error;
@@ -1196,7 +1203,8 @@ export class RuniaAdminStore {
     const search = new URLSearchParams({
       select:
         "id,visual_variant,render_version,render_config,product:supplier_product_id!inner(id,supplier_id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status)),master:source_media_id!inner(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status)",
-      status: "eq.pilot",
+      status: "eq.approved",
+      "render_config->>pilotOrder": "not.is.null",
       "product.supplier_id": `eq.${supplierId}`,
       "product.active": "eq.true",
       "product.eligibility_status": "eq.safe",
@@ -1276,14 +1284,15 @@ export class RuniaAdminStore {
     status?: MatchReviewStatus;
     confidenceBand?: MatchConfidenceBand;
     publicationStatus?: "pending" | "approved" | "rejected";
-    approvalMode?: "auto_exact_high";
+    approvalMode?: "auto";
+    qualityStatus?: ImageQualityStatus;
   } = {}): Promise<AdminImageCandidatePage> {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
     const limit = Math.min(100, Math.max(10, Math.trunc(input.limit ?? 25)));
     const search = new URLSearchParams({
       select:
-        "id,external_product_match_id,source,source_url,image_url,match_confidence,match_review_status,approval_status,rights_status,provenance,created_at,product:supplier_product_id!inner(id,supplier_sku,name_raw,presentation_raw,normalized_presentation,supplier_id)",
+        "id,external_product_match_id,source,source_url,image_url,match_confidence,match_review_status,approval_status,rights_status,quality_status,provenance,created_at,product:supplier_product_id!inner(id,supplier_sku,name_raw,presentation_raw,normalized_presentation,supplier_id)",
       "product.supplier_id": `eq.${supplierId}`,
       order: "match_confidence.desc,created_at.asc,id.asc",
       offset: String(offset),
@@ -1291,7 +1300,10 @@ export class RuniaAdminStore {
     });
     if (input.status) search.set("match_review_status", `eq.${input.status}`);
     if (input.publicationStatus) search.set("approval_status", `eq.${input.publicationStatus}`);
-    if (input.approvalMode) search.set("provenance->>approvalMode", `eq.${input.approvalMode}`);
+    if (input.approvalMode === "auto") {
+      search.set("provenance->>approvalMode", "in.(auto_exact_high,auto_high,auto_medium)");
+    }
+    if (input.qualityStatus) search.set("quality_status", `eq.${input.qualityStatus}`);
     if (input.confidenceBand === "high") search.set("match_confidence", "gte.0.9");
     if (input.confidenceBand === "medium") {
       search.append("match_confidence", "gte.0.72");
@@ -1312,6 +1324,9 @@ export class RuniaAdminStore {
         : [];
       const mismatchWarnings = Array.isArray(row.provenance?.mismatchWarnings)
         ? row.provenance.mismatchWarnings.filter((item): item is string => typeof item === "string")
+        : [];
+      const hardConflicts = Array.isArray(row.provenance?.hardConflicts)
+        ? row.provenance.hardConflicts.filter((item): item is string => typeof item === "string")
         : [];
       return [{
         id: row.id,
@@ -1337,10 +1352,11 @@ export class RuniaAdminStore {
         confidence,
         confidenceBand: confidence >= 0.9 ? "high" : confidence >= 0.72 ? "medium" : "low",
         evidence: matchedFields,
-        mismatchWarnings,
+        mismatchWarnings: [...new Set([...mismatchWarnings, ...hardConflicts])],
         matchReviewStatus: row.match_review_status,
         publicationStatus: row.approval_status,
         rightsStatus: row.rights_status,
+        qualityStatus: row.quality_status,
         createdAt: row.created_at,
       }];
     });
@@ -1375,9 +1391,22 @@ export class RuniaAdminStore {
     return { products, total, offset, limit, hasMore: offset + products.length < total };
   }
 
-  async importPositanoCandidates(items: unknown[]) {
-    const response = await this.rpc("supplier_import_positano_candidates", { p_items: items });
+  async importMassImageCandidates(items: unknown[]) {
+    const response = await this.rpc("supplier_import_mass_image_candidates", { p_items: items });
     return await response.json() as Array<{ candidate_id: string; auto_publish: boolean }>;
+  }
+
+  async reviewPublishedImageCandidate(
+    candidateId: string,
+    action: "correct" | "remove" | "search_other",
+    reviewerId: string,
+  ) {
+    if (!UUID_PATTERN.test(candidateId)) throw new AdminStoreError("Candidato inválido.", 400);
+    await this.rpc("supplier_review_published_image", {
+      p_candidate_id: candidateId,
+      p_action: action,
+      p_reviewer: reviewerId,
+    });
   }
 
   async reviewImageCandidate(
@@ -1477,20 +1506,8 @@ export class RuniaAdminStore {
     }
     sourceFilename = sourceFilename.slice(0, 240);
 
-    const duplicateSearch = new URLSearchParams({
-      select: "bucket_id,storage_path",
-      content_sha256: `eq.${contentSha256}`,
-      order: "created_at.asc",
-      limit: "1",
-    });
-    const { rows: duplicates } = await this.rows<{ bucket_id: string; storage_path: string }>(
-      `supplier_product_media?${duplicateSearch}`,
-      "No pudimos comprobar imágenes duplicadas.",
-    );
-
-    const path = duplicates[0]?.storage_path
-      || `${product.supplier_sku.toLocaleLowerCase("en-US")}/${randomUUID()}.${extension}`;
-    const bucketId = duplicates[0]?.bucket_id || "product-media";
+    const path = `${product.supplier_sku.toLocaleLowerCase("en-US")}/${randomUUID()}.${extension}`;
+    const bucketId = "product-media";
     let uploaded = false;
     const storageHeaders: Record<string, string> = {
       apikey: this.secretKey,
@@ -1499,16 +1516,14 @@ export class RuniaAdminStore {
       "x-upsert": "false",
     };
     if (!this.secretKey.startsWith("sb_secret_")) storageHeaders.Authorization = `Bearer ${this.secretKey}`;
-    if (!duplicates[0]) {
-      const upload = await this.fetcher(`${this.url}/storage/v1/object/product-media/${path}`, {
-        method: "POST",
-        headers: storageHeaders,
-        body: Buffer.from(bytes),
-        cache: "no-store",
-      });
-      if (!upload.ok) throw new AdminStoreError("No pudimos guardar la imagen aprobada.", 502);
-      uploaded = true;
-    }
+    const upload = await this.fetcher(`${this.url}/storage/v1/object/product-media/${path}`, {
+      method: "POST",
+      headers: storageHeaders,
+      body: Uint8Array.from(bytes).buffer,
+      cache: "no-store",
+    });
+    if (!upload.ok) throw new AdminStoreError("No pudimos guardar la imagen aprobada.", 502);
+    uploaded = true;
     try {
       await this.rpc("supplier_publish_external_candidate_v2", {
         p_candidate_id: candidate.id,
