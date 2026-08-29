@@ -7,6 +7,10 @@ import {
   selectActiveBottle,
   toggleDiscardedBottle,
 } from "../lib/secret-cellar/game-state.ts";
+import {
+  formatSecretCellarCountdown,
+  millisecondsUntilNextSecretCellarChallenge,
+} from "../lib/secret-cellar/countdown.ts";
 import type { Product } from "../types/commerce.ts";
 
 function product(index: number, overrides: Partial<Product> = {}): Product {
@@ -187,19 +191,36 @@ test("el acierto crea un cupón estándar del Promotion Engine, no un descuento 
   assert.doesNotMatch(migration, /alter table public\.commerce_orders[\s\S]*secret_cellar/i);
 });
 
-test("el revelado final es editorial, breve y accesible sin cambiar la mecánica", async () => {
+test("la cuenta regresiva representa el cambio real de día en Argentina", () => {
+  const twoSecondsBeforeMidnight = new Date("2026-08-29T23:59:58-03:00").getTime();
+  assert.equal(millisecondsUntilNextSecretCellarChallenge(twoSecondsBeforeMidnight), 2_000);
+  assert.equal(formatSecretCellarCountdown(3_661_000), "01 : 01 : 01");
+});
+
+test("la experiencia física conserva alternativas accesibles y la mecánica aprobada", async () => {
   const [component, stylesheet] = await Promise.all([
     readFile(new URL("../components/secret-cellar/SecretCellarGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/secret-cellar/SecretCellarGame.module.css", import.meta.url), "utf8"),
   ]);
 
+  assert.match(component, /Todos los días Lombardo esconde una botella/);
+  assert.match(component, /% OFF HOY/);
+  assert.match(component, /ABRIR LA CAVA/);
+  assert.match(component, /onPointerMove/);
+  assert.match(stylesheet, /touch-action: none/);
+  assert.match(component, /ArrowRight/);
+  assert.match(component, /event\.key === "Enter"/);
+  assert.match(component, /ChallengeCountdown compact/);
   assert.match(component, /setRevealing\(true\)/);
-  assert.match(component, /1_450/);
+  assert.match(component, /2_050/);
   assert.match(component, /prefers-reduced-motion: reduce/);
   assert.match(component, /LA ENCONTRASTE\./);
-  assert.match(component, /LA BOTELLA ERA ESTA\./);
-  assert.match(component, /ABRIENDO LA CAVA…/);
+  assert.match(component, /ESTA ERA LA BOTELLA ESCONDIDA\./);
+  assert.match(component, /CERRANDO LA CAVA…/);
+  assert.match(component, /REVELANDO LA BOTELLA…/);
   assert.match(stylesheet, /\.revealTransition/);
+  assert.match(stylesheet, /\.finalDoorLeft/);
+  assert.match(stylesheet, /\.candidate\[data-discarded="true"\][\s\S]*--discard-depth/);
   assert.match(stylesheet, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.revealTransition[\s\S]*animation: none/);
   assert.doesNotMatch(`${component}\n${stylesheet}`, /confetti|ne[oó]n|casino|roulette|audio|sound|glow/i);
 });
