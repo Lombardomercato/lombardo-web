@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { createAdminStore } from "@/lib/server/admin/admin-auth";
 
@@ -55,6 +56,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const store = await authorizedStore(request, jobId);
   if (!store) return unauthorized();
   await store.recordImageJobBatch(jobId, { processed: 0, published: 0, failed: 0, complete: true });
+  revalidateTag("runia-real-catalog", "max");
   return NextResponse.json({ complete: true });
 }
 
@@ -113,6 +115,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     errorSummary: failures.length ? `${failures.length} publicaciones fallaron en el último lote.` : undefined,
     complete,
   });
+  if (published > 0) revalidateTag("runia-real-catalog", "max");
 
   return NextResponse.json({
     processed: candidateIds.length,
