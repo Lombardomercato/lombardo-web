@@ -50,6 +50,22 @@ function formRaw(formData: FormData, name: string, maximum: number) {
   return typeof value === "string" ? value.slice(0, maximum) : "";
 }
 
+function candidateIds(formData: FormData) {
+  return [...new Set(formData.getAll("candidateIds"))]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value))
+    .slice(0, 25);
+}
+
+async function settleInBatches<T>(items: T[], batchSize: number, operation: (item: T) => Promise<void>) {
+  const results: PromiseSettledResult<void>[] = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    results.push(...await Promise.allSettled(items.slice(index, index + batchSize).map(operation)));
+  }
+  return results;
+}
+
 function validStatus(value: string): value is FulfillmentStatus {
   return FULFILLMENT_STATUSES.includes(value as FulfillmentStatus);
 }
@@ -335,6 +351,49 @@ export async function reviewImageCandidateAction(formData: FormData) {
       "error",
       error instanceof AdminStoreError ? error.message : "No pudimos guardar la revisión.",
     );
+  }
+  redirect(`/admin/imagenes?${params}`);
+}
+
+export async function bulkReviewImageCandidatesAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const ids = candidateIds(formData);
+  const decision = formText(formData, "decision", 16);
+  const returnStatus = formText(formData, "returnStatus", 16);
+  const returnConfidence = formText(formData, "returnConfidence", 16);
+  const params = new URLSearchParams();
+  if (["pending", "approved", "rejected"].includes(returnStatus)) params.set("status", returnStatus);
+  if (["high", "medium", "low"].includes(returnConfidence)) params.set("confidence", returnConfidence);
+
+  try {
+    if (!ids.length) throw new AdminStoreError("Seleccioná al menos un candidato.", 400);
+    if (decision !== "approved" && decision !== "rejected") {
+      throw new AdminStoreError("Decisión masiva inválida.", 400);
+    }
+    const store = createAdminStore();
+    if (decision === "rejected") {
+      const results = await settleInBatches(ids, 10, (id) =>
+        store.reviewImageCandidate(id, "rejected", session.authUserId));
+      const rejected = results.filter((result) => result.status === "fulfilled").length;
+      const failed = results.length - rejected;
+      if (!rejected) throw new AdminStoreError("No pudimos rechazar los candidatos seleccionados.", 502);
+      params.set("success", `${rejected} candidato${rejected === 1 ? "" : "s"} rechazado${rejected === 1 ? "" : "s"}.${failed ? ` ${failed} no se pudo procesar.` : ""}`);
+    } else {
+      const results = await settleInBatches(ids, 5, async (id) => {
+        await store.reviewImageCandidate(id, "approved", session.authUserId);
+        await store.publishApprovedImageCandidate(id, session.authUserId);
+      });
+      const published = results.filter((result) => result.status === "fulfilled").length;
+      const failed = results.length - published;
+      if (!published) throw new AdminStoreError("No pudimos publicar las imágenes seleccionadas.", 502);
+      params.set("success", `${published} imagen${published === 1 ? "" : "es"} aprobada${published === 1 ? "" : "s"} y publicada${published === 1 ? "" : "s"} como principal.${failed ? ` ${failed} requiere reintento desde Match aprobado.` : ""}`);
+      if (failed) params.set("status", "approved");
+    }
+    revalidatePath("/admin/imagenes");
+    revalidatePath("/admin/productos");
+    revalidatePath("/productos");
+  } catch (error) {
+    params.set("error", error instanceof AdminStoreError ? error.message : "No pudimos procesar la selección.");
   }
   redirect(`/admin/imagenes?${params}`);
 }

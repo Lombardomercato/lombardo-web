@@ -27,6 +27,7 @@ import type {
   AdminDashboard,
   AdminImageCandidate,
   AdminImageCandidatePage,
+  MatchConfidenceBand,
   AdminOrder,
   AdminOrderFilters,
   AdminProduct,
@@ -1162,6 +1163,7 @@ export class RuniaAdminStore {
     offset?: number;
     limit?: number;
     status?: MatchReviewStatus;
+    confidenceBand?: MatchConfidenceBand;
   } = {}): Promise<AdminImageCandidatePage> {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
@@ -1175,6 +1177,12 @@ export class RuniaAdminStore {
       limit: String(limit),
     });
     if (input.status) search.set("match_review_status", `eq.${input.status}`);
+    if (input.confidenceBand === "high") search.set("match_confidence", "gte.0.9");
+    if (input.confidenceBand === "medium") {
+      search.append("match_confidence", "gte.0.72");
+      search.append("match_confidence", "lt.0.9");
+    }
+    if (input.confidenceBand === "low") search.set("match_confidence", "lt.0.72");
     const { rows, response } = await this.rows<ImageCandidateRow>(
       `external_image_candidates?${search}`,
       "No pudimos cargar los candidatos de imágenes.",
@@ -1202,6 +1210,9 @@ export class RuniaAdminStore {
           typeof row.provenance?.externalProductName === "string"
             ? row.provenance.externalProductName
             : product.name_raw,
+        externalPresentation:
+          matchedFields.find((item) => /(?:\d+[,.]?\d*)\s*(?:ml|cc|cl|l|g|kg|oz|unidades?|c[aá]psulas?)/iu.test(item))
+          || "No informada por la fuente",
         source: row.source,
         sourceUrl: row.source_url,
         imageUrl: row.image_url,

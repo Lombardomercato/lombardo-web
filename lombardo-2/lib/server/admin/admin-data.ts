@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminStore, requireAdminSession } from "./admin-auth";
-import type { AdminOrderFilters, AdminProduct, MatchReviewStatus } from "./types";
+import type { AdminOrderFilters, AdminProduct, MatchConfidenceBand, MatchReviewStatus } from "./types";
 
 export async function loadAdminDashboard() {
   await requireAdminSession();
@@ -50,6 +50,7 @@ export async function loadAdminImageCandidates(input: {
   offset?: number;
   limit?: number;
   status?: MatchReviewStatus;
+  confidenceBand?: MatchConfidenceBand;
 } = {}) {
   await requireAdminSession();
   return createAdminStore().listImageCandidates(input);

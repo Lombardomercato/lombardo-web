@@ -180,6 +180,7 @@ export interface AdminImageCandidate {
   presentation: string;
   category: string;
   externalProductName: string;
+  externalPresentation: string;
   source: string;
   sourceUrl: string;
   imageUrl: string;

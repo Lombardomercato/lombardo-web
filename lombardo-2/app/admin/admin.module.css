@@ -1005,14 +1005,16 @@
   opacity: 0.35;
 }
 
-.candidateTabs {
+.candidateTabs,
+.confidenceFilters {
   display: flex;
   gap: 0.4rem;
   margin-bottom: 1rem;
   overflow-x: auto;
 }
 
-.candidateTabs a {
+.candidateTabs a,
+.confidenceFilters a {
   min-height: 2.8rem;
   padding: 0.75rem 0.9rem;
   border: 1px solid rgba(0, 58, 112, 0.25);
@@ -1023,9 +1025,57 @@
   white-space: nowrap;
 }
 
-.candidateTabs a[data-active="true"] {
+.candidateTabs a[data-active="true"],
+.confidenceFilters a[data-active="true"] {
   background: #003a70;
   color: white;
+}
+
+.confidenceFilters {
+  margin-top: -0.45rem;
+}
+
+.confidenceFilters a {
+  min-height: 2.35rem;
+  padding-block: 0.55rem;
+}
+
+.bulkReviewBar {
+  display: grid;
+  grid-template-columns: minmax(13rem, 1fr) auto auto minmax(23rem, auto);
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  border: 1px solid #003a70;
+  background: #fffdf9;
+}
+
+.bulkReviewBar > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.bulkReviewBar strong {
+  color: #003a70;
+  font-size: 0.76rem;
+  letter-spacing: 0.07em;
+}
+
+.bulkReviewBar span {
+  color: #5b6268;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.bulkReviewBar form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bulkReviewBar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .candidateList {
@@ -1035,16 +1085,54 @@
 
 .candidateCard {
   display: grid;
-  grid-template-columns: minmax(12rem, 0.65fr) minmax(20rem, 1.5fr) minmax(11rem, 0.55fr);
+  grid-template-columns: minmax(18rem, 0.8fr) minmax(24rem, 1.4fr) minmax(11rem, 0.48fr);
   gap: 1rem;
   padding: 1rem;
   border: 1px solid rgba(0, 58, 112, 0.2);
   background: #fffdf9;
 }
 
+.candidateCard[data-selected="true"] {
+  border-color: #568200;
+  box-shadow: inset 0 0 0 1px #568200;
+}
+
+.candidateSelection {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.16);
+  color: #003a70;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.candidateSelection label {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.candidateSelection input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: #003a70;
+}
+
+.candidateSelection input:focus-visible {
+  outline: 3px solid #f1a800;
+  outline-offset: 3px;
+}
+
 .externalPreview {
   display: grid;
-  min-height: 16rem;
+  min-height: 22rem;
   place-items: center;
   overflow: hidden;
   background: #eee9df;
@@ -1052,16 +1140,8 @@
 
 .externalPreview img {
   width: 100%;
-  height: 16rem;
+  height: 22rem;
   object-fit: contain;
-}
-
-.candidateBody h2 {
-  margin-bottom: 0.6rem;
-  color: #003a70;
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  line-height: 1.05;
 }
 
 .candidateHeading {
@@ -1073,6 +1153,51 @@
   color: #70777c;
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.productComparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.8rem;
+}
+
+.productComparison section {
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: white;
+}
+
+.productComparison section:last-child {
+  background: #f2eee6;
+}
+
+.productComparison dl {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+}
+
+.productComparison dl > div {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.productComparison dt {
+  color: #70777c;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.productComparison dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #003a70;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .confidenceBadge {
@@ -1181,6 +1306,14 @@
 
   .candidateCard {
     grid-template-columns: minmax(10rem, 0.55fr) minmax(18rem, 1fr);
+  }
+
+  .bulkReviewBar {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .bulkReviewBar form {
+    grid-column: 1 / -1;
   }
 
   .candidateActions {
@@ -1360,6 +1493,25 @@
   }
   .candidateCard {
     grid-template-columns: 1fr;
+  }
+
+  .bulkReviewBar {
+    grid-template-columns: 1fr;
+  }
+
+  .bulkReviewBar form {
+    display: grid;
+    grid-column: auto;
+  }
+
+  .productComparison {
+    grid-template-columns: 1fr;
+  }
+
+  .externalPreview,
+  .externalPreview img {
+    min-height: 19rem;
+    height: 19rem;
   }
 
   .candidateActions {

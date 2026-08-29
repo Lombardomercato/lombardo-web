@@ -23,6 +23,14 @@ const imageQueuePage = readFileSync(
   fileURLToPath(new URL("../app/admin/(protected)/imagenes/page.tsx", import.meta.url)),
   "utf8",
 );
+const imageQueue = readFileSync(
+  fileURLToPath(new URL("../app/admin/(protected)/imagenes/ImageCandidateQueue.tsx", import.meta.url)),
+  "utf8",
+);
+const adminActions = readFileSync(
+  fileURLToPath(new URL("../app/admin/actions.ts", import.meta.url)),
+  "utf8",
+);
 const pilot = JSON.parse(
   readFileSync(
     fileURLToPath(new URL("../docs/image-matching-pilot-2026-08-28.json", import.meta.url)),
@@ -67,7 +75,7 @@ test("media vive en Storage, mantiene una principal e impide publicar externos s
   assert.match(migration, /external_image_candidates_publish_check/);
 });
 
-test("matching humano y publicación de imagen son decisiones separadas", () => {
+test("matching y publicación nunca ocurren sin una decisión humana explícita", () => {
   assert.match(
     matchingReviewMigration,
     /alter table public\.external_image_candidates[\s\S]*add column match_review_status text not null default 'pending'/,
@@ -86,9 +94,18 @@ test("matching humano y publicación de imagen son decisiones separadas", () => 
   assert.match(reviewMethod, /match_review_status: status/);
   assert.match(reviewMethod, /reviewed_by: reviewerId/);
   assert.doesNotMatch(reviewMethod, /approval_status:|rights_status:/);
-  assert.match(imageQueuePage, /Aprobar no publica la imagen/);
-  assert.match(imageQueuePage, /PUBLICACIÓN AUTOMÁTICA = 0/);
-  assert.match(imageQueuePage, /publishImageCandidateAction/);
+  assert.match(imageQueuePage, /SIN APROBACIÓN AUTOMÁTICA/);
+  assert.match(imageQueue, /APROBAR SELECCIONADOS/);
+  assert.match(imageQueue, /bulkReviewImageCandidatesAction/);
+  assert.match(adminActions, /reviewImageCandidate\(id, "approved", session\.authUserId\)[\s\S]*publishApprovedImageCandidate\(id, session\.authUserId\)/);
+});
+
+test("seleccionar HIGH visibles excluye MEDIUM y los filtros se ejecutan server-side", () => {
+  assert.match(imageQueue, /filter\(\(candidate\) => candidate\.confidenceBand === "high"\)/);
+  assert.match(imageQueue, /setSelected\(new Set\(highIds\)\)/);
+  assert.match(imageQueuePage, /confidenceBand: confidence/);
+  assert.match(adminStore, /input\.confidenceBand === "high"[\s\S]*match_confidence", "gte\.0\.9"/);
+  assert.match(adminStore, /input\.confidenceBand === "medium"[\s\S]*"gte\.0\.72"[\s\S]*"lt\.0\.9"/);
 });
 
 test("sólo un match humano aprobado puede convertirse en media pública externa", () => {
