@@ -928,6 +928,21 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
           },
         ]);
       }
+      if (String(url).includes("/rest/v1/supplier_product_public_media?")) {
+        return Response.json([
+          {
+            id: "44444444-4444-4444-8444-444444444444",
+            supplier_product_id: "11111111-1111-4111-8111-111111111111",
+            bucket_id: "product-media",
+            storage_path: "11111111-1111-4111-8111-111111111111/botella.webp",
+            alt_text: "Botella Bodega Runia Malbec",
+            width: 900,
+            height: 1200,
+            position: 0,
+            is_primary: true,
+          },
+        ]);
+      }
       return Response.json(
         [
           {
@@ -946,7 +961,7 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
     },
   });
   const page = await provider.getProductPage();
-  assert.equal(requestedUrls.length, 2);
+  assert.equal(requestedUrls.length, 3);
   assert.match(requestedUrls[0] ?? "", /\/rest\/v1\/suppliers\?/);
   assert.equal(
     new URL(requestedUrls[0] ?? "https://invalid").searchParams.get("code"),
@@ -955,6 +970,7 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
   assert.match(requestedUrls[1] ?? "", /\/rest\/v1\/supplier_products\?/);
   assert.match(requestedUrls[1] ?? "", /eligibility_status=eq\.safe/);
   assert.match(requestedUrls[1] ?? "", /retail_prices\.price_type=eq\.retail/);
+  assert.match(requestedUrls[2] ?? "", /supplier_product_public_media/);
   assert.doesNotMatch(requestedUrls.join("\n"), /commerce_lombardo_dev_product_adapter/);
   assert.equal(page.total, 3265);
   assert.equal(page.products.length, 1);
@@ -970,6 +986,8 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
   assert.equal(page.products[0]?.price, 17_500);
   assert.equal(page.products[0]?.availability, "SUPPLIER_AVAILABLE");
   assert.equal(page.products[0]?.stock.quantity, 0);
+  assert.equal(page.products[0]?.images.length, 1);
+  assert.match(page.products[0]?.images[0]?.src ?? "", /storage\/v1\/object\/public\/product-media/);
 
   const product = page.products[0];
   assert.ok(product);
@@ -977,13 +995,13 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
   const cartProducts = await provider.getProductsByIds([product.id]);
   assert.equal(detail?.id, product.id);
   assert.equal(cartProducts[0]?.id, product.id);
-  assert.equal(requestedUrls.length, 4);
+  assert.equal(requestedUrls.length, 7);
   assert.equal(
-    new URL(requestedUrls[2] ?? "https://invalid").searchParams.get("id"),
+    new URL(requestedUrls[3] ?? "https://invalid").searchParams.get("id"),
     "eq.11111111-1111-4111-8111-111111111111",
   );
   assert.equal(
-    new URL(requestedUrls[3] ?? "https://invalid").searchParams.get("id"),
+    new URL(requestedUrls[5] ?? "https://invalid").searchParams.get("id"),
     "in.(11111111-1111-4111-8111-111111111111)",
   );
 });
@@ -1003,6 +1021,9 @@ test("RuniaCommerceProvider rechaza filas no SAFE aunque el backend las entregue
             tenants: { slug: "lombardo-dev", status: "active" },
           },
         ]);
+      }
+      if (String(url).includes("/rest/v1/supplier_product_public_media?")) {
+        return Response.json([]);
       }
       return Response.json(
         [

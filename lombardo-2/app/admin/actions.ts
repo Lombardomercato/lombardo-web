@@ -167,3 +167,95 @@ export async function retryOrderNotificationAction(formData: FormData) {
   }
   redirect(destination);
 }
+
+function productDestination(productId: string, type: "success" | "error", message: string) {
+  return `/admin/productos/${productId}?${type}=${encodeURIComponent(message)}`;
+}
+
+export async function saveProductEditorialAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const productId = formText(formData, "productId", 36);
+  let destination = productDestination(productId, "success", "Datos editoriales guardados.");
+  try {
+    const categorySlug = formText(formData, "categorySlug", 80).toLocaleLowerCase("es-AR");
+    if (categorySlug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(categorySlug)) {
+      throw new AdminStoreError("La categoría debe usar letras, números y guiones.", 422);
+    }
+    const status = formText(formData, "editorialStatus", 16) === "approved" ? "approved" : "draft";
+    await createAdminStore().saveProductEditorial(productId, {
+      nameOverride: formText(formData, "nameOverride", 240) || undefined,
+      brandName: formText(formData, "brandName", 120) || undefined,
+      categorySlug: categorySlug || undefined,
+      description: formText(formData, "description", 4000) || undefined,
+      tags: formText(formData, "tags", 1200).split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 30),
+      internalNotes: formText(formData, "internalNotes", 4000) || undefined,
+      status,
+    }, session.authUserId);
+    revalidatePath("/admin/productos");
+    revalidatePath(`/admin/productos/${productId}`);
+    revalidatePath("/productos");
+  } catch (error) {
+    destination = productDestination(
+      productId,
+      "error",
+      error instanceof AdminStoreError ? error.message : "No pudimos guardar los datos editoriales.",
+    );
+  }
+  redirect(destination);
+}
+
+export async function setPrimaryProductImageAction(formData: FormData) {
+  await requireAdminSession();
+  const productId = formText(formData, "productId", 36);
+  const mediaId = formText(formData, "mediaId", 36);
+  let destination = productDestination(productId, "success", "Imagen principal actualizada.");
+  try {
+    await createAdminStore().setPrimaryMedia(productId, mediaId);
+    revalidatePath(`/admin/productos/${productId}`);
+    revalidatePath("/productos");
+  } catch (error) {
+    destination = productDestination(productId, "error", error instanceof AdminStoreError ? error.message : "No pudimos actualizar la imagen.");
+  }
+  redirect(destination);
+}
+
+export async function moveProductImageAction(formData: FormData) {
+  await requireAdminSession();
+  const productId = formText(formData, "productId", 36);
+  const mediaId = formText(formData, "mediaId", 36);
+  const direction = formText(formData, "direction", 8);
+  let destination = productDestination(productId, "success", "Galería ordenada.");
+  try {
+    const store = createAdminStore();
+    const product = await store.getProduct(productId);
+    if (!product) throw new AdminStoreError("Producto no encontrado.", 404);
+    const ids = product.media.map((media) => media.id);
+    const index = ids.indexOf(mediaId);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= ids.length) {
+      throw new AdminStoreError("La imagen ya está en ese extremo.", 422);
+    }
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    await store.reorderProductMedia(productId, ids);
+    revalidatePath(`/admin/productos/${productId}`);
+    revalidatePath("/productos");
+  } catch (error) {
+    destination = productDestination(productId, "error", error instanceof AdminStoreError ? error.message : "No pudimos ordenar la galería.");
+  }
+  redirect(destination);
+}
+
+export async function deleteProductImageAction(formData: FormData) {
+  await requireAdminSession();
+  const productId = formText(formData, "productId", 36);
+  const mediaId = formText(formData, "mediaId", 36);
+  let destination = productDestination(productId, "success", "Imagen eliminada.");
+  try {
+    await createAdminStore().deleteProductMedia(productId, mediaId);
+    revalidatePath(`/admin/productos/${productId}`);
+    revalidatePath("/productos");
+  } catch (error) {
+    destination = productDestination(productId, "error", error instanceof AdminStoreError ? error.message : "No pudimos eliminar la imagen.");
+  }
+  redirect(destination);
+}

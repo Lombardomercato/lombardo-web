@@ -84,10 +84,83 @@ export interface AdminProduct {
   name: string;
   presentation: string;
   category: string;
+  categorySlug: string;
+  brand: string;
   retailPrice: number | null;
+  imageUrl?: string;
   active: boolean;
   eligibilityStatus: "safe" | "blocked" | "pending_review" | "supplier_only_cost";
   publicationStatus: "published" | "not_published";
+}
+
+export type SupplierPriceType = "retail" | "wholesale" | "business" | "cost";
+
+export interface AdminProductPrice {
+  type: SupplierPriceType;
+  value: number | null;
+  origin: "current" | "candidate" | "unavailable";
+}
+
+export interface AdminProductMedia {
+  id: string;
+  url: string;
+  alt: string;
+  position: number;
+  isPrimary: boolean;
+  source: "manual_upload" | "supplier" | "brand_asset" | "external_approved";
+  sourceUrl?: string;
+  byteSize: number;
+  mimeType: string;
+}
+
+export interface AdminProductEditorial {
+  nameOverride?: string;
+  brandName?: string;
+  categorySlug?: string;
+  description?: string;
+  tags: string[];
+  internalNotes?: string;
+  status: "draft" | "approved";
+}
+
+export interface AdminProductDetail extends AdminProduct {
+  supplierName: string;
+  rawName: string;
+  rawPresentation: string;
+  prices: AdminProductPrice[];
+  media: AdminProductMedia[];
+  editorial: AdminProductEditorial;
+  anomalies: AdminCatalogAnomaly[];
+  lastSeen: string;
+}
+
+export interface AdminCatalogAnomaly {
+  id: string;
+  type: string;
+  severity: string;
+  status: string;
+  priceType?: string;
+  message: string;
+  observedPrice?: number;
+  lastDetectedAt: string;
+}
+
+export interface VinrosHealth {
+  status: "ok" | "attention" | "blocked";
+  lastSyncAt?: string;
+  nextSyncAt: string;
+  total: number;
+  safe: number;
+  blocked: number;
+  pendingReview: number;
+  supplierOnlyCost: number;
+  lastWriteAt?: string;
+  pricesUpdated: number;
+  alerts: Array<{ message: string; severity: string; at: string }>;
+}
+
+export interface VinrosReviewProduct extends AdminProductDetail {
+  reviewReason: string;
 }
 
 export interface AdminProductPage {

@@ -33,6 +33,7 @@ export function AdminShell({
           {newOrders > 0 ? <strong>{newOrders}</strong> : null}
         </Link>
         <Link href="/admin/productos">PRODUCTOS</Link>
+        <Link href="/admin/vinros">VINROS HEALTH</Link>
         <Link href="/admin/clientes">CLIENTES</Link>
       </nav>
       <main className={styles.adminMain}>{children}</main>

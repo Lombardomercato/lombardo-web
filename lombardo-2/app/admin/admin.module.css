@@ -294,7 +294,7 @@
 
 .filterForm {
   display: grid;
-  grid-template-columns: 1.4fr repeat(4, minmax(8.5rem, 0.7fr)) auto;
+  grid-template-columns: minmax(15rem, 1.5fr) repeat(2, minmax(10rem, 0.7fr)) auto;
   gap: 0.65rem;
   align-items: end;
   margin-bottom: 1rem;
@@ -484,6 +484,11 @@
   background: #fffdf9;
 }
 
+.productRow:hover {
+  border-color: #003a70;
+  background: white;
+}
+
 .eligibility {
   font-size: 0.72rem;
   font-weight: 700;
@@ -565,6 +570,329 @@
   letter-spacing: 0.08em;
 }
 
+.backLink {
+  display: inline-flex;
+  margin-bottom: 1rem;
+  color: #003a70;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.healthSummary,
+.healthTimeline,
+.reviewLinks,
+.imageUploadForm,
+.mediaCard {
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.healthSummary {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.2rem;
+}
+
+.healthSummary > strong,
+.healthBadge {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2.2rem;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid currentColor;
+  color: #416800;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.healthSummary[data-status="attention"] > strong,
+.healthBadge[data-status="attention"] {
+  background: #fff0b7;
+  color: #6e5100;
+}
+
+.healthSummary[data-status="blocked"] > strong,
+.healthBadge[data-status="blocked"] {
+  background: #ffd3cd;
+  color: #9d2019;
+}
+
+.healthTimeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-bottom: 1rem;
+}
+
+.healthTimeline > span {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-right: 1px solid rgba(0, 58, 112, 0.15);
+}
+
+.healthTimeline strong,
+.sourceLabel,
+.readOnlyNotice,
+.reviewReason,
+.priceGrid small,
+.priceGrid em {
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.reviewLinks {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.reviewLinks a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5.5rem;
+  padding: 1rem;
+  border-right: 1px solid rgba(0, 58, 112, 0.15);
+  color: #003a70;
+}
+
+.reviewLinks a:hover {
+  background: #e6e0d4;
+}
+
+.reviewLinks strong {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+}
+
+.alertList,
+.reviewProductList,
+.mediaGrid,
+.anomalyList {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.alertList article {
+  display: grid;
+  grid-template-columns: 6rem 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.17);
+  background: #fffdf9;
+}
+
+.reviewProduct {
+  padding: 1.1rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.reviewProduct > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.reviewProduct h2 {
+  color: #003a70;
+  font-size: 1.25rem;
+}
+
+.reviewReason,
+.readOnlyNotice {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: #fff0b7;
+  color: #6e5100;
+  line-height: 1.5;
+}
+
+.priceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(8rem, 1fr));
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.priceGrid > span {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(0, 58, 112, 0.16);
+}
+
+.priceGrid strong {
+  color: #003a70;
+  font-size: 1.15rem;
+}
+
+.priceGrid em {
+  color: #70777c;
+}
+
+.anomalyList {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.anomalyList li {
+  padding: 0.8rem;
+  border-left: 3px solid #e03c31;
+  background: #ffd3cd;
+  line-height: 1.45;
+}
+
+.productDetailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
+  gap: 1rem;
+}
+
+.sourceLabel {
+  width: fit-content;
+  margin-bottom: 0.6rem;
+  padding: 0.3rem 0.45rem;
+  background: #dce8f2;
+  color: #003a70;
+}
+
+.editorialForm,
+.imageUploadForm {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.editorialForm label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.editorialForm input,
+.editorialForm select,
+.editorialForm textarea,
+.imageUploadForm input {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba(0, 58, 112, 0.35);
+  border-radius: 0;
+  background: white;
+  color: #15212b;
+  font: inherit;
+}
+
+.imageUploadForm {
+  grid-template-columns: minmax(9rem, 0.45fr) repeat(2, minmax(12rem, 1fr)) minmax(10rem, 0.8fr);
+  align-items: end;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.uploadPreview {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 9rem;
+  place-items: center;
+  overflow: hidden;
+  background: #e6e0d4;
+  color: #70777c;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.uploadPreview img {
+  width: 100%;
+  height: 9rem;
+  object-fit: contain;
+}
+
+.checkField {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.checkField input {
+  width: 1rem;
+  min-height: 1rem;
+}
+
+.imageUploadForm > .primaryButton,
+.imageUploadForm > .formError {
+  grid-column: 2 / -1;
+}
+
+.mediaGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mediaCard {
+  display: grid;
+  grid-template-rows: 15rem auto auto;
+  gap: 0.8rem;
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.mediaPreview {
+  position: relative;
+  overflow: hidden;
+  background: #e6e0d4;
+}
+
+.mediaPreview img {
+  object-fit: contain;
+}
+
+.mediaCard p {
+  margin: 0.35rem 0;
+  overflow-wrap: anywhere;
+}
+
+.mediaCard a {
+  display: block;
+  margin-top: 0.4rem;
+  color: #003a70;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.mediaActions,
+.mediaActions form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.mediaActions .primaryButton,
+.mediaActions .secondaryButton,
+.mediaActions .dangerButton {
+  min-height: 2.3rem;
+  padding: 0.4rem 0.55rem;
+}
+
+.mediaActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
 @media (max-width: 1100px) {
   .metricGrid {
     grid-template-columns: repeat(3, minmax(10rem, 1fr));
@@ -581,6 +909,18 @@
 
   .filterForm {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .productDetailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .imageUploadForm {
+    grid-template-columns: minmax(9rem, 0.4fr) repeat(2, 1fr);
+  }
+
+  .mediaGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .productRow {
@@ -697,5 +1037,34 @@
   .customerRow > :nth-child(2),
   .customerRow > :nth-child(4) {
     grid-column: 1 / -1;
+  }
+
+  .healthSummary,
+  .healthTimeline,
+  .reviewLinks,
+  .priceGrid,
+  .imageUploadForm,
+  .mediaGrid,
+  .alertList article {
+    grid-template-columns: 1fr;
+  }
+
+  .healthTimeline > span {
+    border-right: 0;
+    border-bottom: 1px solid rgba(0, 58, 112, 0.15);
+  }
+
+  .reviewLinks a {
+    border-right: 0;
+    border-bottom: 1px solid rgba(0, 58, 112, 0.15);
+  }
+
+  .imageUploadForm > .primaryButton,
+  .imageUploadForm > .formError {
+    grid-column: auto;
+  }
+
+  .reviewProduct > header {
+    align-items: start;
   }
 }

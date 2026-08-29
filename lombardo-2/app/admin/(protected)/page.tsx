@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { AdminOrderRow } from "@/components/admin/AdminOrderRow";
-import { loadAdminDashboard } from "@/lib/server/admin/admin-data";
+import { loadAdminDashboard, loadVinrosHealth } from "@/lib/server/admin/admin-data";
+import { formatAdminDate } from "@/lib/admin/presentation";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import styles from "../admin.module.css";
 
 export default async function AdminDashboardPage() {
-  const dashboard = await loadAdminDashboard();
+  const [dashboard, vinros] = await Promise.all([loadAdminDashboard(), loadVinrosHealth()]);
   const metrics = [
     ["PEDIDOS HOY", String(dashboard.todayOrders), false],
     ["FACTURACIÓN HOY", formatCurrency(dashboard.todayRevenue), false],
@@ -32,6 +33,18 @@ export default async function AdminDashboardPage() {
             <strong>{value}</strong>
           </article>
         ))}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>
+          <h2>VINROS HEALTH</h2>
+          <Link href="/admin/vinros">VER OPERACIÓN</Link>
+        </div>
+        <article className={styles.healthSummary} data-status={vinros.status}>
+          <strong>{vinros.status === "ok" ? "OK" : vinros.status === "attention" ? "ATENCIÓN" : "BLOQUEADO"}</strong>
+          <span>{vinros.total} productos · {vinros.safe} SAFE</span>
+          <span>Última sincronización: {vinros.lastSyncAt ? formatAdminDate(vinros.lastSyncAt) : "sin datos"}</span>
+        </article>
       </section>
 
       <section className={styles.section}>

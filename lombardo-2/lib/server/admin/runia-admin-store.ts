@@ -1,6 +1,13 @@
 import "server-only";
 
-import { categoryForSupplierSku } from "../../commerce/runia-catalog-mapper";
+import { randomUUID } from "node:crypto";
+import { Buffer } from "node:buffer";
+
+import {
+  categoryFilterForPostgrest,
+  categoryForSupplierSku,
+  inferBrand,
+} from "../../commerce/runia-catalog-mapper";
 import type {
   CheckoutCustomer,
   DeliveryAddress,
@@ -17,10 +24,17 @@ import type {
   AdminOrder,
   AdminOrderFilters,
   AdminProduct,
+  AdminProductDetail,
+  AdminProductEditorial,
+  AdminProductMedia,
+  AdminProductPrice,
   AdminProductPage,
   AdminSession,
   FulfillmentStatus,
   FulfillmentTransitionResult,
+  SupplierPriceType,
+  VinrosHealth,
+  VinrosReviewProduct,
 } from "./types";
 import type {
   OrderNotification,
@@ -83,10 +97,81 @@ interface ProductRow {
   normalized_presentation: string | null;
   active: boolean;
   eligibility_status: AdminProduct["eligibilityStatus"];
+  source_raw?: unknown;
+  last_seen?: string;
   retail_prices:
     | Array<{ price_type: string; current_price: number | string }>
     | { price_type: string; current_price: number | string }
     | null;
+  editorial?: ProductEditorialRow | ProductEditorialRow[] | null;
+  media?: ProductMediaRow[] | ProductMediaRow | null;
+  all_prices?: ProductPriceRow[] | ProductPriceRow | null;
+  anomalies?: ProductAnomalyRow[] | ProductAnomalyRow | null;
+}
+
+interface ProductPriceRow {
+  price_type: SupplierPriceType;
+  current_price: number | string;
+}
+
+interface ProductEditorialRow {
+  name_override: string | null;
+  brand_name: string | null;
+  category_slug: string | null;
+  description: string | null;
+  tags: string[] | null;
+  internal_notes: string | null;
+  editorial_status: "draft" | "approved";
+}
+
+interface ProductMediaRow {
+  id: string;
+  bucket_id: string;
+  storage_path: string;
+  mime_type: string;
+  byte_size: number;
+  alt_text: string;
+  position: number;
+  is_primary: boolean;
+  source: AdminProductMedia["source"];
+  source_url: string | null;
+  approval_status: string;
+  rights_status: string;
+}
+
+interface ProductAnomalyRow {
+  id: string;
+  anomaly_type: string;
+  severity: string;
+  status: string;
+  price_type: string | null;
+  observed_price: number | string | null;
+  message: string;
+  last_detected_at: string;
+}
+
+interface AutomationRunRow {
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  products: number;
+  prices_changed: number;
+  blocked: number;
+  pending_review: number;
+  supplier_only_cost: number;
+  errors: number;
+  error_summary: string | null;
+  alert_status: string;
+  alert_error_summary: string | null;
+  dry_run_result: { policyCanWrite?: boolean; blockingReasons?: string[] } | null;
+  write_result: { pricesUpdated?: number; pricesUnchanged?: number } | null;
+}
+
+interface SyncRunRow {
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  prices_updated: number;
 }
 
 interface SupplierRow {
@@ -97,6 +182,9 @@ interface TransitionRow {
   changed: boolean;
   order_record: OrderRow;
 }
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface NotificationRow {
   id: string | number;
@@ -234,6 +322,30 @@ function argentinaDayKey(value: string | Date) {
 function contentRangeTotal(response: Response, fallback: number) {
   const value = response.headers.get("content-range")?.match(/\/(\d+)$/)?.[1];
   return value ? Number(value) : fallback;
+}
+
+function asArray<T>(value: T | T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : value ? [value] : [];
+}
+
+function nextVinrosSync(from = new Date()) {
+  const next = new Date(from);
+  next.setUTCHours(6, 20, 0, 0);
+  if (next <= from) next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString();
+}
+
+function candidatePrices(sourceRaw: unknown) {
+  if (!sourceRaw || typeof sourceRaw !== "object") return new Map<SupplierPriceType, number>();
+  const candidates = (sourceRaw as { observedCandidates?: unknown }).observedCandidates;
+  if (!candidates || typeof candidates !== "object") return new Map<SupplierPriceType, number>();
+  const result = new Map<SupplierPriceType, number>();
+  for (const type of ["retail", "wholesale", "business", "cost"] as const) {
+    const value = (candidates as Record<string, unknown>)[type];
+    const price = Number(value && typeof value === "object" ? (value as { price?: unknown }).price : NaN);
+    if (Number.isFinite(price) && price > 0) result.set(type, price);
+  }
+  return result;
 }
 
 export class AdminStoreError extends Error {
@@ -523,18 +635,60 @@ export class RuniaAdminStore {
     return this.supplierIdPromise;
   }
 
+  private mediaUrl(row: ProductMediaRow) {
+    const path = row.storage_path
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    return `${this.url}/storage/v1/object/public/${encodeURIComponent(row.bucket_id)}/${path}`;
+  }
+
+  private mapProduct(row: ProductRow): AdminProduct {
+    const prices = asArray(row.retail_prices);
+    const retail = Number(
+      prices.find((price) => price.price_type === "retail")?.current_price,
+    );
+    const retailPrice = Number.isFinite(retail) && retail > 0 ? retail : null;
+    const supplierCategory = categoryForSupplierSku(row.supplier_sku);
+    const editorial = asArray(row.editorial)[0];
+    const category = editorial?.category_slug
+      ? { slug: editorial.category_slug, name: editorial.category_slug.replaceAll("-", " ") }
+      : supplierCategory;
+    const brand = editorial?.brand_name?.trim() || inferBrand(row.name_raw).name;
+    const image = asArray(row.media)
+      .filter((item) => item.approval_status === "approved")
+      .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.position - b.position)[0];
+    const published =
+      row.active && row.eligibility_status === "safe" && retailPrice !== null;
+    return {
+      id: row.id,
+      sku: row.supplier_sku,
+      name: editorial?.name_override?.trim() || row.name_raw,
+      presentation: row.normalized_presentation || row.presentation_raw || "Unidad",
+      category: category.name.replace(/(^|\s)\p{L}/gu, (letter) => letter.toLocaleUpperCase("es-AR")),
+      categorySlug: category.slug,
+      brand,
+      retailPrice,
+      imageUrl: image ? this.mediaUrl(image) : undefined,
+      active: row.active,
+      eligibilityStatus: row.eligibility_status,
+      publicationStatus: published ? "published" : "not_published",
+    };
+  }
+
   async listProducts(input: {
     offset?: number;
     limit?: number;
     search?: string;
     eligibility?: AdminProduct["eligibilityStatus"];
+    category?: string;
   }): Promise<AdminProductPage> {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
     const limit = Math.min(100, Math.max(20, Math.trunc(input.limit ?? 50)));
     const search = new URLSearchParams({
       select:
-        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices(price_type,current_price)",
+        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status)",
       supplier_id: `eq.${supplierId}`,
       order: "normalized_name.asc,id.asc",
       offset: String(offset),
@@ -543,9 +697,13 @@ export class RuniaAdminStore {
     if (input.eligibility) {
       search.set("eligibility_status", `eq.${input.eligibility}`);
     }
+    const categoryFilter = input.category
+      ? categoryFilterForPostgrest(input.category)
+      : null;
+    if (categoryFilter) search.append(categoryFilter.key, categoryFilter.value);
     const term = safeSearch(input.search);
     if (term) {
-      search.set(
+      search.append(
         "or",
         `(normalized_name.ilike.*${term}*,supplier_sku.ilike.*${term}*)`,
       );
@@ -555,31 +713,7 @@ export class RuniaAdminStore {
       "No pudimos cargar los productos.",
       "count=exact",
     );
-    const products = rows.map((row): AdminProduct => {
-      const prices = Array.isArray(row.retail_prices)
-        ? row.retail_prices
-        : row.retail_prices
-          ? [row.retail_prices]
-          : [];
-      const retail = Number(
-        prices.find((price) => price.price_type === "retail")?.current_price,
-      );
-      const retailPrice = Number.isFinite(retail) && retail > 0 ? retail : null;
-      const published =
-        row.active && row.eligibility_status === "safe" && retailPrice !== null;
-      return {
-        id: row.id,
-        sku: row.supplier_sku,
-        name: row.name_raw,
-        presentation:
-          row.normalized_presentation || row.presentation_raw || "Unidad",
-        category: categoryForSupplierSku(row.supplier_sku).name,
-        retailPrice,
-        active: row.active,
-        eligibilityStatus: row.eligibility_status,
-        publicationStatus: published ? "published" : "not_published",
-      };
-    });
+    const products = rows.map((row) => this.mapProduct(row));
     const total = contentRangeTotal(response, offset + products.length);
     return {
       products,
@@ -588,6 +722,315 @@ export class RuniaAdminStore {
       limit,
       hasMore: offset + products.length < total,
     };
+  }
+
+  async getProduct(productId: string): Promise<AdminProductDetail | null> {
+    if (!UUID_PATTERN.test(productId)) return null;
+    const supplierId = await this.supplierId();
+    const search = new URLSearchParams({
+      select:
+        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,source_raw,last_seen,retail_prices:supplier_prices(price_type,current_price),all_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status),anomalies:supplier_anomalies(id,anomaly_type,severity,status,price_type,observed_price,message,last_detected_at)",
+      id: `eq.${productId}`,
+      supplier_id: `eq.${supplierId}`,
+      "anomalies.status": "eq.open",
+      "anomalies.order": "last_detected_at.desc",
+      limit: "1",
+    });
+    const { rows } = await this.rows<ProductRow>(
+      `supplier_products?${search}`,
+      "No pudimos cargar el producto.",
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const base = this.mapProduct(row);
+    const current = new Map(
+      asArray(row.all_prices).map((price) => [price.price_type, Number(price.current_price)]),
+    );
+    const candidates = candidatePrices(row.source_raw);
+    const prices: AdminProductPrice[] = (["retail", "wholesale", "business", "cost"] as const).map(
+      (type) => {
+        const currentValue = current.get(type);
+        if (Number.isFinite(currentValue) && Number(currentValue) > 0) {
+          return { type, value: Number(currentValue), origin: "current" };
+        }
+        const candidate = candidates.get(type);
+        return candidate
+          ? { type, value: candidate, origin: "candidate" }
+          : { type, value: null, origin: "unavailable" };
+      },
+    );
+    const editorialRow = asArray(row.editorial)[0];
+    const editorial: AdminProductEditorial = {
+      nameOverride: editorialRow?.name_override ?? undefined,
+      brandName: editorialRow?.brand_name ?? undefined,
+      categorySlug: editorialRow?.category_slug ?? undefined,
+      description: editorialRow?.description ?? undefined,
+      tags: editorialRow?.tags ?? [],
+      internalNotes: editorialRow?.internal_notes ?? undefined,
+      status: editorialRow?.editorial_status ?? "draft",
+    };
+    const media = asArray(row.media)
+      .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.position - b.position)
+      .map((item): AdminProductMedia => ({
+        id: item.id,
+        url: this.mediaUrl(item),
+        alt: item.alt_text,
+        position: item.position,
+        isPrimary: item.is_primary,
+        source: item.source,
+        sourceUrl: item.source_url ?? undefined,
+        byteSize: item.byte_size,
+        mimeType: item.mime_type,
+      }));
+    return {
+      ...base,
+      supplierName: "VINROS",
+      rawName: row.name_raw,
+      rawPresentation: row.presentation_raw || row.normalized_presentation || "Unidad",
+      prices,
+      media,
+      editorial,
+      anomalies: asArray(row.anomalies).map((anomaly) => ({
+        id: anomaly.id,
+        type: anomaly.anomaly_type,
+        severity: anomaly.severity,
+        status: anomaly.status,
+        priceType: anomaly.price_type ?? undefined,
+        message: anomaly.message,
+        observedPrice: anomaly.observed_price === null ? undefined : Number(anomaly.observed_price),
+        lastDetectedAt: anomaly.last_detected_at,
+      })),
+      lastSeen: row.last_seen || "",
+    };
+  }
+
+  private async productCount(supplierId: string, eligibility?: AdminProduct["eligibilityStatus"]) {
+    const search = new URLSearchParams({
+      select: "id",
+      supplier_id: `eq.${supplierId}`,
+      limit: "1",
+    });
+    if (eligibility) search.set("eligibility_status", `eq.${eligibility}`);
+    const { response } = await this.rows<{ id: string }>(
+      `supplier_products?${search}`,
+      "No pudimos calcular el estado de VINROS.",
+      "count=exact",
+    );
+    return contentRangeTotal(response, 0);
+  }
+
+  async getVinrosHealth(): Promise<VinrosHealth> {
+    const supplierId = await this.supplierId();
+    const automationSearch = new URLSearchParams({
+      select:
+        "started_at,finished_at,status,products,prices_changed,blocked,pending_review,supplier_only_cost,errors,error_summary,alert_status,alert_error_summary,dry_run_result,write_result",
+      supplier_id: `eq.${supplierId}`,
+      order: "started_at.desc",
+      limit: "1",
+    });
+    const syncSearch = new URLSearchParams({
+      select: "started_at,finished_at,status,prices_updated",
+      supplier_id: `eq.${supplierId}`,
+      order: "started_at.desc",
+      limit: "1",
+    });
+    const alertSearch = new URLSearchParams({
+      select: "id,anomaly_type,severity,status,price_type,observed_price,message,last_detected_at",
+      supplier_id: `eq.${supplierId}`,
+      status: "eq.open",
+      order: "last_detected_at.desc",
+      limit: "6",
+    });
+    const [total, safe, blocked, pendingReview, supplierOnlyCost, automationResult, syncResult, alertResult] =
+      await Promise.all([
+        this.productCount(supplierId),
+        this.productCount(supplierId, "safe"),
+        this.productCount(supplierId, "blocked"),
+        this.productCount(supplierId, "pending_review"),
+        this.productCount(supplierId, "supplier_only_cost"),
+        this.rows<AutomationRunRow>(
+          `supplier_sync_automation_runs?${automationSearch}`,
+          "No pudimos cargar la última automatización VINROS.",
+        ),
+        this.rows<SyncRunRow>(
+          `supplier_sync_runs?${syncSearch}`,
+          "No pudimos cargar el último write VINROS.",
+        ),
+        this.rows<ProductAnomalyRow>(
+          `supplier_anomalies?${alertSearch}`,
+          "No pudimos cargar las alertas VINROS.",
+        ),
+      ]);
+    const automation = automationResult.rows[0];
+    const sync = syncResult.rows[0];
+    const lastSyncAt = automation?.finished_at || automation?.started_at;
+    const stale = !lastSyncAt || Date.now() - new Date(lastSyncAt).getTime() > 36 * 60 * 60_000;
+    const blockedRun =
+      !automation ||
+      automation.dry_run_result?.policyCanWrite === false ||
+      ["failed", "blocked"].includes(automation.status);
+    const attention = stale || automation?.status !== "completed" || automation.errors > 0;
+    const alerts = alertResult.rows.map((alert) => ({
+      message: alert.message,
+      severity: alert.severity,
+      at: alert.last_detected_at,
+    }));
+    for (const reason of automation?.dry_run_result?.blockingReasons ?? []) {
+      alerts.unshift({ message: reason, severity: "error", at: lastSyncAt || new Date().toISOString() });
+    }
+    if (automation?.error_summary) {
+      alerts.unshift({ message: automation.error_summary, severity: "error", at: lastSyncAt || new Date().toISOString() });
+    }
+    return {
+      status: blockedRun ? "blocked" : attention ? "attention" : "ok",
+      lastSyncAt,
+      nextSyncAt: nextVinrosSync(),
+      total,
+      safe,
+      blocked,
+      pendingReview,
+      supplierOnlyCost,
+      lastWriteAt: sync?.finished_at || sync?.started_at,
+      pricesUpdated: sync?.prices_updated ?? automation?.write_result?.pricesUpdated ?? automation?.prices_changed ?? 0,
+      alerts: alerts.slice(0, 6),
+    };
+  }
+
+  async listVinrosReviewProducts(
+    eligibility: "blocked" | "pending_review",
+  ): Promise<VinrosReviewProduct[]> {
+    const page = await this.listProducts({ eligibility, limit: 100 });
+    const details = await Promise.all(page.products.map((product) => this.getProduct(product.id)));
+    return details.filter((product): product is AdminProductDetail => Boolean(product)).map((product) => ({
+      ...product,
+      reviewReason:
+        product.anomalies[0]?.message ||
+        (eligibility === "blocked"
+          ? "El producto quedó bloqueado por los guardrails VINROS."
+          : "El producto requiere revisión humana antes de publicar precios."),
+    }));
+  }
+
+  async saveProductEditorial(
+    productId: string,
+    input: AdminProductEditorial,
+    operatorUserId: string,
+  ) {
+    if (!UUID_PATTERN.test(productId)) throw new AdminStoreError("Producto inválido.", 400);
+    const product = await this.getProduct(productId);
+    if (!product) throw new AdminStoreError("Producto no encontrado.", 404);
+    const response = await this.request("supplier_product_editorial?on_conflict=supplier_product_id", {
+      method: "POST",
+      body: JSON.stringify({
+        supplier_product_id: productId,
+        name_override: input.nameOverride || null,
+        brand_name: input.brandName || null,
+        category_slug: input.categorySlug || null,
+        description: input.description || null,
+        tags: input.tags,
+        internal_notes: input.internalNotes || null,
+        editorial_status: input.status,
+        updated_by: operatorUserId,
+      }),
+    }, "resolution=merge-duplicates,return=minimal");
+    if (!response.ok) throw new AdminStoreError("No pudimos guardar los datos editoriales.", 502);
+  }
+
+  private async rpc(name: string, body: Record<string, unknown>) {
+    const response = await this.request(`rpc/${name}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new AdminStoreError("No pudimos actualizar las imágenes.", 502);
+    return response;
+  }
+
+  async uploadProductImage(input: {
+    productId: string;
+    bytes: Uint8Array;
+    mimeType: string;
+    altText: string;
+    sourceUrl?: string;
+    makePrimary: boolean;
+    operatorUserId: string;
+  }) {
+    const product = await this.getProduct(input.productId);
+    if (!product) throw new AdminStoreError("Producto no encontrado.", 404);
+    const extensions: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/avif": "avif",
+    };
+    const extension = extensions[input.mimeType];
+    if (!extension || input.bytes.byteLength < 20 || input.bytes.byteLength > 5 * 1024 * 1024) {
+      throw new AdminStoreError("La imagen debe ser JPG, PNG, WebP o AVIF y pesar hasta 5 MB.", 422);
+    }
+    const path = `${input.productId}/${randomUUID()}.${extension}`;
+    const storageHeaders: Record<string, string> = {
+      apikey: this.secretKey,
+      "Content-Type": input.mimeType,
+      "Cache-Control": "31536000",
+      "x-upsert": "false",
+    };
+    if (!this.secretKey.startsWith("sb_secret_")) storageHeaders.Authorization = `Bearer ${this.secretKey}`;
+    const upload = await this.fetcher(
+      `${this.url}/storage/v1/object/product-media/${path}`,
+      { method: "POST", headers: storageHeaders, body: Buffer.from(input.bytes), cache: "no-store" },
+    );
+    if (!upload.ok) throw new AdminStoreError("No pudimos subir la imagen.", 502);
+    try {
+      await this.rpc("supplier_attach_product_media", {
+        p_supplier_product_id: input.productId,
+        p_bucket_id: "product-media",
+        p_storage_path: path,
+        p_mime_type: input.mimeType,
+        p_byte_size: input.bytes.byteLength,
+        p_alt_text: input.altText,
+        p_source: "manual_upload",
+        p_source_url: input.sourceUrl || null,
+        p_make_primary: input.makePrimary,
+        p_created_by: input.operatorUserId,
+      });
+    } catch (error) {
+      await this.deleteStorageObject("product-media", path).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async deleteStorageObject(bucket: string, path: string) {
+    const headers = this.headers();
+    delete headers["Content-Type"];
+    const response = await this.fetcher(
+      `${this.url}/storage/v1/object/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`,
+      { method: "DELETE", headers, cache: "no-store" },
+    );
+    if (!response.ok && response.status !== 404) throw new AdminStoreError("La imagen se quitó del catálogo, pero el archivo requiere limpieza.", 502);
+  }
+
+  async setPrimaryMedia(productId: string, mediaId: string) {
+    await this.rpc("supplier_set_primary_media", {
+      p_supplier_product_id: productId,
+      p_media_id: mediaId,
+    });
+  }
+
+  async reorderProductMedia(productId: string, mediaIds: string[]) {
+    await this.rpc("supplier_reorder_product_media", {
+      p_supplier_product_id: productId,
+      p_media_ids: mediaIds,
+    });
+  }
+
+  async deleteProductMedia(productId: string, mediaId: string) {
+    const response = await this.rpc("supplier_delete_product_media", {
+      p_supplier_product_id: productId,
+      p_media_id: mediaId,
+    });
+    const payload = (await response.json()) as { bucketId?: string; storagePath?: string };
+    if (payload.bucketId && payload.storagePath) {
+      await this.deleteStorageObject(payload.bucketId, payload.storagePath);
+    }
   }
 
   async listCustomers(): Promise<AdminCustomer[]> {

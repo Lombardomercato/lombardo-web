@@ -87,6 +87,18 @@ export interface RuniaSupplierProductRow {
     | null;
 }
 
+export interface RuniaPublicMediaRow {
+  id: string;
+  supplier_product_id: string;
+  bucket_id: string;
+  storage_path: string;
+  alt_text: string;
+  width: number | null;
+  height: number | null;
+  position: number;
+  is_primary: boolean;
+}
+
 const normalize = (value: string) =>
   value
     .normalize("NFD")
@@ -128,7 +140,7 @@ export function categoryFilterForPostgrest(categorySlug: string) {
   };
 }
 
-function inferBrand(name: string) {
+export function inferBrand(name: string) {
   const tokens = name.trim().split(/\s+/).filter(Boolean);
   const uppercaseTokens: string[] = [];
   for (const token of tokens.slice(0, 4)) {
@@ -167,7 +179,10 @@ function retailPrice(row: RuniaSupplierProductRow) {
   return price;
 }
 
-export function mapRuniaSupplierProduct(row: RuniaSupplierProductRow): Product {
+export function mapRuniaSupplierProduct(
+  row: RuniaSupplierProductRow,
+  images: Product["images"] = [],
+): Product {
   if (
     row.eligibility_status !== "safe" ||
     !row.active ||
@@ -197,7 +212,7 @@ export function mapRuniaSupplierProduct(row: RuniaSupplierProductRow): Product {
     price: retailPrice(row),
     availability: "SUPPLIER_AVAILABLE",
     stock: { available: true, quantity: 0 },
-    images: [],
+    images,
     active: true,
     featured: false,
     situations: [],

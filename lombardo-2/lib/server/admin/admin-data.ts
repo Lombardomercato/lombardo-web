@@ -23,9 +23,27 @@ export async function loadAdminProducts(input: {
   limit?: number;
   search?: string;
   eligibility?: AdminProduct["eligibilityStatus"];
+  category?: string;
 }) {
   await requireAdminSession();
   return createAdminStore().listProducts(input);
+}
+
+export async function loadAdminProduct(productId: string) {
+  await requireAdminSession();
+  return createAdminStore().getProduct(productId);
+}
+
+export async function loadVinrosHealth() {
+  await requireAdminSession();
+  return createAdminStore().getVinrosHealth();
+}
+
+export async function loadVinrosReviewProducts(
+  status: "blocked" | "pending_review",
+) {
+  await requireAdminSession();
+  return createAdminStore().listVinrosReviewProducts(status);
 }
 
 export async function loadAdminCustomers() {

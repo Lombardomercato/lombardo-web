@@ -1,4 +1,4 @@
-import type { Category } from "../../types/commerce.ts";
+import type { Category, ProductImage } from "../../types/commerce.ts";
 import type { ServerProductSource } from "../server/orders/order-dependencies.ts";
 import { ServerOrderError } from "../server/orders/server-order-error.ts";
 import {
@@ -6,6 +6,7 @@ import {
   mapRuniaSupplierProduct,
   runiaProductIdFromProductSlug,
   RUNIA_CATALOG_CATEGORIES,
+  type RuniaPublicMediaRow,
   type RuniaSupplierProductRow,
 } from "./runia-catalog-mapper.ts";
 import {
@@ -102,7 +103,7 @@ export class RuniaCommerceProvider
     );
     const queryTimeMs = performance.now() - startedAt;
     if (!response.ok) {
-      providerError("Runia Dev no pudo entregar el catálogo real de VINROS.");
+      providerError("Runia no pudo entregar el catálogo real de VINROS.");
     }
     return {
       rows: (await response.json()) as T[],
@@ -122,7 +123,7 @@ export class RuniaCommerceProvider
     });
     const { rows } = await this.fetchRows<SupplierRow>("suppliers", search);
     if (rows.length !== 1 || !rows[0]?.id || !rows[0].active) {
-      providerError("Runia Dev no tiene un proveedor VINROS activo y unívoco.");
+      providerError("Runia no tiene un proveedor VINROS activo y unívoco.");
     }
     return rows[0];
   }
@@ -146,11 +147,55 @@ export class RuniaCommerceProvider
     });
   }
 
-  private mapRows(rows: RuniaSupplierProductRow[]) {
+  private publicImageUrl(media: RuniaPublicMediaRow) {
+    const path = media.storage_path
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    return `${this.url}/storage/v1/object/public/${encodeURIComponent(media.bucket_id)}/${path}`;
+  }
+
+  private async loadImages(productIds: string[]) {
+    const ids = Array.from(new Set(productIds)).filter((id) => UUID_PATTERN.test(id));
+    if (!ids.length) return { images: new Map(), queryTimeMs: 0 };
+    const search = new URLSearchParams({
+      select:
+        "id,supplier_product_id,bucket_id,storage_path,alt_text,width,height,position,is_primary",
+      supplier_product_id: `in.(${ids.join(",")})`,
+      order: "is_primary.desc,position.asc,id.asc",
+      limit: String(Math.min(ids.length * 20, 2000)),
+    });
+    const { rows, queryTimeMs } = await this.fetchRows<RuniaPublicMediaRow>(
+      "supplier_product_public_media",
+      search,
+    );
+    const images = new Map<string, ProductImage[]>();
+    for (const media of rows) {
+      const productImages = images.get(media.supplier_product_id) ?? [];
+      productImages.push({
+        id: media.id,
+        src: this.publicImageUrl(media),
+        alt: media.alt_text,
+        width: media.width ?? undefined,
+        height: media.height ?? undefined,
+        position: media.position,
+      });
+      images.set(media.supplier_product_id, productImages);
+    }
+    return { images, queryTimeMs };
+  }
+
+  private async mapRows(rows: RuniaSupplierProductRow[]) {
     try {
-      return rows.map(mapRuniaSupplierProduct);
+      const media = await this.loadImages(rows.map((row) => row.runia_product_id));
+      return {
+        products: rows.map((row) =>
+          mapRuniaSupplierProduct(row, media.images.get(row.runia_product_id) ?? []),
+        ),
+        imageQueryTimeMs: media.queryTimeMs,
+      };
     } catch {
-      providerError("Runia Dev devolvió un producto SAFE con datos inválidos.");
+      providerError("Runia devolvió un producto SAFE con datos inválidos.");
     }
   }
 
@@ -192,7 +237,8 @@ export class RuniaCommerceProvider
         search,
         true,
       );
-    const products = this.mapRows(rows);
+    const mapped = await this.mapRows(rows);
+    const products = mapped.products;
     const total = contentRangeTotal(response, offset + products.length);
 
     return {
@@ -201,7 +247,7 @@ export class RuniaCommerceProvider
       offset,
       limit,
       hasMore: offset + products.length < total,
-      queryTimeMs: Math.round(queryTimeMs * 10) / 10,
+      queryTimeMs: Math.round((queryTimeMs + mapped.imageQueryTimeMs) * 10) / 10,
     };
   }
 
@@ -218,7 +264,7 @@ export class RuniaCommerceProvider
       "supplier_products",
       search,
     );
-    return this.mapRows(rows);
+    return (await this.mapRows(rows)).products;
   }
 
   async getProductBySlug(slug: string) {
@@ -235,10 +281,10 @@ export class RuniaCommerceProvider
     );
     if (!rows.length) return null;
     if (rows.length !== 1) {
-      providerError("Runia Dev devolvió más de un producto para el mismo ID.");
+      providerError("Runia devolvió más de un producto para el mismo ID.");
     }
 
-    return this.mapRows(rows)[0] ?? null;
+    return (await this.mapRows(rows)).products[0] ?? null;
   }
 
   async getCategories(): Promise<Category[]> {
