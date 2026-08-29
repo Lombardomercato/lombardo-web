@@ -19,6 +19,10 @@ const massImageMigration = readFileSync(
   fileURLToPath(new URL("../supabase/migrations/20260829041000_positano_mass_image_jobs.sql", import.meta.url)),
   "utf8",
 );
+const unpublishMigration = readFileSync(
+  fileURLToPath(new URL("../supabase/migrations/20260829043000_external_media_unpublish_state.sql", import.meta.url)),
+  "utf8",
+);
 const massImageRoute = readFileSync(
   fileURLToPath(new URL("../app/api/admin/image-jobs/[id]/publish/route.ts", import.meta.url)),
   "utf8",
@@ -131,6 +135,12 @@ test("el job masivo es server-only, por lotes y no puede publicar productos no S
   assert.match(massImageRoute, /MAX_BATCH_SIZE = 10/);
   assert.match(massImageRoute, /Promise\.allSettled/);
   assert.doesNotMatch(massImageRoute, /NEXT_PUBLIC_/);
+});
+
+test("una imagen externa incorrecta puede volver a estado rechazado sin quedar pública", () => {
+  assert.match(unpublishMigration, /approval_status in \('pending', 'rejected'\)/);
+  assert.match(unpublishMigration, /rights_status in \('unknown', 'restricted'\)/);
+  assert.match(migration, /supplier_product_public_media[\s\S]*media\.approval_status = 'approved'/);
 });
 
 test("sólo un match humano aprobado puede convertirse en media pública externa", () => {
