@@ -51,9 +51,16 @@ export async function loadAdminImageCandidates(input: {
   limit?: number;
   status?: MatchReviewStatus;
   confidenceBand?: MatchConfidenceBand;
+  publicationStatus?: "pending" | "approved" | "rejected";
+  approvalMode?: "auto_exact_high";
 } = {}) {
   await requireAdminSession();
   return createAdminStore().listImageCandidates(input);
+}
+
+export async function loadProductsWithoutImageMatch(input: { offset?: number; limit?: number } = {}) {
+  await requireAdminSession();
+  return createAdminStore().listProductsWithoutImageMatch(input);
 }
 
 export async function loadAdminCustomers() {

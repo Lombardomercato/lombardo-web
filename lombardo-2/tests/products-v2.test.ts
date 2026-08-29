@@ -15,6 +15,14 @@ const externalPublicationMigration = readFileSync(
   fileURLToPath(new URL("../supabase/migrations/20260829033000_publish_approved_external_candidate.sql", import.meta.url)),
   "utf8",
 );
+const massImageMigration = readFileSync(
+  fileURLToPath(new URL("../supabase/migrations/20260829041000_positano_mass_image_jobs.sql", import.meta.url)),
+  "utf8",
+);
+const massImageRoute = readFileSync(
+  fileURLToPath(new URL("../app/api/admin/image-jobs/[id]/publish/route.ts", import.meta.url)),
+  "utf8",
+);
 const adminStore = readFileSync(
   fileURLToPath(new URL("../lib/server/admin/runia-admin-store.ts", import.meta.url)),
   "utf8",
@@ -75,7 +83,7 @@ test("media vive en Storage, mantiene una principal e impide publicar externos s
   assert.match(migration, /external_image_candidates_publish_check/);
 });
 
-test("matching y publicación nunca ocurren sin una decisión humana explícita", () => {
+test("matching humano sigue separado de publicación y la excepción masiva queda acotada a exactos HIGH", () => {
   assert.match(
     matchingReviewMigration,
     /alter table public\.external_image_candidates[\s\S]*add column match_review_status text not null default 'pending'/,
@@ -94,7 +102,9 @@ test("matching y publicación nunca ocurren sin una decisión humana explícita"
   assert.match(reviewMethod, /match_review_status: status/);
   assert.match(reviewMethod, /reviewed_by: reviewerId/);
   assert.doesNotMatch(reviewMethod, /approval_status:|rights_status:/);
-  assert.match(imageQueuePage, /SIN APROBACIÓN AUTOMÁTICA/);
+  assert.match(massImageMigration, /v_score < 0\.9/);
+  assert.match(massImageMigration, /mismatchWarnings/);
+  assert.match(massImageMigration, /approvalMode[\s\S]*auto_exact_high/);
   assert.match(imageQueue, /APROBAR SELECCIONADOS/);
   assert.match(imageQueue, /bulkReviewImageCandidatesAction/);
   assert.match(adminActions, /reviewImageCandidate\(id, "approved", session\.authUserId\)[\s\S]*publishApprovedImageCandidate\(id, session\.authUserId\)/);
@@ -105,9 +115,22 @@ test("seleccionar HIGH visibles excluye MEDIUM y los filtros se ejecutan server-
   assert.match(imageQueue, /setSelected\(new Set\(highIds\)\)/);
   assert.match(imageQueue, /status === "approved" && candidate\.publicationStatus === "pending"/);
   assert.match(imageQueue, /PUBLICAR SELECCIONADOS/);
-  assert.match(imageQueuePage, /confidenceBand: confidence/);
+  assert.match(imageQueuePage, /PENDIENTES MEDIUM/);
+  assert.match(imageQueuePage, /AUTO-PUBLICADAS/);
+  assert.match(imageQueuePage, /SIN MATCH/);
   assert.match(adminStore, /input\.confidenceBand === "high"[\s\S]*match_confidence", "gte\.0\.9"/);
   assert.match(adminStore, /input\.confidenceBand === "medium"[\s\S]*"gte\.0\.72"[\s\S]*"lt\.0\.9"/);
+});
+
+test("el job masivo es server-only, por lotes y no puede publicar productos no SAFE", () => {
+  assert.match(massImageMigration, /supplier_image_jobs[\s\S]*force row level security/);
+  assert.match(massImageMigration, /revoke all on table public\.supplier_image_jobs from public, anon, authenticated/);
+  assert.match(massImageMigration, /eligibility_status <> 'safe'/);
+  assert.match(massImageMigration, /supplier_products_without_image_match/);
+  assert.match(massImageRoute, /Bearer \(\[A-Za-z0-9_-\]/);
+  assert.match(massImageRoute, /MAX_BATCH_SIZE = 10/);
+  assert.match(massImageRoute, /Promise\.allSettled/);
+  assert.doesNotMatch(massImageRoute, /NEXT_PUBLIC_/);
 });
 
 test("sólo un match humano aprobado puede convertirse en media pública externa", () => {

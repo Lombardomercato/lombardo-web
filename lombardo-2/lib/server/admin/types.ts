@@ -202,6 +202,21 @@ export interface AdminImageCandidatePage {
   hasMore: boolean;
 }
 
+export interface AdminUnmatchedImageProduct {
+  id: string;
+  sku: string;
+  name: string;
+  presentation: string;
+}
+
+export interface AdminUnmatchedImageProductPage {
+  products: AdminUnmatchedImageProduct[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
 export interface AdminProductPage {
   products: AdminProduct[];
   total: number;

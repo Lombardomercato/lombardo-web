@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
@@ -27,6 +27,7 @@ import type {
   AdminDashboard,
   AdminImageCandidate,
   AdminImageCandidatePage,
+  AdminUnmatchedImageProductPage,
   MatchConfidenceBand,
   AdminOrder,
   AdminOrderFilters,
@@ -225,6 +226,8 @@ interface ImageCandidateRow {
     externalProductName?: unknown;
     matchedFields?: unknown;
     mismatchWarnings?: unknown;
+    externalPresentation?: unknown;
+    approvalMode?: unknown;
   } | null;
   created_at: string;
   product: Pick<
@@ -1164,6 +1167,8 @@ export class RuniaAdminStore {
     limit?: number;
     status?: MatchReviewStatus;
     confidenceBand?: MatchConfidenceBand;
+    publicationStatus?: "pending" | "approved" | "rejected";
+    approvalMode?: "auto_exact_high";
   } = {}): Promise<AdminImageCandidatePage> {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
@@ -1177,6 +1182,8 @@ export class RuniaAdminStore {
       limit: String(limit),
     });
     if (input.status) search.set("match_review_status", `eq.${input.status}`);
+    if (input.publicationStatus) search.set("approval_status", `eq.${input.publicationStatus}`);
+    if (input.approvalMode) search.set("provenance->>approvalMode", `eq.${input.approvalMode}`);
     if (input.confidenceBand === "high") search.set("match_confidence", "gte.0.9");
     if (input.confidenceBand === "medium") {
       search.append("match_confidence", "gte.0.72");
@@ -1211,6 +1218,9 @@ export class RuniaAdminStore {
             ? row.provenance.externalProductName
             : product.name_raw,
         externalPresentation:
+          typeof row.provenance?.externalPresentation === "string"
+            ? row.provenance.externalPresentation
+            :
           matchedFields.find((item) => /(?:\d+[,.]?\d*)\s*(?:ml|cc|cl|l|g|kg|oz|unidades?|c[aá]psulas?)/iu.test(item))
           || "No informada por la fuente",
         source: row.source,
@@ -1228,6 +1238,38 @@ export class RuniaAdminStore {
     });
     const total = contentRangeTotal(response, offset + candidates.length);
     return { candidates, total, offset, limit, hasMore: offset + candidates.length < total };
+  }
+
+  async listProductsWithoutImageMatch(input: { offset?: number; limit?: number } = {}): Promise<AdminUnmatchedImageProductPage> {
+    const supplierId = await this.supplierId();
+    const offset = Math.max(0, Math.trunc(input.offset ?? 0));
+    const limit = Math.min(100, Math.max(10, Math.trunc(input.limit ?? 25)));
+    const search = new URLSearchParams({
+      select: "id,supplier_sku,name_raw,presentation",
+      supplier_id: `eq.${supplierId}`,
+      order: "name_raw.asc,id.asc",
+      offset: String(offset),
+      limit: String(limit),
+    });
+    const { rows, response } = await this.rows<{
+      id: string;
+      supplier_sku: string;
+      name_raw: string;
+      presentation: string;
+    }>(`supplier_products_without_image_match?${search}`, "No pudimos cargar los productos sin match.", "count=exact");
+    const products = rows.map((row) => ({
+      id: row.id,
+      sku: row.supplier_sku,
+      name: row.name_raw,
+      presentation: row.presentation,
+    }));
+    const total = contentRangeTotal(response, offset + products.length);
+    return { products, total, offset, limit, hasMore: offset + products.length < total };
+  }
+
+  async importPositanoCandidates(items: unknown[]) {
+    const response = await this.rpc("supplier_import_positano_candidates", { p_items: items });
+    return await response.json() as Array<{ candidate_id: string; auto_publish: boolean }>;
   }
 
   async reviewImageCandidate(
@@ -1263,7 +1305,7 @@ export class RuniaAdminStore {
     if (!response.ok) throw new AdminStoreError("No pudimos guardar la revisión.", 502);
   }
 
-  async publishApprovedImageCandidate(candidateId: string, operatorUserId: string) {
+  async publishApprovedImageCandidate(candidateId: string, operatorUserId: string | null) {
     if (!UUID_PATTERN.test(candidateId)) throw new AdminStoreError("Candidato inválido.", 400);
     const supplierId = await this.supplierId();
     const search = new URLSearchParams({
@@ -1287,7 +1329,11 @@ export class RuniaAdminStore {
       throw new AdminStoreError("El candidato ya no puede publicarse.", 409);
     }
 
-    let imageUrl = await assertPublicHttpsUrl(candidate.image_url);
+    const preferredSourceImage = candidate.image_url.replace(
+      /-480-0([.](?:webp|avif|png|jpe?g))$/i,
+      "-1024-1024$1",
+    );
+    let imageUrl = await assertPublicHttpsUrl(preferredSourceImage);
     let imageResponse: Response | undefined;
     for (let redirect = 0; redirect < 4; redirect += 1) {
       imageResponse = await this.fetcher(imageUrl, {
@@ -1313,8 +1359,31 @@ export class RuniaAdminStore {
     if (bytes.byteLength < 20 || bytes.byteLength > 5 * 1024 * 1024 || !validImageBytes(bytes, mimeType)) {
       throw new AdminStoreError("El archivo externo no coincide con una imagen válida de hasta 5 MB.", 422);
     }
+    const contentSha256 = createHash("sha256").update(bytes).digest("hex");
+    const encodedFilename = imageUrl.pathname.split("/").pop() || `source.${extension}`;
+    let sourceFilename = encodedFilename;
+    try {
+      sourceFilename = decodeURIComponent(encodedFilename);
+    } catch {
+      sourceFilename = encodedFilename;
+    }
+    sourceFilename = sourceFilename.slice(0, 240);
 
-    const path = `${product.supplier_sku.toLocaleLowerCase("en-US")}/${randomUUID()}.${extension}`;
+    const duplicateSearch = new URLSearchParams({
+      select: "bucket_id,storage_path",
+      content_sha256: `eq.${contentSha256}`,
+      order: "created_at.asc",
+      limit: "1",
+    });
+    const { rows: duplicates } = await this.rows<{ bucket_id: string; storage_path: string }>(
+      `supplier_product_media?${duplicateSearch}`,
+      "No pudimos comprobar imágenes duplicadas.",
+    );
+
+    const path = duplicates[0]?.storage_path
+      || `${product.supplier_sku.toLocaleLowerCase("en-US")}/${randomUUID()}.${extension}`;
+    const bucketId = duplicates[0]?.bucket_id || "product-media";
+    let uploaded = false;
     const storageHeaders: Record<string, string> = {
       apikey: this.secretKey,
       "Content-Type": mimeType,
@@ -1322,27 +1391,70 @@ export class RuniaAdminStore {
       "x-upsert": "false",
     };
     if (!this.secretKey.startsWith("sb_secret_")) storageHeaders.Authorization = `Bearer ${this.secretKey}`;
-    const upload = await this.fetcher(`${this.url}/storage/v1/object/product-media/${path}`, {
-      method: "POST",
-      headers: storageHeaders,
-      body: Buffer.from(bytes),
-      cache: "no-store",
-    });
-    if (!upload.ok) throw new AdminStoreError("No pudimos guardar la imagen aprobada.", 502);
+    if (!duplicates[0]) {
+      const upload = await this.fetcher(`${this.url}/storage/v1/object/product-media/${path}`, {
+        method: "POST",
+        headers: storageHeaders,
+        body: Buffer.from(bytes),
+        cache: "no-store",
+      });
+      if (!upload.ok) throw new AdminStoreError("No pudimos guardar la imagen aprobada.", 502);
+      uploaded = true;
+    }
     try {
-      await this.rpc("supplier_publish_external_candidate", {
+      await this.rpc("supplier_publish_external_candidate_v2", {
         p_candidate_id: candidate.id,
-        p_bucket_id: "product-media",
+        p_bucket_id: bucketId,
         p_storage_path: path,
         p_mime_type: mimeType,
         p_byte_size: bytes.byteLength,
         p_alt_text: `Imagen de ${product.name_raw}`,
         p_created_by: operatorUserId,
+        p_source_image_url: imageUrl.toString(),
+        p_source_filename: sourceFilename,
+        p_content_sha256: contentSha256,
+        p_fetched_at: new Date().toISOString(),
       });
     } catch (error) {
-      await this.deleteStorageObject("product-media", path).catch(() => undefined);
+      if (uploaded) await this.deleteStorageObject(bucketId, path).catch(() => undefined);
       throw error;
     }
+  }
+
+  async authorizeImageJob(jobId: string, tokenHash: string) {
+    if (!UUID_PATTERN.test(jobId) || !/^[0-9a-f]{64}$/.test(tokenHash)) return null;
+    const tenantId = await this.tenantRecordId();
+    const search = new URLSearchParams({
+      select: "id,status,expires_at,items_total,items_processed",
+      id: `eq.${jobId}`,
+      tenant_id: `eq.${tenantId}`,
+      token_hash: `eq.${tokenHash}`,
+      status: "in.(ready,running)",
+      expires_at: `gt.${new Date().toISOString()}`,
+      limit: "1",
+    });
+    const { rows } = await this.rows<{ id: string; status: string; expires_at: string; items_total: number; items_processed: number }>(
+      `supplier_image_jobs?${search}`,
+      "No pudimos validar el trabajo de imágenes.",
+    );
+    return rows[0] || null;
+  }
+
+  async recordImageJobBatch(jobId: string, input: {
+    processed: number;
+    published: number;
+    failed: number;
+    errorSummary?: string;
+    complete: boolean;
+  }) {
+    await this.rpc("supplier_record_image_job_batch", {
+      p_job_id: jobId,
+      p_processed: input.processed,
+      p_published: input.published,
+      p_failed: input.failed,
+      p_error_summary: input.errorSummary || null,
+      p_complete: input.complete,
+    });
   }
 
   private mapCustomer(

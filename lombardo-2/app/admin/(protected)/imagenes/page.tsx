@@ -1,67 +1,94 @@
 import Link from "next/link";
-import { loadAdminImageCandidates } from "@/lib/server/admin/admin-data";
+import { loadAdminImageCandidates, loadProductsWithoutImageMatch } from "@/lib/server/admin/admin-data";
 import type { MatchConfidenceBand, MatchReviewStatus } from "@/lib/server/admin/types";
 import styles from "../../admin.module.css";
 import { ImageCandidateQueue } from "./ImageCandidateQueue";
 
 type Query = Record<string, string | string[] | undefined>;
-const STATUSES: MatchReviewStatus[] = ["pending", "approved", "rejected"];
-const CONFIDENCE_BANDS: MatchConfidenceBand[] = ["high", "medium", "low"];
+type ImageView = "published" | "auto" | "medium" | "unmatched" | "rejected";
+const VIEWS: ImageView[] = ["published", "auto", "medium", "unmatched", "rejected"];
 
 function value(query: Query, key: string) {
   return typeof query[key] === "string" ? query[key] : "";
 }
 
-function pageHref(status: MatchReviewStatus, confidence?: MatchConfidenceBand, offset = 0) {
-  const params = new URLSearchParams({ status });
-  if (confidence) params.set("confidence", confidence);
+function pageHref(view: ImageView, offset = 0) {
+  const params = new URLSearchParams({ view });
   if (offset > 0) params.set("offset", String(offset));
   return `/admin/imagenes?${params}`;
 }
 
 export default async function AdminImageCandidatesPage({ searchParams }: { searchParams: Promise<Query> }) {
   const query = await searchParams;
-  const requestedStatus = value(query, "status");
-  const status = STATUSES.includes(requestedStatus as MatchReviewStatus)
-    ? requestedStatus as MatchReviewStatus
-    : "pending";
-  const requestedConfidence = value(query, "confidence");
-  const confidence = CONFIDENCE_BANDS.includes(requestedConfidence as MatchConfidenceBand)
-    ? requestedConfidence as MatchConfidenceBand
-    : undefined;
+  const requestedView = value(query, "view") as ImageView;
+  const view = VIEWS.includes(requestedView) ? requestedView : "medium";
   const offset = /^\d+$/.test(value(query, "offset")) ? Number(value(query, "offset")) : 0;
-  const page = await loadAdminImageCandidates({ status, confidenceBand: confidence, offset, limit: 25 });
   const success = value(query, "success");
   const error = value(query, "error");
+
+  let status: MatchReviewStatus = "pending";
+  let confidence: MatchConfidenceBand | undefined;
+  let publicationStatus: "pending" | "approved" | "rejected" | undefined;
+  let approvalMode: "auto_exact_high" | undefined;
+  if (view === "published") {
+    status = "approved";
+    publicationStatus = "approved";
+  } else if (view === "auto") {
+    status = "approved";
+    publicationStatus = "approved";
+    approvalMode = "auto_exact_high";
+  } else if (view === "medium") {
+    status = "pending";
+    confidence = "medium";
+    publicationStatus = "pending";
+  } else if (view === "rejected") {
+    status = "rejected";
+  }
+
+  const page = view === "unmatched"
+    ? await loadProductsWithoutImageMatch({ offset, limit: 25 })
+    : await loadAdminImageCandidates({ status, confidenceBand: confidence, publicationStatus, approvalMode, offset, limit: 25 });
+  const unmatchedPage = "products" in page ? page : null;
+  const candidatePage = "candidates" in page ? page : null;
 
   return (
     <>
       <header className={styles.pageHeader}>
-        <div><p className={styles.eyebrow}>MATCHING · REVISIÓN HUMANA</p><h1>CANDIDATOS DE IMAGEN.</h1></div>
-        <p>Compará producto, presentación e imagen. Aprobar es la acción explícita que registra y publica la imagen principal.</p>
+        <div><p className={styles.eyebrow}>MATCHING · POSITANO</p><h1>IMÁGENES.</h1></div>
+        <p>Origen y estado de publicación visibles. Los matches dudosos siempre requieren revisión humana.</p>
       </header>
       {success ? <p className={styles.notice}>{success}</p> : null}
       {error ? <p className={styles.errorNotice}>{error}</p> : null}
-      <nav className={styles.candidateTabs} aria-label="Estado de candidatos">
-        <Link data-active={status === "pending"} href={pageHref("pending", confidence)}>PENDIENTES</Link>
-        <Link data-active={status === "approved"} href={pageHref("approved", confidence)}>APROBADAS</Link>
-        <Link data-active={status === "rejected"} href={pageHref("rejected", confidence)}>RECHAZADAS</Link>
+      <nav className={styles.candidateTabs} aria-label="Estado de imágenes">
+        <Link data-active={view === "published"} href={pageHref("published")}>PUBLICADAS</Link>
+        <Link data-active={view === "auto"} href={pageHref("auto")}>AUTO-PUBLICADAS</Link>
+        <Link data-active={view === "medium"} href={pageHref("medium")}>PENDIENTES MEDIUM</Link>
+        <Link data-active={view === "unmatched"} href={pageHref("unmatched")}>SIN MATCH</Link>
+        <Link data-active={view === "rejected"} href={pageHref("rejected")}>RECHAZADAS</Link>
       </nav>
-      <nav className={styles.confidenceFilters} aria-label="Confianza de candidatos">
-        <Link data-active={!confidence} href={pageHref(status)}>TODAS</Link>
-        <Link data-active={confidence === "high"} href={pageHref(status, "high")}>HIGH</Link>
-        <Link data-active={confidence === "medium"} href={pageHref(status, "medium")}>MEDIUM</Link>
-        <Link data-active={confidence === "low"} href={pageHref(status, "low")}>LOW</Link>
-      </nav>
-      <p className={styles.readOnlyNotice}>SIN APROBACIÓN AUTOMÁTICA · “Seleccionar HIGH” nunca incluye MEDIUM · {page.total} candidatos en este filtro.</p>
+      <p className={styles.readOnlyNotice}>{page.total} productos o candidatos en este filtro.</p>
 
-      {page.candidates.length
-        ? <ImageCandidateQueue candidates={page.candidates} status={status} confidence={confidence} />
-        : <p className={styles.emptyState}>No hay candidatos en este estado y nivel de confianza.</p>}
+      {view === "unmatched" ? (
+        unmatchedPage?.products.length ? (
+          <div className={styles.productList}>
+            {unmatchedPage.products.map((product) => (
+              <Link className={styles.productRow} href={`/admin/productos/${product.id}`} key={product.id}>
+                <strong>{product.sku}</strong>
+                <span><strong>{product.name}</strong><small className={styles.muted}>{product.presentation}</small></span>
+                <span>POSITANO · SIN CANDIDATO</span>
+              </Link>
+            ))}
+          </div>
+        ) : <p className={styles.emptyState}>No hay productos SAFE sin imagen y sin candidato.</p>
+      ) : (
+        candidatePage?.candidates.length
+          ? <ImageCandidateQueue candidates={candidatePage.candidates} status={status} confidence={confidence} />
+          : <p className={styles.emptyState}>No hay candidatos en este filtro.</p>
+      )}
 
-      <nav className={styles.pagination} aria-label="Paginación de candidatos">
-        {page.offset > 0 ? <Link className={styles.secondaryButton} href={pageHref(status, confidence, page.offset - page.limit)}>ANTERIOR</Link> : <span />}
-        {page.hasMore ? <Link className={styles.secondaryButton} href={pageHref(status, confidence, page.offset + page.limit)}>SIGUIENTE</Link> : null}
+      <nav className={styles.pagination} aria-label="Paginación de imágenes">
+        {page.offset > 0 ? <Link className={styles.secondaryButton} href={pageHref(view, page.offset - page.limit)}>ANTERIOR</Link> : <span />}
+        {page.hasMore ? <Link className={styles.secondaryButton} href={pageHref(view, page.offset + page.limit)}>SIGUIENTE</Link> : null}
       </nav>
     </>
   );
