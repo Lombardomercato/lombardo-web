@@ -30,6 +30,11 @@ import {
   parseAdminPromotionInput,
   PromotionAdminValidationError,
 } from "@/lib/server/promotions/promotion-admin-validation";
+import {
+  createSecretCellarService,
+  SecretCellarInputError,
+} from "@/lib/server/secret-cellar/secret-cellar-service";
+import { SecretCellarStoreError } from "@/lib/server/secret-cellar/secret-cellar-store";
 
 export interface AdminLoginState {
   error?: string;
@@ -177,6 +182,77 @@ export async function updatePromotionAction(formData: FormData) {
   } catch (error) {
     const message = error instanceof AdminStoreError || error instanceof PromotionAdminValidationError ? error.message : "No pudimos actualizar la promoción.";
     destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+function secretCellarError(error: unknown) {
+  return error instanceof SecretCellarInputError || error instanceof SecretCellarStoreError
+    ? error.message
+    : "No pudimos actualizar La Cava Secreta.";
+}
+
+export async function updateSecretCellarSettingsAction(formData: FormData) {
+  let destination = "/admin/cava-secreta";
+  try {
+    const session = await requireAdminRole("admin");
+    const number = (name: string) => Number(formText(formData, name, 10));
+    await createSecretCellarService().updateSettings({
+      enabled: formData.get("enabled") === "on",
+      candidateCount: number("candidateCount"),
+      clueCount: number("clueCount"),
+      rewardPercentage: number("rewardPercentage"),
+      rewardValidHours: number("rewardValidHours"),
+    }, session.authUserId);
+    revalidatePath("/");
+    revalidatePath("/cava-secreta");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Configuración guardada. Se aplica al próximo desafío que se genere.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(secretCellarError(error))}`;
+  }
+  redirect(destination);
+}
+
+export async function regenerateNextSecretCellarAction() {
+  let destination = "/admin/cava-secreta";
+  try {
+    await requireAdminRole("admin");
+    await createSecretCellarService().regenerateNextChallenge();
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("El desafío de mañana fue regenerado. El de hoy no cambió.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(secretCellarError(error))}`;
+  }
+  redirect(destination);
+}
+
+export async function excludeSecretCellarProductAction(formData: FormData) {
+  let destination = "/admin/cava-secreta";
+  try {
+    const session = await requireAdminRole("admin");
+    await createSecretCellarService().addExclusion(
+      formText(formData, "productId", 36),
+      formText(formData, "reason", 500),
+      session.authUserId,
+    );
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Producto excluido de futuros desafíos.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(secretCellarError(error))}`;
+  }
+  redirect(destination);
+}
+
+export async function removeSecretCellarExclusionAction(formData: FormData) {
+  let destination = "/admin/cava-secreta";
+  try {
+    await requireAdminRole("admin");
+    await createSecretCellarService().removeExclusion(formText(formData, "productId", 36));
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("El producto vuelve a ser elegible para próximos desafíos.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(secretCellarError(error))}`;
   }
   redirect(destination);
 }

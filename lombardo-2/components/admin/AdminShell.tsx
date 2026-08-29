@@ -37,6 +37,7 @@ export function AdminShell({
         <Link href="/admin/imagenes">IMÁGENES</Link>
         <Link href="/admin/clientes">CLIENTES</Link>
         <Link href="/admin/promociones">PROMOCIONES</Link>
+        <Link href="/admin/cava-secreta">CAVA SECRETA</Link>
       </nav>
       <main className={styles.adminMain}>{children}</main>
     </div>

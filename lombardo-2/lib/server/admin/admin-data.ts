@@ -87,3 +87,9 @@ export async function loadAdminPromotion(promotionId: string) {
   await requireAdminSession();
   return createAdminStore().getPromotion(promotionId);
 }
+
+export async function loadAdminSecretCellar() {
+  await requireAdminSession();
+  const { createSecretCellarService } = await import("../secret-cellar/secret-cellar-service");
+  return createSecretCellarService().getAdminDashboard();
+}
