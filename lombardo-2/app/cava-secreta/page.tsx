@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/layout/Footer";
 import { SecretCellarGame } from "@/components/secret-cellar/SecretCellarGame";
+import { logCommerceError } from "@/lib/server/dev-commerce-logger";
 import { createSecretCellarService } from "@/lib/server/secret-cellar/secret-cellar-service";
 import styles from "./page.module.css";
 
@@ -26,7 +27,10 @@ export default async function SecretCellarPage() {
   let experience;
   try {
     experience = await createSecretCellarService().getPublicExperience();
-  } catch {
+  } catch (error) {
+    logCommerceError("secret_cellar.challenge_failed", error, {
+      route: "/cava-secreta",
+    });
     experience = { enabled: false } as const;
   }
 

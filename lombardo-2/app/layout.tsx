@@ -59,25 +59,39 @@ const articulat = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
-    default: "LOMBARDO. | Vinos, regalos y cosas buenas.",
+    default: "Comprar vinos online en Rosario | LOMBARDO.",
     template: "%s | LOMBARDO.",
   },
   description: SITE.description,
   applicationName: "LOMBARDO.",
+  formatDetection: { email: false, address: false, telephone: false },
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
   robots:
     process.env.VERCEL_ENV === "production"
-      ? { index: true, follow: true }
+      ? {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+            "max-video-preview": -1,
+          },
+        }
       : { index: false, follow: false },
   openGraph: {
     type: "website",
-    locale: "es_AR",
+    locale: SITE.locale,
     siteName: "LOMBARDO.",
-    title: "LOMBARDO. | Quedar bien es fácil.",
+    title: "Comprar vinos, destilados y regalos online en Rosario | LOMBARDO.",
     description: SITE.description,
   },
   twitter: {
-    card: "summary",
-    title: "LOMBARDO. | Quedar bien es fácil.",
+    card: "summary_large_image",
+    title: "Comprar vinos online en Rosario | LOMBARDO.",
     description: SITE.description,
   },
 };

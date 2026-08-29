@@ -26,7 +26,15 @@ interface CatalogExplorerProps {
   initialPage: ProductPage;
   categories: Category[];
   initialCategory?: string;
+  heroTitle?: readonly [string, string];
+  heroDescription?: readonly [string, string];
 }
+
+const DEFAULT_HERO_TITLE = ["TODO LO", "BUENO."] as const;
+const DEFAULT_HERO_DESCRIPTION = [
+  "Para regalar, llevar o quedártelo.",
+  "Explorá por gusto o encontrá eso que ya tenés en mente.",
+] as const;
 
 function useDebouncedValue(value: string, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -101,9 +109,11 @@ export function CatalogExplorer({
   initialPage,
   categories,
   initialCategory = "todos",
+  heroTitle = DEFAULT_HERO_TITLE,
+  heroDescription = DEFAULT_HERO_DESCRIPTION,
 }: CatalogExplorerProps) {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState(initialCategory);
+  const category = initialCategory;
   const [mode, setMode] = useState<CatalogMode>("editorial");
   const [products, setProducts] = useState(initialPage.products);
   const [total, setTotal] = useState(initialPage.total);
@@ -206,12 +216,12 @@ export function CatalogExplorer({
           <span>ROSARIO</span>
         </div>
         <h1>
-          <span>TODO LO</span>
-          <span>BUENO.</span>
+          <span>{heroTitle[0]}</span>
+          <span>{heroTitle[1]}</span>
         </h1>
         <div className={styles.heroAside}>
-          <p>Para regalar, llevar o quedártelo.</p>
-          <p>Explorá por gusto o encontrá eso que ya tenés en mente.</p>
+          <p>{heroDescription[0]}</p>
+          <p>{heroDescription[1]}</p>
         </div>
       </header>
 
@@ -254,29 +264,26 @@ export function CatalogExplorer({
           </div>
         </div>
 
-        <div
+        <nav
           className={styles.categoryBar}
-          role="group"
-          aria-label="Filtrar por categoría"
+          aria-label="Categorías de productos"
         >
-          <button
-            type="button"
-            aria-pressed={category === "todos"}
-            onClick={() => setCategory("todos")}
+          <Link
+            href="/productos"
+            aria-current={category === "todos" ? "page" : undefined}
           >
             TODO
-          </button>
+          </Link>
           {categories.map((item) => (
-            <button
+            <Link
               key={item.id}
-              type="button"
-              aria-pressed={category === item.slug}
-              onClick={() => setCategory(item.slug)}
+              href={`/categorias/${item.slug}`}
+              aria-current={category === item.slug ? "page" : undefined}
             >
               {item.name}
-            </button>
+            </Link>
           ))}
-        </div>
+        </nav>
 
         <div className={styles.resultsHeading}>
           <h2 id="catalog-title">SELECCIÓN LOMBARDO</h2>
@@ -332,7 +339,6 @@ export function CatalogExplorer({
                   setRetryRequest((request) => request + 1);
                 } else {
                   setQuery("");
-                  setCategory("todos");
                 }
               }}
             >

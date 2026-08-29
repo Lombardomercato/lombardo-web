@@ -7,14 +7,15 @@ import { useCart } from "@/components/cart/CartProvider";
 import styles from "./Header.module.css";
 
 const navigation = [
-  { label: "Regalos", href: "/productos?categoria=regalos" },
-  { label: "Vinos", href: "/productos?categoria=vinos" },
-  { label: "Empresas", href: "/#empresas" },
+  { label: "Regalos", href: "/categorias/regalos" },
+  { label: "Vinos", href: "/categorias/vinos" },
+  { label: "Empresas", href: "/guias/regalos-empresariales-rosario" },
   { label: "Experiencias", href: "/#experiencias" },
 ] as const;
 
 export function Header() {
   const pathname = usePathname();
+  const isSecretCellar = pathname.startsWith("/cava-secreta");
   const { getItemCount, isDrawerOpen, openCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -49,7 +50,7 @@ export function Header() {
 
   return (
     <header
-      className={`${styles.header} ${
+      className={`${styles.header} ${isSecretCellar ? styles.cellarHeader : ""} ${
         pathname !== "/" && isScrolled ? styles.scrolledHeader : ""
       }`}
     >

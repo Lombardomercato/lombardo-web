@@ -7,9 +7,11 @@ import type { ServerProductSource } from "../server/orders/order-dependencies.ts
 import { ServerOrderError } from "../server/orders/server-order-error.ts";
 import {
   categoryFilterForPostgrest,
+  categoryForSupplierSku,
   mapRuniaSupplierProduct,
   runiaProductIdFromProductSlug,
   RUNIA_CATALOG_CATEGORIES,
+  slugify,
   type RuniaPublicMediaRow,
   type RuniaSupplierProductRow,
 } from "./runia-catalog-mapper.ts";
@@ -39,6 +41,12 @@ interface SupplierRow {
     | { slug: string; status: string }
     | Array<{ slug: string; status: string }>
     | null;
+}
+
+interface IndexableProductRow {
+  runia_product_id: string;
+  supplier_sku: string;
+  name_raw: string;
 }
 
 function providerError(message: string): never {
@@ -313,6 +321,41 @@ export class RuniaCommerceProvider
     }
 
     return (await this.mapRows(rows, pricingContext)).products[0] ?? null;
+  }
+
+  async getIndexableProducts() {
+    const supplier = await this.getSupplier();
+    const pageSize = 1000;
+    const products: Array<{ slug: string; categorySlug: string }> = [];
+
+    for (let offset = 0; ; offset += pageSize) {
+      const search = new URLSearchParams({
+        select:
+          "runia_product_id:id,supplier_sku,name_raw,retail_prices:supplier_prices!inner(price_type)",
+        supplier_id: `eq.${supplier.id}`,
+        eligibility_status: "eq.safe",
+        active: "is.true",
+        "retail_prices.price_type": "eq.retail",
+        order: "normalized_name.asc,id.asc",
+        offset: String(offset),
+        limit: String(pageSize),
+      });
+      const { rows } = await this.fetchRows<IndexableProductRow>(
+        "supplier_products",
+        search,
+      );
+
+      products.push(
+        ...rows.map((row) => ({
+          slug: `${slugify(row.name_raw)}--${row.runia_product_id}`,
+          categorySlug: categoryForSupplierSku(row.supplier_sku).slug,
+        })),
+      );
+
+      if (rows.length < pageSize) break;
+    }
+
+    return products;
   }
 
   async getCategories(): Promise<Category[]> {
