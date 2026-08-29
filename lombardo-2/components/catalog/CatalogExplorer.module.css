@@ -228,7 +228,18 @@
 .editorialGrid .product {
   grid-column: span 4;
   padding-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
   border-top: 1px solid rgba(0, 58, 112, 0.32);
+}
+
+.editorialGrid .productInfo {
+  flex: 1;
+  grid-template-rows: 1fr auto;
+}
+
+.editorialGrid .productInfo > button {
+  grid-row: 2;
 }
 
 .editorialGrid .featuredProduct {
@@ -738,7 +749,7 @@
 
   .editorialGrid .product:nth-child(3n + 2) {
     width: 88%;
-    margin-left: auto;
+    margin-inline: auto;
   }
 
   .photoArtwork,

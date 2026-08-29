@@ -55,7 +55,7 @@ export function Header() {
     >
       <div className={styles.inner}>
         <Link href="/" className={styles.brand} aria-label="Lombardo, inicio">
-          LOMBARDO.
+          LOMBARDO™
         </Link>
 
         <nav className={styles.desktopNav} aria-label="Navegación principal">

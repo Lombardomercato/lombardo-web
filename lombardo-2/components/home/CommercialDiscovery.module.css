@@ -104,11 +104,11 @@
   position: relative;
   z-index: 1;
   margin-top: auto;
-  max-width: 7ch;
+  max-width: 100%;
   font-family: var(--font-display);
-  font-size: clamp(2rem, 3.5vw, 4rem);
+  font-size: clamp(2rem, 2.8vw, 3.25rem);
   font-weight: 700;
-  line-height: 0.84;
+  line-height: 0.86;
   letter-spacing: -0.04em;
   text-transform: uppercase;
 }
@@ -165,6 +165,8 @@
 
 .productCard {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .productVisual {
@@ -172,7 +174,10 @@
 }
 
 .productDetails {
+  flex: 1;
   padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .productDetails > p {
@@ -194,7 +199,7 @@
 }
 
 .productDetails > div {
-  margin-top: 1.2rem;
+  margin-top: auto;
   padding-top: 0.8rem;
   display: flex;
   align-items: center;
