@@ -207,6 +207,8 @@ export interface AdminImageCandidate {
   confidenceBand: MatchConfidenceBand;
   evidence: string[];
   mismatchWarnings: string[];
+  reviewRiskRank: 1 | 2 | 3 | 4;
+  reviewRiskReason: string;
   matchReviewStatus: MatchReviewStatus;
   publicationStatus: "pending" | "approved" | "rejected";
   rightsStatus: "unknown" | "licensed" | "approved" | "restricted";

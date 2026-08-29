@@ -268,6 +268,8 @@ interface ImageCandidateRow {
     hardConflicts?: unknown;
     externalPresentation?: unknown;
     approvalMode?: unknown;
+    reviewRiskRank?: unknown;
+    reviewRiskReason?: unknown;
   } | null;
   created_at: string;
   product: Pick<
@@ -1294,7 +1296,9 @@ export class RuniaAdminStore {
       select:
         "id,external_product_match_id,source,source_url,image_url,match_confidence,match_review_status,approval_status,rights_status,quality_status,provenance,created_at,product:supplier_product_id!inner(id,supplier_sku,name_raw,presentation_raw,normalized_presentation,supplier_id)",
       "product.supplier_id": `eq.${supplierId}`,
-      order: "match_confidence.desc,created_at.asc,id.asc",
+      order: input.qualityStatus === "needs_review"
+        ? "provenance->>reviewRiskRank.asc.nullslast,match_confidence.asc,created_at.asc,id.asc"
+        : "match_confidence.desc,created_at.asc,id.asc",
       offset: String(offset),
       limit: String(limit),
     });
@@ -1353,6 +1357,12 @@ export class RuniaAdminStore {
         confidenceBand: confidence >= 0.9 ? "high" : confidence >= 0.72 ? "medium" : "low",
         evidence: matchedFields,
         mismatchWarnings: [...new Set([...mismatchWarnings, ...hardConflicts])],
+        reviewRiskRank: [1, 2, 3, 4].includes(Number(row.provenance?.reviewRiskRank))
+          ? Number(row.provenance?.reviewRiskRank) as 1 | 2 | 3 | 4
+          : 4,
+        reviewRiskReason: typeof row.provenance?.reviewRiskReason === "string"
+          ? row.provenance.reviewRiskReason
+          : "Revisión general",
         matchReviewStatus: row.match_review_status,
         publicationStatus: row.approval_status,
         rightsStatus: row.rights_status,
@@ -1394,6 +1404,10 @@ export class RuniaAdminStore {
   async importMassImageCandidates(items: unknown[]) {
     const response = await this.rpc("supplier_import_mass_image_candidates", { p_items: items });
     return await response.json() as Array<{ candidate_id: string; auto_publish: boolean }>;
+  }
+
+  async setMassImageCandidateReviewRisks(items: unknown[]) {
+    await this.rpc("supplier_set_image_candidate_review_risks", { p_items: items });
   }
 
   async reviewPublishedImageCandidate(
