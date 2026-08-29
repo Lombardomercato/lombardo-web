@@ -2,6 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 
 import {
   categoryFilterForPostgrest,
@@ -120,7 +122,7 @@ interface ProductRow {
   active: boolean;
   eligibility_status: AdminProduct["eligibilityStatus"];
   source_raw?: unknown;
-  last_seen?: string;
+  last_seen_at?: string;
   retail_prices:
     | Array<{ price_type: string; current_price: number | string }>
     | { price_type: string; current_price: number | string }
@@ -170,6 +172,18 @@ interface ProductAnomalyRow {
   observed_price: number | string | null;
   message: string;
   last_detected_at: string;
+}
+
+interface PublishableImageCandidateRow {
+  id: string;
+  supplier_product_id: string;
+  source_url: string;
+  image_url: string;
+  match_review_status: MatchReviewStatus;
+  approval_status: "pending" | "approved" | "rejected";
+  product:
+    | { supplier_id: string; supplier_sku: string; name_raw: string; active: boolean; eligibility_status: string }
+    | Array<{ supplier_id: string; supplier_sku: string; name_raw: string; active: boolean; eligibility_status: string }>;
 }
 
 interface AutomationRunRow {
@@ -395,6 +409,44 @@ function candidatePrices(sourceRaw: unknown) {
     if (Number.isFinite(price) && price > 0) result.set(type, price);
   }
   return result;
+}
+
+function privateAddress(address: string) {
+  if (isIP(address) === 4) {
+    const [a, b] = address.split(".").map(Number);
+    return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  }
+  const normalized = address.toLocaleLowerCase("en-US");
+  return normalized === "::1" || normalized === "::" || normalized.startsWith("fc") ||
+    normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") ||
+    normalized.startsWith("fea") || normalized.startsWith("feb") || normalized.startsWith("::ffff:127.") ||
+    normalized.startsWith("::ffff:10.") || normalized.startsWith("::ffff:192.168.");
+}
+
+async function assertPublicHttpsUrl(raw: string) {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new AdminStoreError("La imagen externa tiene una URL inválida.", 422);
+  }
+  if (url.protocol !== "https:" || url.username || url.password || url.port) {
+    throw new AdminStoreError("La imagen externa debe usar HTTPS público.", 422);
+  }
+  const addresses = await lookup(url.hostname, { all: true, verbatim: true }).catch(() => []);
+  if (!addresses.length || addresses.some(({ address }) => privateAddress(address))) {
+    throw new AdminStoreError("La fuente externa no resuelve a una dirección pública segura.", 422);
+  }
+  return url;
+}
+
+function validImageBytes(bytes: Uint8Array, mimeType: string) {
+  if (mimeType === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === "image/png") return bytes.slice(0, 8).every((value, index) => value === [137, 80, 78, 71, 13, 10, 26, 10][index]);
+  const ascii = new TextDecoder("ascii").decode(bytes.slice(0, 16));
+  if (mimeType === "image/webp") return ascii.startsWith("RIFF") && ascii.slice(8, 12) === "WEBP";
+  return mimeType === "image/avif" && (ascii.slice(4, 12) === "ftypavif" || ascii.slice(4, 12) === "ftypavis");
 }
 
 export class AdminStoreError extends Error {
@@ -802,7 +854,7 @@ export class RuniaAdminStore {
     const supplierId = await this.supplierId();
     const search = new URLSearchParams({
       select:
-        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,source_raw,last_seen,retail_prices:supplier_prices(price_type,current_price),all_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status),anomalies:supplier_anomalies(id,anomaly_type,severity,status,price_type,observed_price,message,last_detected_at)",
+        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,source_raw,last_seen_at,retail_prices:supplier_prices(price_type,current_price),all_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status),anomalies:supplier_anomalies(id,anomaly_type,severity,status,price_type,observed_price,message,last_detected_at)",
       id: `eq.${productId}`,
       supplier_id: `eq.${supplierId}`,
       "anomalies.status": "eq.open",
@@ -873,7 +925,7 @@ export class RuniaAdminStore {
         observedPrice: anomaly.observed_price === null ? undefined : Number(anomaly.observed_price),
         lastDetectedAt: anomaly.last_detected_at,
       })),
-      lastSeen: row.last_seen || "",
+      lastSeen: row.last_seen_at || "",
     };
   }
 
@@ -1198,6 +1250,88 @@ export class RuniaAdminStore {
       "return=minimal",
     );
     if (!response.ok) throw new AdminStoreError("No pudimos guardar la revisión.", 502);
+  }
+
+  async publishApprovedImageCandidate(candidateId: string, operatorUserId: string) {
+    if (!UUID_PATTERN.test(candidateId)) throw new AdminStoreError("Candidato inválido.", 400);
+    const supplierId = await this.supplierId();
+    const search = new URLSearchParams({
+      select: "id,supplier_product_id,source_url,image_url,match_review_status,approval_status,product:supplier_product_id!inner(supplier_id,supplier_sku,name_raw,active,eligibility_status)",
+      id: `eq.${candidateId}`,
+      "product.supplier_id": `eq.${supplierId}`,
+      limit: "1",
+    });
+    const { rows } = await this.rows<PublishableImageCandidateRow>(
+      `external_image_candidates?${search}`,
+      "No pudimos validar el candidato.",
+    );
+    const candidate = rows[0];
+    const product = candidate ? asArray(candidate.product)[0] : undefined;
+    if (!candidate || !product) throw new AdminStoreError("Candidato no encontrado.", 404);
+    if (candidate.match_review_status !== "approved") {
+      throw new AdminStoreError("El match debe aprobarse antes de publicar.", 409);
+    }
+    if (candidate.approval_status === "approved") return;
+    if (candidate.approval_status !== "pending" || !product.active || product.eligibility_status !== "safe") {
+      throw new AdminStoreError("El candidato ya no puede publicarse.", 409);
+    }
+
+    let imageUrl = await assertPublicHttpsUrl(candidate.image_url);
+    let imageResponse: Response | undefined;
+    for (let redirect = 0; redirect < 4; redirect += 1) {
+      imageResponse = await this.fetcher(imageUrl, {
+        method: "GET",
+        redirect: "manual",
+        headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
+        cache: "no-store",
+      });
+      if (![301, 302, 303, 307, 308].includes(imageResponse.status)) break;
+      const location = imageResponse.headers.get("location");
+      if (!location) throw new AdminStoreError("La fuente externa redirigió sin destino.", 422);
+      imageUrl = await assertPublicHttpsUrl(new URL(location, imageUrl).toString());
+    }
+    if (!imageResponse?.ok) throw new AdminStoreError("No pudimos descargar la imagen aprobada.", 502);
+    const mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
+    const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/avif": "avif" };
+    const extension = extensions[mimeType];
+    const declaredBytes = Number(imageResponse.headers.get("content-length") || 0);
+    if (!extension || declaredBytes > 5 * 1024 * 1024) {
+      throw new AdminStoreError("La imagen aprobada no tiene un formato o tamaño permitido.", 422);
+    }
+    const bytes = new Uint8Array(await imageResponse.arrayBuffer());
+    if (bytes.byteLength < 20 || bytes.byteLength > 5 * 1024 * 1024 || !validImageBytes(bytes, mimeType)) {
+      throw new AdminStoreError("El archivo externo no coincide con una imagen válida de hasta 5 MB.", 422);
+    }
+
+    const path = `${product.supplier_sku.toLocaleLowerCase("en-US")}/${randomUUID()}.${extension}`;
+    const storageHeaders: Record<string, string> = {
+      apikey: this.secretKey,
+      "Content-Type": mimeType,
+      "Cache-Control": "31536000",
+      "x-upsert": "false",
+    };
+    if (!this.secretKey.startsWith("sb_secret_")) storageHeaders.Authorization = `Bearer ${this.secretKey}`;
+    const upload = await this.fetcher(`${this.url}/storage/v1/object/product-media/${path}`, {
+      method: "POST",
+      headers: storageHeaders,
+      body: Buffer.from(bytes),
+      cache: "no-store",
+    });
+    if (!upload.ok) throw new AdminStoreError("No pudimos guardar la imagen aprobada.", 502);
+    try {
+      await this.rpc("supplier_publish_external_candidate", {
+        p_candidate_id: candidate.id,
+        p_bucket_id: "product-media",
+        p_storage_path: path,
+        p_mime_type: mimeType,
+        p_byte_size: bytes.byteLength,
+        p_alt_text: `Imagen de ${product.name_raw}`,
+        p_created_by: operatorUserId,
+      });
+    } catch (error) {
+      await this.deleteStorageObject("product-media", path).catch(() => undefined);
+      throw error;
+    }
   }
 
   private mapCustomer(

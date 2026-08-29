@@ -338,3 +338,19 @@ export async function reviewImageCandidateAction(formData: FormData) {
   }
   redirect(`/admin/imagenes?${params}`);
 }
+
+export async function publishImageCandidateAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const candidateId = formText(formData, "candidateId", 36);
+  const params = new URLSearchParams({ status: "approved" });
+  try {
+    await createAdminStore().publishApprovedImageCandidate(candidateId, session.authUserId);
+    params.set("success", "Imagen publicada como principal con su fuente registrada.");
+    revalidatePath("/admin/imagenes");
+    revalidatePath("/admin/productos");
+    revalidatePath("/productos");
+  } catch (error) {
+    params.set("error", error instanceof AdminStoreError ? error.message : "No pudimos publicar la imagen.");
+  }
+  redirect(`/admin/imagenes?${params}`);
+}

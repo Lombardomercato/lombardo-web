@@ -11,6 +11,10 @@ const matchingReviewMigration = readFileSync(
   fileURLToPath(new URL("../supabase/migrations/20260829005749_image_matching_pilot_review_status.sql", import.meta.url)),
   "utf8",
 );
+const externalPublicationMigration = readFileSync(
+  fileURLToPath(new URL("../supabase/migrations/20260829033000_publish_approved_external_candidate.sql", import.meta.url)),
+  "utf8",
+);
 const adminStore = readFileSync(
   fileURLToPath(new URL("../lib/server/admin/runia-admin-store.ts", import.meta.url)),
   "utf8",
@@ -39,6 +43,12 @@ test("Productos V2 separa verdad VINROS de editorial Lombardo", () => {
   assert.match(migration, /supplier_product_id uuid primary key references public\.supplier_products/);
   assert.doesNotMatch(migration, /update public\.supplier_prices/);
   assert.doesNotMatch(migration, /delete from public\.supplier_prices/);
+});
+
+test("la ficha consulta el nombre real de la marca temporal de última presencia", () => {
+  assert.match(adminStore, /source_raw,last_seen_at,retail_prices/);
+  assert.match(adminStore, /lastSeen: row\.last_seen_at/);
+  assert.doesNotMatch(adminStore, /source_raw,last_seen,retail_prices/);
 });
 
 test("la vista pública sólo entrega imágenes aprobadas para productos SAFE activos", () => {
@@ -77,7 +87,18 @@ test("matching humano y publicación de imagen son decisiones separadas", () => 
   assert.match(reviewMethod, /reviewed_by: reviewerId/);
   assert.doesNotMatch(reviewMethod, /approval_status:|rights_status:/);
   assert.match(imageQueuePage, /Aprobar no publica la imagen/);
-  assert.match(imageQueuePage, /PUBLICACIÓN EXTERNA = 0/);
+  assert.match(imageQueuePage, /PUBLICACIÓN AUTOMÁTICA = 0/);
+  assert.match(imageQueuePage, /publishImageCandidateAction/);
+});
+
+test("sólo un match humano aprobado puede convertirse en media pública externa", () => {
+  assert.match(externalPublicationMigration, /match_review_status <> 'approved'/);
+  assert.match(externalPublicationMigration, /eligibility_status <> 'safe'/);
+  assert.match(externalPublicationMigration, /'external_approved',v_candidate\.source_url,'approved','approved'/);
+  assert.match(externalPublicationMigration, /revoke all on function[\s\S]*from public, anon, authenticated/);
+  assert.match(adminStore, /assertPublicHttpsUrl/);
+  assert.match(adminStore, /privateAddress/);
+  assert.match(adminStore, /supplier_publish_external_candidate/);
 });
 
 test("tablas editoriales, matching y RPC quedan server-only con RLS forzado", () => {
