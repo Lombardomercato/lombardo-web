@@ -1,5 +1,5 @@
 .root {
   min-height: 100svh;
-  background: #140f0d;
-  color: #f5efe3;
+  background: var(--neutral-paper);
+  color: var(--lombardo-blue);
 }
