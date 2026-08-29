@@ -42,11 +42,20 @@
   min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
+  column-gap: 0.08em;
   font-family: var(--font-display);
   font-size: clamp(1.25rem, 1.7vw, 1.65rem);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.045em;
+}
+
+.trademark {
+  flex: 0 0 auto;
+  font-size: 0.38em;
+  line-height: 1;
+  letter-spacing: 0;
+  transform: translateY(-0.75em);
 }
 
 .desktopNav {
