@@ -16,9 +16,10 @@ interface Props {
   candidates: AdminImageCandidate[];
   status: MatchReviewStatus;
   confidence?: MatchConfidenceBand;
+  returnView?: string;
 }
 
-export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
+export function ImageCandidateQueue({ candidates, status, confidence, returnView = "needs_review" }: Props) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const actionableCandidates = candidates.filter((candidate) =>
     status === "pending" || (status === "approved" && candidate.publicationStatus === "pending"));
@@ -91,7 +92,9 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
                 {candidate.confidenceBand.toLocaleUpperCase("es-AR")} · {Math.round(candidate.confidence * 100)}%
               </span>
               {candidate.qualityStatus === "needs_review" ? (
-                <span>RIESGO {candidate.reviewRiskRank} · {candidate.reviewRiskReason.toLocaleUpperCase("es-AR")}</span>
+                <span className={styles.riskBadge} data-risk={candidate.reviewRiskKind}>
+                  PRIORIDAD {candidate.reviewRiskRank} · {candidate.reviewRiskReason.toLocaleUpperCase("es-AR")}
+                </span>
               ) : null}
               <span>{candidate.qualityStatus.toLocaleUpperCase("es-AR")}</span>
             </div>
@@ -154,11 +157,13 @@ export function ImageCandidateQueue({ candidates, status, confidence }: Props) {
                 <div>
                   <form action={reviewPublishedImageCandidateAction}>
                     <input type="hidden" name="candidateId" value={candidate.id} />
+                    <input type="hidden" name="returnView" value={returnView} />
                     <button className={styles.primaryButton} name="decision" value="correct">CORRECTA</button>
                   </form>
-                  <Link className={styles.secondaryButton} href={`/admin/productos/${candidate.productId}`}>CAMBIAR</Link>
+                  {returnView !== "priority" ? <Link className={styles.secondaryButton} href={`/admin/productos/${candidate.productId}`}>CAMBIAR</Link> : null}
                   <form action={reviewPublishedImageCandidateAction}>
                     <input type="hidden" name="candidateId" value={candidate.id} />
+                    <input type="hidden" name="returnView" value={returnView} />
                     <button className={styles.dangerButton} name="decision" value="remove">QUITAR</button>
                     <button className={styles.secondaryButton} name="decision" value="search_other">BUSCAR OTRA</button>
                   </form>

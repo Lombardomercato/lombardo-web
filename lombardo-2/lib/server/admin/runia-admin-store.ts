@@ -269,7 +269,10 @@ interface ImageCandidateRow {
     externalPresentation?: unknown;
     approvalMode?: unknown;
     reviewRiskRank?: unknown;
+    reviewRiskKind?: unknown;
     reviewRiskReason?: unknown;
+    reviewPriorityScore?: unknown;
+    reviewRiskVersion?: unknown;
   } | null;
   created_at: string;
   product: Pick<
@@ -1289,6 +1292,7 @@ export class RuniaAdminStore {
     approvalMode?: "auto";
     qualityStatus?: ImageQualityStatus;
     runId?: string;
+    riskVersion?: 2;
   } = {}): Promise<AdminImageCandidatePage> {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
@@ -1298,7 +1302,7 @@ export class RuniaAdminStore {
         "id,external_product_match_id,source,source_url,image_url,match_confidence,match_review_status,approval_status,rights_status,quality_status,provenance,created_at,product:supplier_product_id!inner(id,supplier_sku,name_raw,presentation_raw,normalized_presentation,supplier_id)",
       "product.supplier_id": `eq.${supplierId}`,
       order: input.qualityStatus === "needs_review"
-        ? "provenance->>reviewRiskRank.asc.nullslast,match_confidence.asc,created_at.asc,id.asc"
+        ? "provenance->>reviewRiskRank.asc.nullslast,provenance->>reviewPriorityScore.desc.nullslast,match_confidence.asc,created_at.asc,id.asc"
         : "match_confidence.desc,created_at.asc,id.asc",
       offset: String(offset),
       limit: String(limit),
@@ -1310,6 +1314,7 @@ export class RuniaAdminStore {
     }
     if (input.qualityStatus) search.set("quality_status", `eq.${input.qualityStatus}`);
     if (input.runId) search.set("provenance->>runId", `eq.${input.runId}`);
+    if (input.riskVersion) search.set("provenance->>reviewRiskVersion", `eq.${input.riskVersion}`);
     if (input.confidenceBand === "high") search.set("match_confidence", "gte.0.9");
     if (input.confidenceBand === "medium") {
       search.append("match_confidence", "gte.0.72");
@@ -1359,12 +1364,18 @@ export class RuniaAdminStore {
         confidenceBand: confidence >= 0.9 ? "high" : confidence >= 0.72 ? "medium" : "low",
         evidence: matchedFields,
         mismatchWarnings: [...new Set([...mismatchWarnings, ...hardConflicts])],
-        reviewRiskRank: [1, 2, 3, 4].includes(Number(row.provenance?.reviewRiskRank))
-          ? Number(row.provenance?.reviewRiskRank) as 1 | 2 | 3 | 4
-          : 4,
+        reviewRiskRank: [1, 2, 3, 4, 5, 6].includes(Number(row.provenance?.reviewRiskRank))
+          ? Number(row.provenance?.reviewRiskRank) as 1 | 2 | 3 | 4 | 5 | 6
+          : 6,
+        reviewRiskKind: ["product", "brand_line", "varietal", "presentation_volume", "pack_unit", "confidence"].includes(String(row.provenance?.reviewRiskKind))
+          ? row.provenance?.reviewRiskKind as AdminImageCandidate["reviewRiskKind"]
+          : "confidence",
         reviewRiskReason: typeof row.provenance?.reviewRiskReason === "string"
           ? row.provenance.reviewRiskReason
-          : "Revisión general",
+          : "Menor confianza; revisión general",
+        reviewPriorityScore: Number.isFinite(Number(row.provenance?.reviewPriorityScore))
+          ? Number(row.provenance?.reviewPriorityScore)
+          : Math.round((1 - confidence) * 100),
         matchReviewStatus: row.match_review_status,
         publicationStatus: row.approval_status,
         rightsStatus: row.rights_status,

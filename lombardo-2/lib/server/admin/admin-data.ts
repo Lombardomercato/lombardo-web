@@ -54,6 +54,7 @@ export async function loadAdminImageCandidates(input: {
   publicationStatus?: "pending" | "approved" | "rejected";
   approvalMode?: "auto";
   qualityStatus?: ImageQualityStatus;
+  riskVersion?: 2;
 } = {}) {
   await requireAdminSession();
   return createAdminStore().listImageCandidates(input);

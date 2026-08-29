@@ -42,8 +42,27 @@ test("matcher bloquea una línea distinta aprendida del QA", () => {
 
 test("NEEDS_REVIEW prioriza riesgo de presentación antes que confianza", () => {
   const match = comparePublicCatalogImage(product, candidate("Andeluna Raices Malbec"));
-  assert.equal(reviewRiskForMatch(match).rank, 1);
+  assert.equal(reviewRiskForMatch(match).rank, 4);
   assert.match(reviewRiskForMatch(match).reason, /presentación|volumen/i);
+});
+
+test("riesgo V2 aprende producto, línea, varietal, volumen y pack de los falsos positivos", () => {
+  const wrongProduct = comparePublicCatalogImage(
+    { ...product, name: "JUNIOR Malbec x 750cc" },
+    { ...candidate("Ginebra Hilbing Malbec 750 ml"), sourceUrl: "https://licoresjunior.com/producto/ginebra-hilbing-malbec-750-ml/" },
+  );
+  const wrongLine = comparePublicCatalogImage(
+    { ...product, name: "ALYDA Van Salentein Millesime" },
+    candidate("Alyda Van Salentein Brut Nature Rose 750ml"),
+  );
+  const wrongVarietal = comparePublicCatalogImage(product, candidate("Andeluna Raices Cabernet Sauvignon 750 ml"));
+  const wrongVolume = comparePublicCatalogImage(product, candidate("Andeluna Raices Malbec 500 ml"));
+  const wrongPack = comparePublicCatalogImage(product, candidate("Pack x 6 Andeluna Raices Malbec 750 ml"));
+  assert.equal(reviewRiskForMatch(wrongProduct).kind, "product");
+  assert.equal(reviewRiskForMatch(wrongLine).kind, "brand_line");
+  assert.equal(reviewRiskForMatch(wrongVarietal).kind, "varietal");
+  assert.equal(reviewRiskForMatch(wrongVolume).kind, "presentation_volume");
+  assert.equal(reviewRiskForMatch(wrongPack).kind, "pack_unit");
 });
 
 test("matcher bloquea varietal, volumen y pack/unidad", () => {

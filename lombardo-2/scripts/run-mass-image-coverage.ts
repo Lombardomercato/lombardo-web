@@ -928,7 +928,9 @@ let automaticPublication = { published: 0, failures: [] as string[] };
 let importFailures: Array<{ productId: string; reason: string }> = [];
 
 if (mode === "execute") {
-  const items = publishable.map((match) => ({
+  const items = publishable.map((match) => {
+    const reviewRisk = reviewRiskForMatch(match);
+    return ({
     productId: match.product.id,
     source: match.external?.source,
     sourceTier: match.external?.tier,
@@ -945,10 +947,14 @@ if (mode === "execute") {
     mismatchWarnings: [],
     hardConflicts: match.hardConflicts,
     visualVariant: visualVariantForSku(match.product.sku),
-    reviewRiskRank: reviewRiskForMatch(match).rank,
-    reviewRiskReason: reviewRiskForMatch(match).reason,
+    reviewRiskRank: reviewRisk.rank,
+    reviewRiskKind: reviewRisk.kind,
+    reviewRiskReason: reviewRisk.reason,
+    reviewPriorityScore: reviewRisk.score,
+    reviewRiskVersion: 2,
     runId,
-  }));
+    });
+  });
   const imported = await importResilient(items);
   importFailures = imported.failures;
   automaticPublication = await publish(imported.candidateIds);

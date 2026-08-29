@@ -95,11 +95,21 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const items = body.items as unknown[];
   const imported = await store.importMassImageCandidates(items);
   await store.setMassImageCandidateReviewRisks(imported.map((candidate, index) => {
-    const item = items[index] as { reviewRiskRank?: unknown; reviewRiskReason?: unknown; runId?: unknown };
+    const item = items[index] as {
+      reviewRiskRank?: unknown;
+      reviewRiskKind?: unknown;
+      reviewRiskReason?: unknown;
+      reviewPriorityScore?: unknown;
+      reviewRiskVersion?: unknown;
+      runId?: unknown;
+    };
     return {
       candidateId: candidate.candidate_id,
       reviewRiskRank: item?.reviewRiskRank,
+      reviewRiskKind: item?.reviewRiskKind,
       reviewRiskReason: item?.reviewRiskReason,
+      reviewPriorityScore: item?.reviewPriorityScore,
+      reviewRiskVersion: item?.reviewRiskVersion,
       runId: item?.runId,
     };
   }));

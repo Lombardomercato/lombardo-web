@@ -528,7 +528,8 @@ export async function reviewPublishedImageCandidateAction(formData: FormData) {
   const session = await requireAdminSession();
   const candidateId = formText(formData, "candidateId", 36);
   const decision = formText(formData, "decision", 24);
-  const params = new URLSearchParams({ view: "needs_review" });
+  const returnView = formText(formData, "returnView", 24);
+  const params = new URLSearchParams({ view: returnView === "priority" ? "priority" : "needs_review" });
   try {
     if (decision !== "correct" && decision !== "remove" && decision !== "search_other") {
       throw new AdminStoreError("Acción de imagen inválida.", 400);

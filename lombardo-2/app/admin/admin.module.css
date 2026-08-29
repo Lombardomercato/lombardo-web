@@ -1217,6 +1217,26 @@
   color: #6e5100;
 }
 
+.riskBadge {
+  display: inline-flex;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid currentColor;
+  background: #eef2f5;
+}
+
+.riskBadge[data-risk="product"],
+.riskBadge[data-risk="brand_line"] {
+  background: #ffd3cd;
+  color: #7e1711;
+}
+
+.riskBadge[data-risk="varietal"],
+.riskBadge[data-risk="presentation_volume"],
+.riskBadge[data-risk="pack_unit"] {
+  background: #fff0b7;
+  color: #6e5100;
+}
+
 .externalName {
   margin-bottom: 0.8rem;
   line-height: 1.4;
