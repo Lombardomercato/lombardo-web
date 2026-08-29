@@ -9,6 +9,7 @@ import { GuideProductGrid } from "@/components/guides/GuideProductGrid";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { loadGuideProducts } from "@/lib/seo/guide-products";
+import { loadLiveGuideProducts } from "@/lib/server/automations/live-data";
 import { absoluteUrl } from "@/lib/seo/metadata";
 import { getGuide, getRelatedGuides, hasGuideQuality, PUBLISHED_GUIDES } from "@/lib/seo/guides";
 import { articleStructuredData, breadcrumbStructuredData } from "@/lib/seo/structured-data";
@@ -65,7 +66,11 @@ export default async function GuidePage({ params }: GuidePageProps) {
   const guide = getGuideDefinition(slug);
   if (!guide) notFound();
 
-  const products = await loadGuideProducts(guide, pricingContext);
+  const [fallbackProducts, liveProducts] = await Promise.all([
+    loadGuideProducts(guide, pricingContext),
+    loadLiveGuideProducts(guide.slug, pricingContext).catch(() => []),
+  ]);
+  const products = liveProducts.length ? liveProducts : fallbackProducts;
   if (!hasGuideQuality(guide, products.length)) notFound();
 
   const url = absoluteUrl(`/guias/${guide.slug}`);

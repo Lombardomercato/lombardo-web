@@ -1,0 +1,100 @@
+.success,
+.error {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #406018;
+  background: #eef4e5;
+  font-weight: 700;
+}
+
+.error {
+  border-color: #a9241d;
+  background: #ffd3cd;
+}
+
+.runGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.runCard {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.2rem;
+  border: 1px solid rgba(0, 58, 112, 0.25);
+  background: #fffdf9;
+}
+
+.runCard[data-status="failed"],
+.runCard[data-status="blocked"] { border-color: #a9241d; }
+.runCard[data-status="warning"] { border-color: #c27a00; }
+.runCard[data-status="completed"] { border-color: #406018; }
+
+.runCard > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.runCard span,
+.runCard dt,
+.pinForm span,
+.pinList span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.runCard > div > strong { color: #003a70; }
+
+.runCard dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.runCard dl div { padding: 0.7rem; background: #f4f1ea; }
+.runCard dd { margin-top: 0.3rem; font-weight: 700; }
+.runCard p { min-height: 2.7em; color: #4d5963; line-height: 1.35; overflow-wrap: anywhere; }
+.runCard small { color: #a9241d; }
+
+.runCard button,
+.pinForm button,
+.pinList button {
+  min-height: 2.8rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #003a70;
+  background: #003a70;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.help { max-width: 52rem; margin-bottom: 1rem; color: #4d5963; }
+
+.pinForm {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(9rem, 0.35fr) auto;
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.pinForm label { display: grid; gap: 0.4rem; }
+.pinForm input { min-height: 2.8rem; padding: 0.65rem; border: 1px solid #78828a; background: white; }
+
+.pinList { display: grid; gap: 0.55rem; margin-top: 1rem; }
+.pinList article { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 1rem; align-items: center; padding: 0.8rem; border: 1px solid rgba(0, 58, 112, 0.18); background: #fffdf9; }
+.pinList strong { grid-column: 1; }
+.pinList form { grid-column: 2; grid-row: 1 / span 2; }
+.pinList button { background: transparent; color: #003a70; }
+
+@media (max-width: 760px) {
+  .runGrid { grid-template-columns: 1fr; }
+  .pinForm { grid-template-columns: 1fr; }
+  .pinList article { grid-template-columns: 1fr; }
+  .pinList form { grid-column: 1; grid-row: auto; }
+  .pinList button { width: 100%; }
+}

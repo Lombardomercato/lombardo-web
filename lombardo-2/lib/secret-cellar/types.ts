@@ -42,7 +42,7 @@ export interface SecretCellarChallenge {
   clues: SecretCellarClue[];
   rewardPercentage: number;
   rewardValidHours: number;
-  generatedBy: "DAILY_ENGINE" | "ADMIN_NEXT_REGENERATION";
+  generatedBy: "DAILY_ENGINE" | "ADMIN_NEXT_REGENERATION" | "DAILY_FALLBACK";
   createdAt: string;
 }
 

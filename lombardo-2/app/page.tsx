@@ -6,6 +6,7 @@ import { FirstAct } from "@/components/home/FirstAct";
 import { HomeGuides } from "@/components/home/HomeGuides";
 import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
+import { loadDailyHomeData } from "@/lib/server/automations/live-data";
 import type { CustomerPricingContext } from "@/lib/server/customers/types";
 import type { Category } from "@/types/commerce";
 import { onlineStoreStructuredData } from "@/lib/seo/structured-data";
@@ -51,9 +52,10 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
       ),
     ]);
 
+    const daily = await loadDailyHomeData(pricingContext, categories).catch(() => null);
     return {
-      categories,
-      products: pages.flatMap((page) => page.products).slice(0, 6),
+      categories: daily?.categories ?? categories,
+      products: daily?.products ?? pages.flatMap((page) => page.products).slice(0, 6),
       catalogTotal: catalog.total,
     };
   } catch {

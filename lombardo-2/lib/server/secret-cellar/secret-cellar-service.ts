@@ -109,12 +109,14 @@ export class SecretCellarService {
   }
 
   private async generate(date: string, generatedBy: "DAILY_ENGINE" | "ADMIN_NEXT_REGENERATION") {
-    const [tenantId, settings, excludedProductIds, products] = await Promise.all([
+    const [tenantId, settings, configuredExclusions, recentProducts, products] = await Promise.all([
       this.store.tenantId(),
       this.store.getSettings(),
       this.store.exclusionIds(),
+      this.store.recentChallengeProductIds(date),
       this.loadEligibleProducts(date),
     ]);
+    const excludedProductIds = new Set([...configuredExclusions, ...recentProducts]);
     const challenge = generateSecretCellarChallenge({
       tenantId,
       date,
@@ -132,11 +134,23 @@ export class SecretCellarService {
     return (await this.store.getChallenge(date)) ?? this.generate(date, "DAILY_ENGINE");
   }
 
+  async ensureChallengeWithFallback(date = argentinaDate()) {
+    const existing = await this.store.getChallenge(date);
+    if (existing) return { challenge: existing, fallback: existing.generatedBy === "DAILY_FALLBACK" };
+    try {
+      return { challenge: await this.generate(date, "DAILY_ENGINE"), fallback: false };
+    } catch (generationError) {
+      const fallback = await this.store.cloneLatestChallenge(date);
+      if (!fallback) throw generationError;
+      return { challenge: fallback, fallback: true };
+    }
+  }
+
   async getPublicExperience(): Promise<SecretCellarPublicExperience> {
     const settings = await this.store.getSettings();
     if (!settings.enabled) return { enabled: false };
     const [challenge, pricingContext] = await Promise.all([
-      this.ensureChallenge(),
+      this.ensureChallengeWithFallback().then((result) => result.challenge),
       getCurrentCustomerPricingContext(),
     ]);
     return {
