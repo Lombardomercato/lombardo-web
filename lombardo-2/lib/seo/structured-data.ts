@@ -97,6 +97,7 @@ export function articleStructuredData(article: {
   publishedAt: string;
   updatedAt: string;
   category: string;
+  heroImage?: string;
   productImages: string[];
 }) {
   const url = absoluteUrl(`/guias/${article.slug}`);
@@ -115,7 +116,7 @@ export function articleStructuredData(article: {
     author: { "@type": "Organization", name: SITE.name, url: SITE.url },
     publisher: { "@id": `${SITE.url}/#online-store` },
     image: [
-      absoluteUrl(`/guias/${article.slug}/opengraph-image`),
+      absoluteUrl(article.heroImage ?? `/guias/${article.slug}/opengraph-image`),
       ...article.productImages,
     ],
   };

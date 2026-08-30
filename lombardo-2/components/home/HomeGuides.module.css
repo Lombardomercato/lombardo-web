@@ -5,7 +5,7 @@
 .section > header > a { padding-bottom: 0.4rem; border-bottom: 1px solid currentColor; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
 .grid article { min-width: 0; }
-.visual { min-height: clamp(22rem, 34vw, 34rem); display: block; overflow: hidden; background: var(--lombardo-green); }
+.visual { position: relative; min-height: clamp(22rem, 34vw, 34rem); display: block; overflow: hidden; background: var(--lombardo-green); }
 .grid article:nth-child(2) .visual { background: var(--lombardo-red); }
 .grid article:nth-child(3) .visual { background: var(--lombardo-pink); }
 .visual > span { padding: 1rem; display: block; font-family: var(--font-display); font-size: 12rem; }
