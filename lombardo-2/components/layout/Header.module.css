@@ -39,6 +39,17 @@
   background: var(--neutral-paper);
 }
 
+.editorialHeader {
+  color: var(--neutral-paper);
+  border-color: rgba(255, 253, 249, 0.28);
+}
+
+.editorialHeader.scrolledHeader {
+  color: var(--lombardo-blue);
+  border-color: rgba(0, 58, 112, 0.22);
+  background: var(--neutral-paper);
+}
+
 .inner {
   width: min(100%, var(--content-max));
   height: 100%;
