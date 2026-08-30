@@ -7,6 +7,7 @@ import {
   robotsAllowsProducts,
 } from "../lib/competitors/positano-parser.ts";
 import type { ExternalCompetitorProduct } from "../lib/competitors/types.ts";
+import { PositanoCatalogSource } from "../lib/server/competitors/positano-source.ts";
 
 const POSITANO_PAGE = String.raw`
 <script>
@@ -92,6 +93,36 @@ test("firma estructural ignora cambios de precio y contenido", () => {
 test("robots permite catálogo público y bloquea cuando /productos está prohibido", () => {
   assert.equal(robotsAllowsProducts("User-agent: *\nDisallow: /checkout/\nDisallow: /account/"), true);
   assert.equal(robotsAllowsProducts("User-agent: *\nDisallow: /productos/"), false);
+});
+
+function sourcePage(page: number, next?: number) {
+  const products = Array.from({ length: 10 }, (_, index) => {
+    const id = (page * 100) + index;
+    return `{id:${id},brand:"BODEGA",canonical_url:"https://www.positanovinos.com.ar/productos/producto-${id}/",name:{"es":"PRODUCTO ${id} X 750 CC"},variants:[{id:${id + 10_000},price:"${10_000 + id}.00",sku:"POS-${id}",stock_management:false,values:[]}]}`;
+  }).join(",");
+  return `<script>const state={products:[${products}]};</script>${next ? `<a href="/productos/page/${next}/">SIGUIENTE</a>` : ""}`;
+}
+
+test("fuente Positano sigue paginación incremental hasta el final sin superar el límite", async () => {
+  const requested: string[] = [];
+  const fetcher = (async (input: string | URL | Request) => {
+    const url = String(input);
+    requested.push(new URL(url).pathname);
+    const body = url.endsWith("/robots.txt")
+      ? "User-agent: *\nDisallow: /checkout/"
+      : url.endsWith("/productos/")
+        ? sourcePage(1, 2)
+        : url.includes("/page/2/")
+          ? sourcePage(2, 3)
+          : sourcePage(3);
+    const response = new Response(body, { status: 200 });
+    Object.defineProperty(response, "url", { value: url });
+    return response;
+  }) as typeof fetch;
+  const result = await new PositanoCatalogSource({ fetcher, crawlDelayMs: 250, maximumPages: 3 }).scrape();
+  assert.equal(result.pagesFetched, 3);
+  assert.equal(result.products.length, 30);
+  assert.deepEqual(requested, ["/robots.txt", "/productos/", "/productos/page/2/", "/productos/page/3/"]);
 });
 
 test("matcher asigna HIGH por identidad completa y no confunde varietal o volumen", () => {

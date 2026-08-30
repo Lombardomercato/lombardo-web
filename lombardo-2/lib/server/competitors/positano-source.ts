@@ -3,8 +3,8 @@ import "server-only";
 import {
   parsePositanoCatalogPage,
   robotsAllowsProducts,
-} from "@/lib/competitors/positano-parser";
-import type { CompetitorScrapeResult } from "@/lib/competitors/types";
+} from "../../competitors/positano-parser.ts";
+import type { CompetitorScrapeResult } from "../../competitors/types.ts";
 
 const POSITANO_ORIGIN = "https://www.positanovinos.com.ar";
 const USER_AGENT = "LombardoCompetitorIntelligence/1.0 (+https://www.lombardomercato.com)";
@@ -78,16 +78,18 @@ export class PositanoCatalogSource {
     if (first.structuralSignature.startsWith("missing-") || first.structuralSignature.startsWith("unbalanced-")) {
       throw new CompetitorSourceError("Cambió la estructura principal del catálogo de Positano.", true);
     }
-    if (first.pagesDiscovered > this.maximumPages) {
-      throw new CompetitorSourceError(
-        `El catálogo anunció ${first.pagesDiscovered} páginas y supera el límite seguro de ${this.maximumPages}.`,
-        true,
-      );
-    }
-
     const products = [...first.products];
     let objectsDetected = first.objectsDetected;
-    for (let page = 2; page <= first.pagesDiscovered; page += 1) {
+    let pagesFetched = 1;
+    let currentPage = first;
+    while (currentPage.pagesDiscovered > pagesFetched) {
+      const page = pagesFetched + 1;
+      if (page > this.maximumPages) {
+        throw new CompetitorSourceError(
+          `El catálogo supera el límite seguro de ${this.maximumPages} páginas.`,
+          true,
+        );
+      }
       await wait(this.crawlDelayMs);
       const html = await this.fetchText(`/productos/page/${page}/`);
       const parsed = parsePositanoCatalogPage(html, fetchedAt);
@@ -96,6 +98,8 @@ export class PositanoCatalogSource {
       }
       products.push(...parsed.products);
       objectsDetected += parsed.objectsDetected;
+      pagesFetched = page;
+      currentPage = parsed;
     }
 
     const unique = [...new Map(products.map((product) => [product.externalId, product])).values()];
@@ -108,8 +112,8 @@ export class PositanoCatalogSource {
     }
     return {
       products: unique,
-      pagesFetched: first.pagesDiscovered,
-      pagesDiscovered: first.pagesDiscovered,
+      pagesFetched,
+      pagesDiscovered: pagesFetched,
       objectsDetected,
       structuralSignature: first.structuralSignature,
       robotsAllowed,
