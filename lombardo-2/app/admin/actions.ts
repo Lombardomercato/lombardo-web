@@ -39,6 +39,9 @@ import { AUTOMATION_TYPES, type AutomationType } from "@/lib/automations/types";
 import { minuteRunKey } from "@/lib/automations/date";
 import { createAutomationServices } from "@/lib/server/automations";
 import { AutomationStoreError } from "@/lib/server/automations/automation-store";
+import { createCompetitorServices } from "@/lib/server/competitors";
+import { CompetitorStoreError } from "@/lib/server/competitors/competitor-store";
+import { COMPETITOR_ALERT_TYPES, type CompetitorAlertType } from "@/lib/competitors/types";
 
 export interface AdminLoginState {
   error?: string;
@@ -138,6 +141,78 @@ export async function unpinHomeFeaturedAction(formData: FormData) {
     destination += `?success=${encodeURIComponent("PIN removido.")}`;
   } catch (error) {
     destination += `?error=${encodeURIComponent(error instanceof AutomationStoreError ? error.message : "No pudimos quitar el PIN.")}`;
+  }
+  redirect(destination);
+}
+
+export async function runCompetitorIngestionAction() {
+  let destination = "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const result = await createCompetitorServices().service.run({
+      trigger: "manual",
+      runKey: minuteRunKey("competitor-positano"),
+      createdBy: session.authUserId,
+    });
+    revalidatePath(destination);
+    const feedback = `Positano: ${result.status} · ${result.productsParsed} productos · ${result.matched} matches.`;
+    destination += result.status === "failed" || result.status === "blocked"
+      ? `?error=${encodeURIComponent(`${feedback} ${result.warnings.join(" ")}`)}`
+      : `?success=${encodeURIComponent(feedback)}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof CompetitorStoreError ? error.message : "No pudimos ejecutar Competencia.")}`;
+  }
+  redirect(destination);
+}
+
+export async function setCompetitorMatchAction(formData: FormData) {
+  const productId = formText(formData, "competitorProductId", 36);
+  let destination = `/admin/competencia/${productId}`;
+  try {
+    const session = await requireAdminRole("admin");
+    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw new CompetitorStoreError("Producto inválido.", 400);
+    const rejected = formData.get("matchAction") === "reject";
+    const runiaSku = formText(formData, "runiaSku", 80).toLocaleUpperCase("es-AR");
+    if (!rejected && !runiaSku) throw new CompetitorStoreError("Ingresá un SKU Runia SAFE.", 422);
+    await createCompetitorServices().store.setManualMatch({
+      competitorProductId: productId,
+      runiaSku,
+      rejected,
+      operatorId: session.authUserId,
+    });
+    revalidatePath("/admin/competencia");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent(rejected ? "Match rechazado manualmente." : "Match corregido manualmente.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof CompetitorStoreError ? error.message : "No pudimos guardar el match.")}`;
+  }
+  redirect(destination);
+}
+
+function alertRuleValue(formData: FormData, type: CompetitorAlertType, field: "threshold" | "cooldown") {
+  const value = Number(formText(formData, `${field}_${type}`, 10));
+  if (!Number.isFinite(value)) throw new CompetitorStoreError("La configuración de alertas no es válida.", 422);
+  return field === "threshold"
+    ? Math.min(Math.max(value, 0), 1_000)
+    : Math.min(Math.max(Math.trunc(value), 1), 8_760);
+}
+
+export async function updateCompetitorAlertRulesAction(formData: FormData) {
+  let destination = "/admin/competencia";
+  try {
+    await requireAdminRole("admin");
+    const services = createCompetitorServices();
+    const competitor = await services.store.ensurePositano();
+    await services.store.updateRules(competitor.id, COMPETITOR_ALERT_TYPES.map((type) => ({
+      type,
+      enabled: formData.get(`enabled_${type}`) === "on",
+      thresholdPct: alertRuleValue(formData, type, "threshold"),
+      cooldownHours: alertRuleValue(formData, type, "cooldown"),
+    })));
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Alertas competitivas actualizadas.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof CompetitorStoreError ? error.message : "No pudimos actualizar las alertas.")}`;
   }
   redirect(destination);
 }
