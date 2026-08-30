@@ -204,13 +204,32 @@ function CellarEntrance({
             if (nextProgress >= 0.55) openCellar();
           }}
         >
-          <span className={styles.leftDoor} aria-hidden="true"><i>LOMBARDO.</i></span>
-          <span className={styles.rightDoor} aria-hidden="true"><i>CAVA 04</i></span>
+          <span className={styles.leftDoor} aria-hidden="true">
+            <span className={styles.doorPanel}>
+              <small>PUERTA 01</small>
+              <strong>CAVA</strong>
+            </span>
+            <span className={styles.doorHandle} />
+          </span>
+          <span className={styles.rightDoor} aria-hidden="true">
+            <span className={styles.doorPanel}>
+              <small>PUERTA 02</small>
+              <strong>SECRETA</strong>
+            </span>
+            <span className={styles.doorHandle} />
+          </span>
           <span className={styles.doorInstruction}>
             <strong>ABRIR LA CAVA</strong>
             <small>DESLIZÁ → · CLICK · ENTER</small>
           </span>
         </button>
+        <span className={styles.cellarFrame} aria-hidden="true">
+          <span className={styles.cellarLintel}>
+            <strong>LA CAVA SECRETA</strong>
+            <small>LOMBARDO · RESERVA 04</small>
+          </span>
+          <i className={styles.cellarThreshold} />
+        </span>
       </div>
     </section>
   );
