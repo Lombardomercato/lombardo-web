@@ -1,90 +1,153 @@
 .section {
-  padding: clamp(4rem, 9vw, 8rem) var(--page-gutter);
-  background: var(--neutral-paper);
-  color: var(--lombardo-blue);
+  padding: clamp(5rem, 10vw, 10rem) var(--page-gutter);
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
 }
 
 .heading {
-  margin-bottom: clamp(2rem, 5vw, 4rem);
+  margin-bottom: clamp(3rem, 7vw, 6rem);
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 8fr) minmax(16rem, 4fr);
+  gap: 1rem clamp(2rem, 6vw, 7rem);
   align-items: end;
-  gap: 0.8rem 2rem;
 }
 
 .heading > p {
   grid-column: 1 / -1;
-  color: var(--lombardo-red);
-  font-size: var(--step--1);
+  color: var(--lombardo-pink);
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.11em;
 }
 
 .heading h2 {
-  max-width: 12ch;
+  max-width: 13ch;
   font-family: var(--font-display);
-  font-size: clamp(2.7rem, 6vw, 6.8rem);
-  line-height: 0.86;
-  letter-spacing: -0.045em;
+  font-size: clamp(3.4rem, 7vw, 8rem);
+  line-height: 0.8;
+  letter-spacing: -0.055em;
   text-transform: uppercase;
 }
 
-.heading a {
+.heading > div {
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(245, 239, 227, 0.36);
+}
+
+.heading > div p {
+  max-width: 33rem;
+  margin-bottom: 1.8rem;
+  line-height: 1.5;
+}
+
+.heading > div a {
+  display: inline-block;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid currentColor;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(2rem, 4vw, 4rem) clamp(1rem, 2vw, 2rem);
+  gap: clamp(3rem, 5vw, 5rem) clamp(1rem, 2vw, 2rem);
 }
 
 .card {
   min-width: 0;
 }
 
-.card > div {
+.visualLink {
+  position: relative;
+  display: block;
+  color: var(--lombardo-blue);
+}
+
+.index {
+  position: absolute;
+  z-index: 2;
+  top: 0.8rem;
+  left: 0.8rem;
+  min-width: 2.1rem;
+  padding: 0.45rem;
+  background: var(--lombardo-pink);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cardCopy {
   padding-top: 1rem;
 }
 
-.card p {
-  color: var(--neutral-muted);
-  font-size: 0.72rem;
+.cardCopy > p {
+  color: rgba(245, 239, 227, 0.6);
+  font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
-.card h3 {
-  margin: 0.45rem 0 1rem;
+.cardCopy h3 {
+  min-height: 3.8rem;
+  margin: 0.55rem 0 1.2rem;
   font-family: var(--font-display);
-  font-size: clamp(1.35rem, 2vw, 2.1rem);
-  line-height: 0.95;
+  font-size: clamp(1.35rem, 2vw, 2.15rem);
+  line-height: 0.93;
+  text-transform: uppercase;
 }
 
-.card strong {
+.buyRow {
+  padding-top: 0.8rem;
+  display: grid;
+  gap: 0.9rem;
+  border-top: 1px solid rgba(245, 239, 227, 0.3);
+}
+
+.buyRow strong {
   font-size: var(--step-1);
 }
 
+.buyRow button {
+  min-height: 3.2rem;
+  padding: 0 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 0;
+  background: var(--lombardo-green);
+  color: var(--lombardo-blue);
+  cursor: pointer;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.buyRow button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.liveNote {
+  max-width: 48rem;
+  margin-top: clamp(3rem, 6vw, 6rem);
+  padding-top: 1rem;
+  border-top: 1px solid rgba(245, 239, 227, 0.35);
+  color: rgba(245, 239, 227, 0.68);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 @media (max-width: 64rem) {
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 47.99rem) {
-  .heading {
-    grid-template-columns: 1fr;
-  }
-
-  .heading a {
-    justify-self: start;
-  }
-
-  .grid {
-    grid-template-columns: 1fr;
-    gap: 3rem;
-  }
+  .heading { grid-template-columns: 1fr; }
+  .heading h2 { font-size: clamp(3.1rem, 14vw, 5.3rem); }
+  .grid { grid-template-columns: 1fr; gap: 3.5rem; }
+  .cardCopy h3 { min-height: 0; }
 }

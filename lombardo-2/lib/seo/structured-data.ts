@@ -89,3 +89,34 @@ export function productStructuredData(product: Product) {
     },
   };
 }
+
+export function articleStructuredData(article: {
+  slug: string;
+  title: string;
+  description: string;
+  publishedAt: string;
+  updatedAt: string;
+  category: string;
+  productImages: string[];
+}) {
+  const url = absoluteUrl(`/guias/${article.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: article.title,
+    description: article.description,
+    url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    datePublished: article.publishedAt,
+    dateModified: article.updatedAt,
+    articleSection: article.category,
+    inLanguage: "es-AR",
+    author: { "@type": "Organization", name: SITE.name, url: SITE.url },
+    publisher: { "@id": `${SITE.url}/#online-store` },
+    image: [
+      absoluteUrl(`/guias/${article.slug}/opengraph-image`),
+      ...article.productImages,
+    ],
+  };
+}

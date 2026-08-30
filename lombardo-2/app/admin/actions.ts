@@ -35,6 +35,10 @@ import {
   SecretCellarInputError,
 } from "@/lib/server/secret-cellar/secret-cellar-service";
 import { SecretCellarStoreError } from "@/lib/server/secret-cellar/secret-cellar-store";
+import { AUTOMATION_TYPES, type AutomationType } from "@/lib/automations/types";
+import { minuteRunKey } from "@/lib/automations/date";
+import { createAutomationServices } from "@/lib/server/automations";
+import { AutomationStoreError } from "@/lib/server/automations/automation-store";
 
 export interface AdminLoginState {
   error?: string;
@@ -77,6 +81,65 @@ async function settleInBatches<T>(items: T[], batchSize: number, operation: (ite
 
 function validStatus(value: string): value is FulfillmentStatus {
   return FULFILLMENT_STATUSES.includes(value as FulfillmentStatus);
+}
+
+function validAutomationType(value: string): value is AutomationType {
+  return AUTOMATION_TYPES.includes(value as AutomationType);
+}
+
+export async function runAutomationAction(formData: FormData) {
+  let destination = "/admin/automatizaciones";
+  const type = formText(formData, "automationType", 40);
+  try {
+    const session = await requireAdminRole("admin");
+    if (!validAutomationType(type)) throw new AutomationStoreError("Automatización inválida.", 400);
+    const result = await createAutomationServices().orchestrator.run({
+      type,
+      trigger: "manual",
+      runKey: minuteRunKey(type),
+      createdBy: session.authUserId,
+    });
+    revalidatePath("/");
+    revalidatePath("/guias");
+    revalidatePath("/admin/automatizaciones");
+    destination += result.claimed
+      ? `?success=${encodeURIComponent(`${type}: ${result.status}.`)}`
+      : `?success=${encodeURIComponent(`${type}: ya estaba ejecutado o en curso.`)}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof AutomationStoreError ? error.message : "No pudimos ejecutar la automatización.")}`;
+  }
+  redirect(destination);
+}
+
+export async function pinHomeFeaturedAction(formData: FormData) {
+  let destination = "/admin/automatizaciones";
+  try {
+    const session = await requireAdminRole("admin");
+    const sku = formText(formData, "sku", 80).toLocaleUpperCase("es-AR");
+    const position = Math.min(Math.max((Number(formText(formData, "position", 2)) || 1) - 1, 0), 5);
+    if (!sku) throw new AutomationStoreError("Ingresá un SKU SAFE.", 422);
+    await createAutomationServices().store.pinProductBySku(sku, position, session.authUserId);
+    revalidatePath("/admin/automatizaciones");
+    destination += `?success=${encodeURIComponent("Producto fijado. Se aplicará en la próxima rotación.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof AutomationStoreError ? error.message : "No pudimos fijar el producto.")}`;
+  }
+  redirect(destination);
+}
+
+export async function unpinHomeFeaturedAction(formData: FormData) {
+  let destination = "/admin/automatizaciones";
+  try {
+    await requireAdminRole("admin");
+    const pinId = formText(formData, "pinId", 36);
+    if (!/^[0-9a-f-]{36}$/i.test(pinId)) throw new AutomationStoreError("PIN inválido.", 400);
+    await createAutomationServices().store.unpinProduct(pinId);
+    revalidatePath("/admin/automatizaciones");
+    destination += `?success=${encodeURIComponent("PIN removido.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof AutomationStoreError ? error.message : "No pudimos quitar el PIN.")}`;
+  }
+  redirect(destination);
 }
 
 export async function loginAdminAction(
@@ -528,7 +591,8 @@ export async function reviewPublishedImageCandidateAction(formData: FormData) {
   const session = await requireAdminSession();
   const candidateId = formText(formData, "candidateId", 36);
   const decision = formText(formData, "decision", 24);
-  const params = new URLSearchParams({ view: "needs_review" });
+  const returnView = formText(formData, "returnView", 24);
+  const params = new URLSearchParams({ view: returnView === "priority" ? "priority" : "needs_review" });
   try {
     if (decision !== "correct" && decision !== "remove" && decision !== "search_other") {
       throw new AdminStoreError("Acción de imagen inválida.", 400);

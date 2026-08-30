@@ -553,6 +553,43 @@ async function imageSearchFallback(
   preferredDomains: string[],
   rejectedUrls: Set<string>,
 ) {
+  if (duckSearchEnabled) {
+    const duckCandidates: PublicCatalogImage[] = [];
+    for (const rawQuery of publicSearchQueries(product, preferredDomains).slice(0, 3)) {
+      const query = encodeURIComponent(rawQuery);
+      try {
+        const searchPage = await fetchWithRetry(`https://duckduckgo.com/?q=${query}&iax=images&ia=images`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+            Accept: "text/html",
+          },
+        }, 2);
+        if (!searchPage.ok) continue;
+        const html = await searchPage.text();
+        const vqd = html.match(/vqd=["']([^"'&]+)/)?.[1]
+          || html.match(/vqd=([^&"'\s]+)/)?.[1];
+        if (!vqd) continue;
+        const response = await fetchWithRetry(`https://duckduckgo.com/i.js?l=ar-es&o=json&q=${query}&vqd=${encodeURIComponent(vqd)}`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+            Referer: "https://duckduckgo.com/",
+            Accept: "application/json",
+          },
+        }, 2);
+        if (!response.ok) continue;
+        duckCandidates.push(...duckDuckGoImageResults(await response.json(), product));
+        const usable = duckCandidates.filter((candidate) =>
+          !rejectedUrls.has(candidate.imageUrl) && !rejectedUrls.has(candidate.sourceUrl));
+        const best = bestSearchResult(product, usable);
+        if (best?.band === "high" || best?.band === "medium") return best;
+      } catch {
+        // Continue with the next query variant or the static source catalogs.
+      }
+    }
+    const best = bestSearchResult(product, duckCandidates.filter((candidate) =>
+      !rejectedUrls.has(candidate.imageUrl) && !rejectedUrls.has(candidate.sourceUrl)));
+    if (best) return best;
+  }
   const candidates: PublicCatalogImage[] = [];
   for (const rawQuery of publicSearchQueries(product, preferredDomains)) {
     const query = encodeURIComponent(rawQuery);
@@ -654,7 +691,8 @@ async function readSearchCache(products: ImageMatchProduct[]) {
     const records = JSON.parse(await readFile(searchCachePath, "utf8")) as SearchCacheRecord[];
     return new Map(records.flatMap((record) => {
       const product = productById.get(record.productId);
-      return product ? [[record.productId, { ...record, product } satisfies ImageMatchResult] as const] : [];
+      const reusable = !duckSearchEnabled || record.band === "high" || record.band === "medium";
+      return product && reusable ? [[record.productId, { ...record, product } satisfies ImageMatchResult] as const] : [];
     }));
   } catch {
     return new Map<string, ImageMatchResult>();
@@ -758,7 +796,22 @@ async function importResilient(items: Array<Record<string, unknown>>) {
   const candidateIds: string[] = [];
   const failures: Array<{ productId: string; reason: string }> = [];
   async function importBatch(batch: Array<Record<string, unknown>>): Promise<void> {
-    const response = await jobRequest("", { method: "PUT", body: JSON.stringify({ items: batch }) });
+    let response: Response;
+    try {
+      response = await jobRequest("", { method: "PUT", body: JSON.stringify({ items: batch }) });
+    } catch (error) {
+      if (batch.length === 1) {
+        failures.push({
+          productId: String(batch[0].productId || ""),
+          reason: error instanceof Error ? error.message : "network_error",
+        });
+        return;
+      }
+      const middle = Math.ceil(batch.length / 2);
+      await importBatch(batch.slice(0, middle));
+      await importBatch(batch.slice(middle));
+      return;
+    }
     if (!response.ok) {
       if (batch.length === 1) {
         failures.push({ productId: String(batch[0].productId || ""), reason: `HTTP ${response.status}` });
@@ -875,7 +928,9 @@ let automaticPublication = { published: 0, failures: [] as string[] };
 let importFailures: Array<{ productId: string; reason: string }> = [];
 
 if (mode === "execute") {
-  const items = publishable.map((match) => ({
+  const items = publishable.map((match) => {
+    const reviewRisk = reviewRiskForMatch(match);
+    return ({
     productId: match.product.id,
     source: match.external?.source,
     sourceTier: match.external?.tier,
@@ -892,10 +947,14 @@ if (mode === "execute") {
     mismatchWarnings: [],
     hardConflicts: match.hardConflicts,
     visualVariant: visualVariantForSku(match.product.sku),
-    reviewRiskRank: reviewRiskForMatch(match).rank,
-    reviewRiskReason: reviewRiskForMatch(match).reason,
+    reviewRiskRank: reviewRisk.rank,
+    reviewRiskKind: reviewRisk.kind,
+    reviewRiskReason: reviewRisk.reason,
+    reviewPriorityScore: reviewRisk.score,
+    reviewRiskVersion: 2,
     runId,
-  }));
+    });
+  });
   const imported = await importResilient(items);
   importFailures = imported.failures;
   automaticPublication = await publish(imported.candidateIds);

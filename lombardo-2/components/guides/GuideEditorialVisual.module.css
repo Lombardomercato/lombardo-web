@@ -1,0 +1,83 @@
+.heroVisual {
+  grid-column: 7 / -1;
+  position: relative;
+  min-height: clamp(28rem, 58vw, 48rem);
+  align-self: stretch;
+  overflow: hidden;
+  background: var(--lombardo-beige);
+  color: var(--lombardo-blue);
+}
+
+.heroBottle {
+  position: absolute;
+  width: 48%;
+}
+
+.heroBottle[data-index="0"] { left: 4%; bottom: 5%; z-index: 2; }
+.heroBottle[data-index="1"] { right: -6%; top: 3%; width: 44%; transform: rotate(4deg); }
+.heroBottle[data-index="2"] { right: 20%; bottom: -12%; width: 39%; transform: rotate(-4deg); }
+
+.heroVisual > span {
+  position: absolute;
+  z-index: 3;
+  top: 1.3rem;
+  left: 1.3rem;
+  color: var(--lombardo-red);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 3.2rem);
+  font-weight: 700;
+  line-height: 0.78;
+}
+
+.moment {
+  margin: clamp(2rem, 5vw, 5rem) 0 clamp(5rem, 10vw, 10rem);
+  display: grid;
+  grid-template-columns: minmax(0, 8fr) minmax(16rem, 4fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: end;
+}
+
+.moment[data-reverse="true"] .momentVisuals { order: 2; }
+
+.momentVisuals {
+  min-height: clamp(28rem, 54vw, 46rem);
+  padding: clamp(1rem, 4vw, 4rem);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.7rem, 2vw, 2rem);
+  align-items: end;
+  overflow: hidden;
+  background: var(--lombardo-green);
+}
+
+.momentVisuals > div[data-index="1"] { transform: translateY(-12%); }
+
+.moment figcaption {
+  padding-top: 1rem;
+  border-top: 1px solid currentColor;
+}
+
+.moment figcaption span {
+  color: var(--lombardo-red);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.moment figcaption p {
+  margin-top: 1.2rem;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.6vw, 4rem);
+  line-height: 0.94;
+}
+
+@media (max-width: 64rem) {
+  .heroVisual { grid-column: 6 / -1; }
+}
+
+@media (max-width: 47.99rem) {
+  .heroVisual { grid-column: 1 / -1; min-height: 34rem; }
+  .moment { grid-template-columns: 1fr; }
+  .moment[data-reverse="true"] .momentVisuals { order: initial; }
+  .momentVisuals { min-height: 25rem; padding: 0.75rem; }
+}

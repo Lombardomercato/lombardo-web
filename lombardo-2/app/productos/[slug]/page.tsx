@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ProductDetail } from "@/components/product/ProductDetail";
+import { ProductGuideLinks } from "@/components/product/ProductGuideLinks";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
@@ -83,6 +84,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         ]}
       />
       <ProductDetail product={product} />
+      <ProductGuideLinks product={product} />
     </>
   );
 }

@@ -1,0 +1,23 @@
+.section { padding: clamp(5rem, 10vw, 10rem) var(--page-gutter); background: var(--lombardo-beige); color: var(--lombardo-blue); }
+.section > header { margin-bottom: clamp(3rem, 6vw, 6rem); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem; align-items: end; }
+.section header p { color: var(--lombardo-red); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; }
+.section h2 { max-width: 12ch; margin-top: 1.2rem; font-family: var(--font-display); font-size: clamp(3.5rem, 7vw, 7.5rem); line-height: 0.8; letter-spacing: -0.055em; }
+.section > header > a { padding-bottom: 0.4rem; border-bottom: 1px solid currentColor; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
+.grid article { min-width: 0; }
+.visual { min-height: clamp(22rem, 34vw, 34rem); display: block; overflow: hidden; background: var(--lombardo-green); }
+.grid article:nth-child(2) .visual { background: var(--lombardo-red); }
+.grid article:nth-child(3) .visual { background: var(--lombardo-pink); }
+.visual > span { padding: 1rem; display: block; font-family: var(--font-display); font-size: 12rem; }
+.grid article > div { padding-top: 1rem; border-top: 1px solid currentColor; }
+.grid article p { color: var(--lombardo-red); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em; }
+.grid h3 { min-height: 3.2em; margin: 1rem 0; font-family: var(--font-display); font-size: clamp(2rem, 3.4vw, 3.5rem); line-height: 0.87; text-transform: uppercase; }
+.grid article > div > a { display: inline-block; padding-bottom: 0.3rem; border-bottom: 1px solid currentColor; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; }
+@media (max-width: 47.99rem) {
+  .section > header { grid-template-columns: 1fr; }
+  .section h2 { font-size: clamp(3.1rem, 14vw, 4.8rem); }
+  .section > header > a { justify-self: start; }
+  .grid { grid-template-columns: 1fr; gap: 3.5rem; }
+  .visual { min-height: 30rem; }
+  .grid h3 { min-height: 0; }
+}

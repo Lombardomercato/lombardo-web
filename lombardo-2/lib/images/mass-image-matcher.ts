@@ -31,8 +31,10 @@ export interface ImageMatchResult {
 }
 
 export interface ImageReviewRisk {
-  rank: 1 | 2 | 3 | 4;
+  rank: 1 | 2 | 3 | 4 | 5 | 6;
+  kind: "product" | "brand_line" | "varietal" | "presentation_volume" | "pack_unit" | "confidence";
   reason: string;
+  score: number;
 }
 
 const STOP_WORDS = new Set([
@@ -53,6 +55,13 @@ const LINE_MARKERS = [
   "coleccion", "collection", "alta", "altitud", "raices", "pasionado", "primus",
   "icono", "icon", "roble", "premium", "clasico", "classic", "family reserve",
   "maria carmen", "maría carmen", "founders reserve", "limited edition", "edicion limitada",
+  "millesime", "blanc de blancs", "golden black", "golden reserve", "familia", "estirpe",
+  "choco a la frutilla", "dunkel", "hefeweizen", "sin azucar", "con azucar",
+] as const;
+
+const STRONG_PRODUCT_KINDS = [
+  "gin", "ginebra", "vodka", "whisky", "cognac", "licor", "cerveza", "ketchup",
+  "mostaza", "aderezo", "vinagre", "chocolate", "garrapinada",
 ] as const;
 
 const SPIRITS_PREFIXES = [
@@ -82,25 +91,44 @@ function replaceAliases(value: string) {
 export function reviewRiskForMatch(match: ImageMatchResult): ImageReviewRisk {
   const productText = `${match.product.name} ${match.product.presentation}`;
   const externalText = `${match.external?.name ?? ""} ${match.external?.presentation ?? ""}`;
+  const externalUrl = match.external?.sourceUrl ?? "";
   const productVolume = volumeMl(productText);
   const externalVolume = volumeMl(externalText);
+  const productNameVolume = volumeMl(match.product.name);
+  const productPresentationVolume = volumeMl(match.product.presentation);
   const productPackaging = packaging(productText);
   const externalPackaging = packaging(externalText);
-  if ((productVolume && !externalVolume) || !sameSet(productPackaging, externalPackaging)) {
-    return { rank: 1, reason: "Revisar presentación/volumen del master" };
-  }
   const productVarietals = markers(productText, VARIETALS);
   const externalVarietals = markers(externalText, VARIETALS);
   const productLines = markers(productText, LINE_MARKERS);
   const externalLines = markers(externalText, LINE_MARKERS);
-  if ((productVarietals.length && !sameSet(productVarietals, externalVarietals))
-    || (productLines.length && !sameSet(productLines, externalLines))) {
-    return { rank: 2, reason: "Revisar varietal/línea del master" };
+  const productKinds = markers(productText, STRONG_PRODUCT_KINDS);
+  const externalKinds = markers(externalText, STRONG_PRODUCT_KINDS);
+  const score = (rank: number) => ((7 - rank) * 1000) + Math.round((1 - match.confidence) * 100);
+
+  if (match.hardConflicts.some((conflict) => /producto diferente|marca diferente/i.test(conflict))
+    || (externalKinds.length > 0 && !sameSet(productKinds, externalKinds))
+    || /coloriage|abillion|pinterest|wikipedia/i.test(externalUrl)
+    || /^https:\/\/[^/]+\/?(?:[?#].*)?$/i.test(externalUrl)) {
+    return { rank: 1, kind: "product", reason: "Posible producto diferente o fuente genérica", score: score(1) };
   }
-  if (match.band === "medium" && match.confidence < 0.82) {
-    return { rank: 3, reason: "MEDIUM de menor confianza" };
+  if (match.hardConflicts.some((conflict) => /marca|línea/i.test(conflict))
+    || ((productLines.length || externalLines.length) && !sameSet(productLines, externalLines))) {
+    return { rank: 2, kind: "brand_line", reason: "Posible conflicto de marca o línea", score: score(2) };
   }
-  return { rank: 4, reason: "Revisión general" };
+  if ((productVarietals.length || externalVarietals.length) && !sameSet(productVarietals, externalVarietals)) {
+    return { rank: 3, kind: "varietal", reason: "Posible conflicto de varietal", score: score(3) };
+  }
+  if (match.hardConflicts.some((conflict) => /volumen|presentación/i.test(conflict))
+    || (productNameVolume && productPresentationVolume && productNameVolume !== productPresentationVolume)
+    || (productVolume && (!externalVolume || productVolume !== externalVolume))) {
+    return { rank: 4, kind: "presentation_volume", reason: "Revisar presentación o volumen", score: score(4) };
+  }
+  if (match.hardConflicts.some((conflict) => /pack|estuche/i.test(conflict))
+    || !sameSet(productPackaging, externalPackaging)) {
+    return { rank: 5, kind: "pack_unit", reason: "Revisar pack, estuche o unidad", score: score(5) };
+  }
+  return { rank: 6, kind: "confidence", reason: "Menor confianza; revisión general", score: score(6) };
 }
 
 export function normalizeImageMatchText(value: string) {

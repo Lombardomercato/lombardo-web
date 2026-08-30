@@ -207,8 +207,10 @@ export interface AdminImageCandidate {
   confidenceBand: MatchConfidenceBand;
   evidence: string[];
   mismatchWarnings: string[];
-  reviewRiskRank: 1 | 2 | 3 | 4;
+  reviewRiskRank: 1 | 2 | 3 | 4 | 5 | 6;
+  reviewRiskKind: "product" | "brand_line" | "varietal" | "presentation_volume" | "pack_unit" | "confidence";
   reviewRiskReason: string;
+  reviewPriorityScore: number;
   matchReviewStatus: MatchReviewStatus;
   publicationStatus: "pending" | "approved" | "rejected";
   rightsStatus: "unknown" | "licensed" | "approved" | "restricted";

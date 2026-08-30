@@ -34,6 +34,7 @@ export function AdminShell({
         </Link>
         <Link href="/admin/productos">PRODUCTOS</Link>
         <Link href="/admin/vinros">VINROS HEALTH</Link>
+        <Link href="/admin/automatizaciones">AUTOMATIZACIONES</Link>
         <Link href="/admin/imagenes">IMÁGENES</Link>
         <Link href="/admin/clientes">CLIENTES</Link>
         <Link href="/admin/promociones">PROMOCIONES</Link>

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { RuniaCommerceProvider } from "../lib/commerce/runia-commerce-provider.ts";
 import { SEO_CATEGORIES } from "../lib/seo/categories.ts";
 import {
+  FEATURED_GUIDES,
   PUBLISHED_GUIDES,
   hasGuideQuality,
 } from "../lib/seo/guides.ts";
@@ -61,10 +62,50 @@ test("SEO publica categorías reales y sólo guías editoriales con control de c
     SEO_CATEGORIES.map((category) => category.slug),
     ["vinos", "destilados", "cervezas", "sin-alcohol", "gourmet", "regalos"],
   );
-  assert.equal(PUBLISHED_GUIDES.length, 2);
+  assert.equal(FEATURED_GUIDES.length, 5);
+  assert.equal(PUBLISHED_GUIDES.length, 7);
   for (const guide of PUBLISHED_GUIDES) {
-    assert.equal(hasGuideQuality(guide, guide.minimumProducts), true);
-    assert.equal(hasGuideQuality(guide, guide.minimumProducts - 1), false);
+    assert.equal(hasGuideQuality(guide, guide.catalog.limit), true);
+    assert.equal(hasGuideQuality(guide, guide.catalog.limit - 1), false);
+  }
+});
+
+test("las cinco piezas editoriales tienen metadatos, lectura, visuales y catálogo vivo", () => {
+  assert.deepEqual(
+    FEATURED_GUIDES.map((guide) => guide.slug),
+    [
+      "que-vino-llevar-a-una-cena",
+      "vinos-por-menos-de-20000",
+      "malbec-7-botellas-para-entenderlo",
+      "regalar-vino-sin-saber-de-vino",
+      "vino-para-asado-no-siempre-malbec",
+    ],
+  );
+  for (const guide of FEATURED_GUIDES) {
+    assert.equal(guide.sections.length, 4);
+    assert.equal(guide.visualCaptions.length, 2);
+    assert.ok(guide.titleLines.length >= 3);
+    assert.ok(guide.readingMinutes >= 5);
+    assert.equal(guide.publishedAt, "2026-08-29");
+  }
+  const priceGuide = FEATURED_GUIDES.find((guide) => guide.slug === "vinos-por-menos-de-20000");
+  assert.equal(priceGuide?.catalog.mode, "price-cap");
+  assert.equal(priceGuide?.catalog.priceMax, 20_000);
+  assert.equal(priceGuide?.catalog.limit, 10);
+});
+
+test("guías publican Article schema, OG propia, enlaces bidireccionales y eventos editoriales", () => {
+  const article = source("app/guias/[slug]/page.tsx");
+  const products = source("components/guides/GuideProductGrid.tsx");
+  const events = source("lib/analytics/commerce-events.ts");
+  assert.match(article, /articleStructuredData/);
+  assert.match(source("app/guias/[slug]/opengraph-image.tsx"), /ImageResponse/);
+  assert.match(source("app/productos/[slug]/page.tsx"), /ProductGuideLinks/);
+  assert.match(source("app/page.tsx"), /HomeGuides/);
+  assert.match(products, /guide_product_click/);
+  assert.match(products, /guide_add_to_cart/);
+  for (const event of ["guide_view", "guide_product_click", "guide_add_to_cart", "guide_share", "guide_related_click"]) {
+    assert.match(events, new RegExp(event));
   }
 });
 
