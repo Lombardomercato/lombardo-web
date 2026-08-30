@@ -20,6 +20,12 @@ interface TenantRow {
   id: string;
 }
 
+export interface CurrentCustomerAccessState {
+  tenant: { id: string; slug: string };
+  authUserId: string | null;
+  account: CustomerAccountSummary | null;
+}
+
 interface CustomerAccountRow {
   id: string;
   tenant_id: string;
@@ -152,12 +158,23 @@ export async function getClaimsSubjectForClient(supabase: SupabaseClient) {
 }
 
 export async function getCurrentCustomerAccount() {
-  const supabase = await createSupabaseServerClient();
-  const authUserId = await getClaimsSubjectForClient(supabase);
-  if (!authUserId) return null;
+  return (await getCurrentCustomerAccessState()).account;
+}
 
-  const tenant = await resolveConfiguredTenant();
-  return getActiveCustomerAccountForClient(supabase, tenant.id, authUserId);
+export async function getCurrentCustomerAccessState(): Promise<CurrentCustomerAccessState> {
+  const [supabase, tenant] = await Promise.all([
+    createSupabaseServerClient(),
+    resolveConfiguredTenant(),
+  ]);
+  const authUserId = await getClaimsSubjectForClient(supabase);
+  if (!authUserId) return { tenant, authUserId: null, account: null };
+
+  const account = await getActiveCustomerAccountForClient(
+    supabase,
+    tenant.id,
+    authUserId,
+  );
+  return { tenant, authUserId, account };
 }
 
 export async function requireCurrentCustomerAccount(
@@ -170,22 +187,15 @@ export async function requireCurrentCustomerAccount(
   redirect(`/login?next=${encodeURIComponent(next)}`);
 }
 
-export async function getCurrentCustomerPricingContext(): Promise<CustomerPricingContext> {
-  const tenant = await resolveConfiguredTenant();
+export function pricingContextForCustomerState(
+  state: CurrentCustomerAccessState,
+): CustomerPricingContext {
+  const { tenant, authUserId, account } = state;
   const guest = {
     ...retailPricingContext(tenant.slug),
     tenantRecordId: tenant.id,
   };
-  const supabase = await createSupabaseServerClient();
-  const authUserId = await getClaimsSubjectForClient(supabase);
-  if (!authUserId) return guest;
-
-  const account = await getActiveCustomerAccountForClient(
-    supabase,
-    tenant.id,
-    authUserId,
-  );
-  if (!account) return guest;
+  if (!authUserId || !account) return guest;
 
   return {
     tenantRecordId: tenant.id,
@@ -203,4 +213,8 @@ export async function getCurrentCustomerPricingContext(): Promise<CustomerPricin
       String(account.discountPercent),
     ].join(":"),
   };
+}
+
+export async function getCurrentCustomerPricingContext(): Promise<CustomerPricingContext> {
+  return pricingContextForCustomerState(await getCurrentCustomerAccessState());
 }

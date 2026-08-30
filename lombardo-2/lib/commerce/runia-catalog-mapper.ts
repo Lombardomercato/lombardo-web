@@ -101,6 +101,10 @@ export interface RuniaSupplierProductRow {
         active: boolean;
       }
     | null;
+  editorial?:
+    | Array<{ brand_name: string | null }>
+    | { brand_name: string | null }
+    | null;
 }
 
 export interface RuniaPublicMediaRow {
@@ -173,6 +177,13 @@ export function inferBrand(name: string) {
   };
 }
 
+function editorialBrand(row: RuniaSupplierProductRow) {
+  const editorial = Array.isArray(row.editorial)
+    ? row.editorial[0]
+    : row.editorial;
+  return editorial?.brand_name?.trim() || null;
+}
+
 function presentationFor(row: RuniaSupplierProductRow) {
   const stored = row.normalized_presentation?.trim() || row.presentation_raw?.trim();
   if (stored) return stored;
@@ -239,7 +250,13 @@ export function mapRuniaSupplierProduct(
 
   const sku = row.supplier_sku.trim();
   const name = row.name_raw.trim();
-  const brand = inferBrand(name);
+  const inferredBrand = inferBrand(name);
+  const brandName = editorialBrand(row) || inferredBrand.name;
+  const brand = {
+    id: `runia-brand-${slugify(brandName) || "vinros"}`,
+    slug: slugify(brandName) || "vinros",
+    name: brandName,
+  };
   const productCategory = categoryForSupplierSku(sku);
   const presentation = presentationFor(row);
   assertPricingList(pricingContext);

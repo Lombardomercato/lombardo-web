@@ -11,6 +11,7 @@ import {
 } from "../server/customers/types";
 import type { Product } from "../../types/commerce";
 import type { CommerceProvider, ProductPageQuery } from "./provider";
+import type { QuickOrderProvider } from "../quick-order/types";
 
 export type {
   CommerceProvider,
@@ -182,4 +183,20 @@ export const commerceProvider: CommerceProvider = {
   },
   getIndexableProducts: () => cachedIndexableProducts(),
   getCategories: () => getRuniaProvider().getCategories(),
+};
+
+export const quickOrderProvider: QuickOrderProvider = {
+  searchProducts: async (input, pricingContext) => {
+    const result = await getRuniaProvider().searchProducts(input, pricingContext);
+    return {
+      ...result,
+      products: result.products.map((entry) => ({
+        ...entry,
+        product: attachPricingIdentity(
+          entry.product,
+          pricingContext.contextKey,
+        ),
+      })),
+    };
+  },
 };

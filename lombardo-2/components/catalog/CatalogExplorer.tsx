@@ -28,6 +28,7 @@ interface CatalogExplorerProps {
   initialCategory?: string;
   heroTitle?: readonly [string, string];
   heroDescription?: readonly [string, string];
+  quickOrderAvailable?: boolean;
 }
 
 const DEFAULT_HERO_TITLE = ["TODO LO", "BUENO."] as const;
@@ -111,6 +112,7 @@ export function CatalogExplorer({
   initialCategory = "todos",
   heroTitle = DEFAULT_HERO_TITLE,
   heroDescription = DEFAULT_HERO_DESCRIPTION,
+  quickOrderAvailable = false,
 }: CatalogExplorerProps) {
   const [query, setQuery] = useState("");
   const category = initialCategory;
@@ -215,6 +217,12 @@ export function CatalogExplorer({
           <span>CATÁLOGO / 01</span>
           <span>ROSARIO</span>
         </div>
+        {quickOrderAvailable ? (
+          <nav className={styles.purchaseModes} aria-label="Modo de compra">
+            <Link href="/productos" aria-current="page">CATÁLOGO</Link>
+            <Link href="/pedido-rapido">PEDIDO RÁPIDO</Link>
+          </nav>
+        ) : null}
         <h1>
           <span>{heroTitle[0]}</span>
           <span>{heroTitle[1]}</span>

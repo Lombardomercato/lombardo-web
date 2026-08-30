@@ -19,7 +19,9 @@ export const config = {
     "/nueva-clave/:path*",
     "/recuperar-clave/:path*",
     "/mi-cuenta/:path*",
+    "/pedido-rapido/:path*",
     "/api/catalog/:path*",
+    "/api/quick-order/:path*",
     "/api/orders/:path*",
   ],
 };
