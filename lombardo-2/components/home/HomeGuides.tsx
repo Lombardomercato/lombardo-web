@@ -1,10 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ProductVisual } from "@/components/product/ProductVisual";
 import { FEATURED_GUIDES } from "@/lib/seo/guides";
-import type { Product } from "@/types/commerce";
 import styles from "./HomeGuides.module.css";
 
-export function HomeGuides({ products }: { products: Product[] }) {
+export function HomeGuides() {
   const guides = FEATURED_GUIDES.slice(0, 3);
   return (
     <section className={styles.section} aria-labelledby="home-guides-title">
@@ -19,7 +18,15 @@ export function HomeGuides({ products }: { products: Product[] }) {
         {guides.map((guide, index) => (
           <article key={guide.slug}>
             <Link className={styles.visual} href={`/guias/${guide.slug}`}>
-              {products[index] ? <ProductVisual product={products[index]} /> : <span>{String(index + 1).padStart(2, "0")}</span>}
+              {guide.heroImage ? (
+                <Image
+                  src={guide.heroImage}
+                  alt={guide.heroAlt ?? ""}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  style={{ objectFit: "cover" }}
+                />
+              ) : <span>{String(index + 1).padStart(2, "0")}</span>}
             </Link>
             <div>
               <p>{guide.cluster} · {guide.readingMinutes} MIN</p>

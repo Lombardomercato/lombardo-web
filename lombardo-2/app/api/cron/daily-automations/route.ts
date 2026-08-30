@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { createAutomationServices } from "@/lib/server/automations";
+import { createCompetitorServices } from "@/lib/server/competitors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ function authorized(request: Request) {
 export async function GET(request: Request) {
   if (!authorized(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const results = await createAutomationServices().orchestrator.runDaily("schedule");
-  const failed = results.some((result) => result.status === "failed" || result.status === "blocked");
-  return Response.json({ ok: !failed, results }, { status: failed ? 207 : 200 });
+  const competitor = await createCompetitorServices().service.run({ trigger: "schedule" });
+  const failed = results.some((result) => result.status === "failed" || result.status === "blocked") ||
+    competitor.status === "failed" || competitor.status === "blocked";
+  return Response.json({ ok: !failed, results, competitor }, { status: failed ? 207 : 200 });
 }

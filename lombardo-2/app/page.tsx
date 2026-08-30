@@ -77,7 +77,7 @@ export default async function Home() {
       <main className={styles.home}>
         <FirstAct />
         <CommercialDiscovery {...discovery} />
-        <HomeGuides products={discovery.products.slice(0, 3)} />
+        <HomeGuides />
       </main>
       <Footer />
     </>

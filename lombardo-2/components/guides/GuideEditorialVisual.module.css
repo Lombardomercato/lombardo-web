@@ -1,83 +1,99 @@
-.heroVisual {
-  grid-column: 7 / -1;
-  position: relative;
-  min-height: clamp(28rem, 58vw, 48rem);
-  align-self: stretch;
-  overflow: hidden;
-  background: var(--lombardo-beige);
+.heroPhoto {
+  margin: 0;
+  background: var(--neutral-paper);
   color: var(--lombardo-blue);
 }
 
-.heroBottle {
-  position: absolute;
-  width: 48%;
+.heroPhoto > div {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  min-height: 34rem;
+  overflow: hidden;
+  background: var(--lombardo-beige);
 }
 
-.heroBottle[data-index="0"] { left: 4%; bottom: 5%; z-index: 2; }
-.heroBottle[data-index="1"] { right: -6%; top: 3%; width: 44%; transform: rotate(4deg); }
-.heroBottle[data-index="2"] { right: 20%; bottom: -12%; width: 39%; transform: rotate(-4deg); }
+.heroPhoto figcaption {
+  padding: 0.9rem var(--page-gutter) 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  border-bottom: 1px solid var(--neutral-line);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
 
-.heroVisual > span {
-  position: absolute;
-  z-index: 3;
-  top: 1.3rem;
-  left: 1.3rem;
+.heroPhoto figcaption span {
   color: var(--lombardo-red);
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 3vw, 3.2rem);
+  font-size: 0.61rem;
   font-weight: 700;
-  line-height: 0.78;
+  letter-spacing: 0.09em;
 }
+
+.heroPhoto figcaption p { max-width: 42rem; text-align: right; }
+
+.fallbackHero { margin: 0; }
+.fallbackHero > div { position: relative; min-height: 38rem; overflow: hidden; background: var(--lombardo-beige); }
+.fallbackHero figcaption { padding: 0.9rem var(--page-gutter); border-bottom: 1px solid var(--neutral-line); font-size: 0.72rem; }
+.heroBottle { position: absolute; width: 38%; }
+.heroBottle[data-index="0"] { left: 10%; bottom: 2%; z-index: 2; }
+.heroBottle[data-index="1"] { left: 36%; top: -4%; transform: rotate(4deg); }
+.heroBottle[data-index="2"] { right: 7%; bottom: -9%; transform: rotate(-4deg); }
 
 .moment {
-  margin: clamp(2rem, 5vw, 5rem) 0 clamp(5rem, 10vw, 10rem);
+  width: min(100%, 74rem);
+  margin: clamp(4rem, 9vw, 8rem) auto;
   display: grid;
-  grid-template-columns: minmax(0, 8fr) minmax(16rem, 4fr);
+  grid-template-columns: minmax(0, 9fr) minmax(15rem, 3fr);
   gap: clamp(1.5rem, 4vw, 4rem);
   align-items: end;
 }
 
-.moment[data-reverse="true"] .momentVisuals { order: 2; }
+.moment[data-reverse="true"] .momentVisual { order: 2; }
 
-.momentVisuals {
-  min-height: clamp(28rem, 54vw, 46rem);
-  padding: clamp(1rem, 4vw, 4rem);
+.momentVisual {
+  position: relative;
+  min-height: clamp(25rem, 48vw, 42rem);
+  overflow: hidden;
+  background: var(--lombardo-beige);
+}
+
+.fallbackProducts {
+  position: absolute;
+  inset: 0;
+  padding: 2rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(0.7rem, 2vw, 2rem);
-  align-items: end;
-  overflow: hidden;
   background: var(--lombardo-green);
 }
 
-.momentVisuals > div[data-index="1"] { transform: translateY(-12%); }
-
 .moment figcaption {
-  padding-top: 1rem;
+  padding-top: 0.9rem;
   border-top: 1px solid currentColor;
 }
 
 .moment figcaption span {
   color: var(--lombardo-red);
-  font-size: 0.65rem;
+  font-size: 0.61rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
 }
 
 .moment figcaption p {
-  margin-top: 1.2rem;
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 3.6vw, 4rem);
-  line-height: 0.94;
-}
-
-@media (max-width: 64rem) {
-  .heroVisual { grid-column: 6 / -1; }
+  max-width: 24ch;
+  margin-top: 1rem;
+  font-family: var(--font-body);
+  font-size: clamp(1.35rem, 2.2vw, 2rem);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.018em;
 }
 
 @media (max-width: 47.99rem) {
-  .heroVisual { grid-column: 1 / -1; min-height: 34rem; }
+  .heroPhoto > div { min-height: 22rem; aspect-ratio: 4 / 3; }
+  .heroPhoto figcaption { display: block; }
+  .heroPhoto figcaption p { margin-top: 0.45rem; text-align: left; }
+  .fallbackHero > div { min-height: 26rem; }
   .moment { grid-template-columns: 1fr; }
-  .moment[data-reverse="true"] .momentVisuals { order: initial; }
-  .momentVisuals { min-height: 25rem; padding: 0.75rem; }
+  .moment[data-reverse="true"] .momentVisual { order: initial; }
+  .momentVisual { min-height: 23rem; }
 }

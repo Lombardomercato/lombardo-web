@@ -1,0 +1,346 @@
+.feedback,
+.error,
+.notice {
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #8baa56;
+  background: #eef5df;
+  color: #355014;
+  line-height: 1.45;
+}
+
+.error {
+  border-color: #e03c31;
+  background: #ffd3cd;
+  color: #851e18;
+}
+
+.notice {
+  border-color: rgba(0, 58, 112, 0.3);
+  background: #e7eef4;
+  color: #003a70;
+}
+
+.headerActions {
+  display: grid;
+  justify-items: end;
+  gap: 0.65rem;
+}
+
+.headerActions button,
+.rules button,
+.matchForm button {
+  min-height: 2.8rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #003a70;
+  background: #003a70;
+  color: white;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.headerActions small {
+  max-width: 28rem;
+  color: #667078;
+  text-align: right;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(9.5rem, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric {
+  min-height: 7.5rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.metric span,
+.runStatus span,
+.confidence,
+.tableHeader,
+.rules label > span,
+.matchForm label > span {
+  display: block;
+  color: #697278;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 1.1rem;
+  color: #003a70;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+}
+
+.metric[data-tone="danger"] {
+  border-color: #e03c31;
+  background: #ffd3cd;
+}
+
+.metric[data-tone="good"] {
+  border-color: #88a64f;
+  background: #eef5df;
+}
+
+.runStatus {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.runStatus strong {
+  color: #003a70;
+}
+
+.runStatus[data-state="open"],
+.runStatus[data-status="blocked"],
+.runStatus[data-status="failed"] {
+  border-color: #e03c31;
+  background: #ffd3cd;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(8rem, 1fr)) auto;
+  gap: 0.65rem;
+  align-items: end;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.filters label,
+.rules label,
+.matchForm label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.filters label span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.filters input,
+.filters select,
+.rules input,
+.matchForm input {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.6rem;
+  border: 1px solid rgba(0, 58, 112, 0.35);
+  background: white;
+  color: #15212b;
+}
+
+.filters button {
+  min-height: 2.8rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #003a70;
+  background: transparent;
+  color: #003a70;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.table {
+  min-width: 62rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.tableHeader,
+.row {
+  display: grid;
+  grid-template-columns: minmax(15rem, 1.6fr) 8rem 8rem 7rem 8rem 7rem;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.75rem 0.8rem;
+}
+
+.tableHeader {
+  border-bottom: 2px solid #003a70;
+}
+
+.row {
+  min-height: 5.4rem;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.16);
+  background: #fffdf9;
+}
+
+.row:hover {
+  background: #f8f3ea;
+}
+
+.productName strong,
+.price strong {
+  display: block;
+}
+
+.productName small,
+.price small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #717980;
+}
+
+.delta {
+  font-weight: 800;
+}
+
+.delta[data-direction="more"] { color: #a72821; }
+.delta[data-direction="less"] { color: #3f6812; }
+.delta[data-direction="equal"] { color: #5d666d; }
+
+.confidence {
+  width: fit-content;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid currentColor;
+}
+
+.confidence[data-band="high"] { background: #dff0bc; color: #355a0e; }
+.confidence[data-band="medium"] { background: #fff0b7; color: #6e5100; }
+.confidence[data-band="low"] { background: #ffe0c2; color: #8c4100; }
+.confidence[data-band="none"] { background: #ece7e1; color: #60676d; }
+
+.detailLink,
+.backLink {
+  color: #003a70;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.rules {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1.4fr) 8rem 9rem 7rem;
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.rule > label:first-child {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.rule input[type="checkbox"] {
+  width: 1.1rem;
+  min-height: 1.1rem;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+
+.detailCard {
+  padding: 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
+}
+
+.detailCard h2 {
+  margin-bottom: 0.8rem;
+  color: #003a70;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+}
+
+.priceHero {
+  color: #003a70;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.8rem);
+}
+
+.facts {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(0, 58, 112, 0.13);
+}
+
+.facts dt { color: #697278; }
+.facts dd { text-align: right; font-weight: 700; }
+
+.matchForm {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.65rem;
+  align-items: end;
+  margin-top: 1rem;
+}
+
+.matchForm button[data-action="reject"] {
+  border-color: #9f2d26;
+  background: transparent;
+  color: #9f2d26;
+}
+
+.historyTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fffdf9;
+}
+
+.historyTable th,
+.historyTable td {
+  padding: 0.7rem;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.14);
+  text-align: left;
+}
+
+.historyTable th {
+  color: #697278;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 980px) {
+  .metricGrid { grid-template-columns: repeat(2, minmax(9rem, 1fr)); }
+  .filters { grid-template-columns: repeat(2, minmax(8rem, 1fr)); }
+  .detailGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .headerActions { justify-items: start; }
+  .headerActions small { text-align: left; }
+  .metricGrid,
+  .filters,
+  .rule,
+  .matchForm { grid-template-columns: 1fr; }
+  .runStatus { grid-template-columns: 1fr; }
+}
