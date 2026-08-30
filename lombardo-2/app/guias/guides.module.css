@@ -272,7 +272,7 @@
 
 .standfirst > p {
   max-width: 34ch;
-  font-family: var(--font-functional);
+  font-family: var(--font-body);
   font-size: clamp(1.65rem, 2.7vw, 2.45rem);
   font-weight: 500;
   line-height: 1.28;
@@ -309,7 +309,7 @@
 .sectionCopy > p { margin-bottom: 1.55em; font-size: clamp(1.12rem, 1.6vw, 1.25rem); line-height: 1.72; letter-spacing: -0.008em; }
 .sectionCopy ul { margin: 2.5rem 0; padding: 0; list-style: none; border-top: 1px solid currentColor; }
 .sectionCopy li { padding: 1rem 0; border-bottom: 1px solid currentColor; font-size: 1rem; line-height: 1.5; }
-.sectionCopy blockquote { max-width: 31ch; margin: clamp(3rem, 6vw, 5rem) 0; padding: 0.15rem 0 0.15rem 1.5rem; border-left: 0.35rem solid var(--lombardo-pink); font-family: var(--font-functional); font-size: clamp(1.55rem, 2.7vw, 2.35rem); font-weight: 500; line-height: 1.27; letter-spacing: -0.02em; }
+.sectionCopy blockquote { max-width: 31ch; margin: clamp(3rem, 6vw, 5rem) 0; padding: 0.15rem 0 0.15rem 1.5rem; border-left: 0.35rem solid var(--lombardo-pink); font-family: var(--font-body); font-size: clamp(1.55rem, 2.7vw, 2.35rem); font-weight: 500; line-height: 1.27; letter-spacing: -0.02em; }
 
 .articleClose {
   width: min(100%, 54rem);
