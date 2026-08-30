@@ -28,12 +28,19 @@ import {
 } from "@/lib/secret-cellar/game-state";
 import styles from "./SecretCellarGame.module.css";
 
-function CandidateArtwork({ candidate }: { candidate: SecretCellarCandidate }) {
+function CandidateArtwork({
+  candidate,
+  priority = false,
+}: {
+  candidate: SecretCellarCandidate;
+  priority?: boolean;
+}) {
   return candidate.imageUrl ? (
     <Image
       src={candidate.imageUrl}
       alt={`Botella de ${candidate.name}`}
       fill
+      priority={priority}
       sizes="(max-width: 480px) 72vw, (max-width: 900px) 31vw, 18vw"
     />
   ) : (
@@ -66,6 +73,7 @@ function ChallengeCountdown({ compact = false }: { compact?: boolean }) {
 }
 
 type PublicChallenge = NonNullable<SecretCellarPublicExperience["challenge"]>;
+const CELLAR_OPEN_DURATION_MS = 1_350;
 
 function CellarEntrance({
   challenge,
@@ -99,7 +107,7 @@ function CellarEntrance({
       onOpened();
       return;
     }
-    openingTimerRef.current = window.setTimeout(onOpened, 1_050);
+    openingTimerRef.current = window.setTimeout(onOpened, CELLAR_OPEN_DURATION_MS);
   }, [onOpened, opening, setProgress]);
 
   const releaseDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -139,8 +147,10 @@ function CellarEntrance({
         <div className={styles.portalInterior} aria-hidden="true">
           <span>LA BOTELLA DE HOY ESTÁ ADENTRO.</span>
           <div className={styles.entranceBottles}>
-            {challenge.candidates.slice(0, 5).map((candidate) => (
-              <i key={candidate.id}><CandidateArtwork candidate={candidate} /></i>
+            {challenge.candidates.slice(0, 5).map((candidate, index) => (
+              <i key={candidate.id}>
+                <CandidateArtwork candidate={candidate} priority={index === 0} />
+              </i>
             ))}
           </div>
         </div>

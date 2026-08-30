@@ -8,12 +8,12 @@
 
 /* Editorial front page */
 .hubHeader {
-  min-height: 31rem;
-  padding: calc(var(--header-height) + 1.5rem) var(--page-gutter) clamp(3.5rem, 7vw, 6rem);
+  min-height: 26rem;
+  padding: calc(var(--header-height) + 1.25rem) var(--page-gutter) clamp(3rem, 5vw, 4.5rem);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 4rem;
+  gap: 3rem;
   background: var(--lombardo-blue);
   color: var(--neutral-paper);
 }
@@ -48,9 +48,9 @@
 .hubTitle h1 {
   max-width: 10ch;
   font-family: var(--font-display);
-  font-size: clamp(4.5rem, 9.5vw, 10rem);
-  line-height: 0.78;
-  letter-spacing: -0.06em;
+  font-size: clamp(4rem, 7.3vw, 7.6rem);
+  line-height: 0.84;
+  letter-spacing: -0.052em;
   text-transform: uppercase;
 }
 
@@ -63,12 +63,12 @@
 }
 
 .cover {
-  padding: clamp(2rem, 5vw, 5rem) var(--page-gutter) clamp(5rem, 10vw, 10rem);
+  padding: clamp(2rem, 4vw, 4rem) var(--page-gutter) clamp(4.5rem, 8vw, 8rem);
 }
 
 .coverLead {
   display: grid;
-  grid-template-columns: minmax(0, 8fr) minmax(22rem, 4fr);
+  grid-template-columns: minmax(0, 7fr) minmax(23rem, 5fr);
   background: var(--lombardo-beige);
 }
 
@@ -81,7 +81,7 @@
   background: var(--lombardo-beige);
 }
 
-.coverLeadImage { min-height: clamp(34rem, 56vw, 52rem); }
+.coverLeadImage { min-height: clamp(30rem, 44vw, 43rem); }
 
 .coverLeadCopy {
   padding: clamp(2rem, 5vw, 5rem);
@@ -106,12 +106,12 @@
 }
 
 .coverLeadCopy h2 {
-  max-width: 11ch;
+  max-width: 12ch;
   margin: 1.2rem 0 1.5rem;
   font-family: var(--font-display);
-  font-size: clamp(3rem, 5.5vw, 6.2rem);
-  line-height: 0.87;
-  letter-spacing: -0.05em;
+  font-size: clamp(2.65rem, 4.15vw, 4.75rem);
+  line-height: 0.94;
+  letter-spacing: -0.042em;
   text-transform: uppercase;
 }
 
@@ -121,22 +121,22 @@
 .latestStory > div > a { margin-top: 2rem; padding-bottom: 0.3rem; border-bottom: 1px solid currentColor; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; }
 
 .coverSecondary {
-  margin-top: clamp(4rem, 8vw, 8rem);
+  margin-top: clamp(4rem, 7vw, 7rem);
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: clamp(2rem, 6vw, 6rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2rem, 4vw, 4rem);
   align-items: start;
 }
 
-.secondaryStory:nth-child(2) { margin-top: clamp(5rem, 11vw, 11rem); }
-.secondaryImage { min-height: clamp(25rem, 42vw, 42rem); }
-.secondaryStory:nth-child(2) .secondaryImage { min-height: clamp(22rem, 34vw, 34rem); }
+.secondaryStory:nth-child(2) { margin-top: clamp(3rem, 6vw, 6rem); }
+.secondaryImage { min-height: clamp(23rem, 34vw, 34rem); }
+.secondaryStory:nth-child(2) .secondaryImage { min-height: clamp(23rem, 34vw, 34rem); }
 .secondaryStory > div { padding-top: 1rem; border-top: 1px solid currentColor; }
-.secondaryStory h2 { max-width: 13ch; margin: 1rem 0; font-family: var(--font-display); font-size: clamp(2.7rem, 4.8vw, 5.2rem); line-height: 0.9; letter-spacing: -0.045em; text-transform: uppercase; }
+.secondaryStory h2 { max-width: 16ch; margin: 1rem 0; font-family: var(--font-display); font-size: clamp(2.25rem, 3.3vw, 3.65rem); line-height: 0.96; letter-spacing: -0.038em; text-transform: uppercase; }
 .secondaryStory > div > p:nth-of-type(2) { max-width: 39rem; font-size: 0.97rem; line-height: 1.55; }
 
 .latest {
-  padding: clamp(5rem, 10vw, 10rem) var(--page-gutter);
+  padding: clamp(4.5rem, 8vw, 8rem) var(--page-gutter);
   background: #f3ecde;
 }
 
@@ -148,12 +148,12 @@
 }
 
 .latest > header h2 {
-  max-width: 15ch;
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 6vw, 6.6rem);
-  line-height: 0.87;
-  letter-spacing: -0.05em;
-  text-transform: uppercase;
+  max-width: 18ch;
+  font-family: var(--font-body);
+  font-size: clamp(2.35rem, 4vw, 4.5rem);
+  font-weight: 500;
+  line-height: 1.03;
+  letter-spacing: -0.035em;
 }
 
 .latest > div {
@@ -164,7 +164,7 @@
 
 .latestImage { min-height: clamp(25rem, 39vw, 39rem); }
 .latestStory > div { padding-top: 1rem; border-top: 1px solid currentColor; }
-.latestStory h3 { max-width: 14ch; margin: 1rem 0; font-family: var(--font-display); font-size: clamp(2.5rem, 4vw, 4.5rem); line-height: 0.9; letter-spacing: -0.045em; text-transform: uppercase; }
+.latestStory h3 { max-width: 16ch; margin: 1rem 0; font-family: var(--font-display); font-size: clamp(2.15rem, 3.1vw, 3.45rem); line-height: 0.96; letter-spacing: -0.038em; text-transform: uppercase; }
 .latestStory > div > p:nth-of-type(2) { max-width: 36rem; line-height: 1.55; }
 
 .editorialStatement {
@@ -176,9 +176,9 @@
   max-width: 18ch;
   margin-top: clamp(2rem, 5vw, 5rem);
   font-family: var(--font-display);
-  font-size: clamp(3rem, 7vw, 7rem);
-  line-height: 0.88;
-  letter-spacing: -0.05em;
+  font-size: clamp(2.8rem, 5.5vw, 5.6rem);
+  line-height: 0.94;
+  letter-spacing: -0.042em;
   text-transform: uppercase;
 }
 
@@ -189,7 +189,7 @@
 }
 
 .foundationLinks > p { grid-row: 1 / 3; padding-top: 1.2rem; }
-.foundationLinks > a { padding: 1.2rem 0; display: flex; justify-content: space-between; gap: 2rem; border-top: 1px solid currentColor; font-family: var(--font-display); font-size: clamp(1.7rem, 3vw, 3.2rem); text-transform: uppercase; }
+.foundationLinks > a { padding: 1.2rem 0; display: flex; justify-content: space-between; gap: 2rem; border-top: 1px solid currentColor; font-family: var(--font-body); font-size: clamp(1.4rem, 2.2vw, 2.25rem); font-weight: 600; line-height: 1.2; }
 
 /* Article */
 .articlePage[data-tone="blue"] { --article-accent: var(--lombardo-pink); }
@@ -214,14 +214,20 @@
 .breadcrumbs a { border-bottom: 1px solid currentColor; }
 
 .articleHeader {
-  padding: clamp(3.5rem, 8vw, 8rem) var(--page-gutter) clamp(4rem, 9vw, 8rem);
+  padding: clamp(3rem, 5vw, 5rem) max(var(--page-gutter), calc((100vw - 88rem) / 2)) clamp(3.5rem, 6vw, 6rem);
+  display: grid;
+  grid-template-columns: minmax(0, 8fr) minmax(20rem, 4fr);
+  grid-template-rows: auto auto auto;
+  column-gap: clamp(3rem, 7vw, 7rem);
+  row-gap: 0;
   background: var(--lombardo-blue);
   color: var(--neutral-paper);
 }
 
-.articleHeader > * { width: min(100%, 78rem); margin-inline: auto; }
+.articleHeader > * { width: 100%; margin-inline: 0; }
 
 .articleKicker {
+  grid-column: 1 / -1;
   color: var(--article-accent);
   font-size: 0.68rem;
   font-weight: 700;
@@ -229,25 +235,32 @@
 }
 
 .articleHeader h1 {
-  max-width: 12.5ch;
+  grid-column: 1;
+  grid-row: 2 / 4;
+  max-width: 11.5ch;
   margin-top: 1.6rem;
   font-family: var(--font-display);
-  font-size: clamp(4rem, 8.2vw, 8.4rem);
-  line-height: 0.84;
-  letter-spacing: -0.058em;
+  font-size: clamp(3.8rem, 6.2vw, 6.6rem);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
   text-wrap: balance;
   text-transform: uppercase;
 }
 
 .articleDek {
-  max-width: 48rem;
-  margin-top: clamp(2.2rem, 5vw, 4.5rem);
-  font-size: clamp(1.35rem, 2.4vw, 2rem);
-  line-height: 1.42;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: end;
+  max-width: 31rem;
+  margin-top: 1.6rem;
+  font-size: clamp(1.2rem, 1.7vw, 1.55rem);
+  line-height: 1.48;
 }
 
 .articleMeta {
-  margin-top: clamp(2.5rem, 5vw, 5rem);
+  grid-column: 2;
+  grid-row: 3;
+  margin-top: clamp(2rem, 3vw, 3rem);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 11rem));
   gap: 1rem;
@@ -263,7 +276,7 @@
 .standfirst {
   width: min(100%, 66rem);
   margin: 0 auto;
-  padding: clamp(5rem, 10vw, 9rem) 0;
+  padding: clamp(4.5rem, 7vw, 7rem) 0;
   display: grid;
   grid-template-columns: minmax(0, 9fr) minmax(10rem, 3fr);
   gap: clamp(2rem, 6vw, 6rem);
@@ -271,11 +284,12 @@
 }
 
 .standfirst > p {
-  max-width: 39ch;
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 3.8vw, 3.5rem);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+  max-width: 34ch;
+  font-family: var(--font-body);
+  font-size: clamp(1.65rem, 2.7vw, 2.45rem);
+  font-weight: 500;
+  line-height: 1.28;
+  letter-spacing: -0.02em;
 }
 
 .standfirst aside { padding-top: 0.9rem; border-top: 1px solid currentColor; }
@@ -287,19 +301,19 @@
 .editorialSections { width: min(100%, 54rem); margin: 0 auto; }
 
 .editorialSection {
-  padding: clamp(3.5rem, 7vw, 6.5rem) 0;
+  padding: clamp(3.5rem, 6vw, 5.5rem) 0;
   border-top: 1px solid var(--neutral-line);
 }
 
 .sectionKicker { margin-bottom: 1.2rem; color: var(--lombardo-red); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.09em; }
 
 .editorialSection h2 {
-  max-width: 15ch;
+  max-width: 17ch;
   margin-bottom: clamp(2rem, 4vw, 3.5rem);
   font-family: var(--font-display);
-  font-size: clamp(2.7rem, 4.7vw, 4.7rem);
-  line-height: 0.95;
-  letter-spacing: -0.045em;
+  font-size: clamp(2.45rem, 3.8vw, 3.85rem);
+  line-height: 0.99;
+  letter-spacing: -0.038em;
   text-transform: uppercase;
   text-wrap: balance;
 }
@@ -308,7 +322,7 @@
 .sectionCopy > p { margin-bottom: 1.55em; font-size: clamp(1.12rem, 1.6vw, 1.25rem); line-height: 1.72; letter-spacing: -0.008em; }
 .sectionCopy ul { margin: 2.5rem 0; padding: 0; list-style: none; border-top: 1px solid currentColor; }
 .sectionCopy li { padding: 1rem 0; border-bottom: 1px solid currentColor; font-size: 1rem; line-height: 1.5; }
-.sectionCopy blockquote { margin: clamp(3rem, 6vw, 5rem) 0; padding: 0 0 0 1.5rem; border-left: 0.45rem solid var(--lombardo-pink); font-family: var(--font-display); font-size: clamp(2rem, 3.5vw, 3.4rem); line-height: 1.03; letter-spacing: -0.03em; }
+.sectionCopy blockquote { max-width: 31ch; margin: clamp(3rem, 6vw, 5rem) 0; padding: 0.15rem 0 0.15rem 1.5rem; border-left: 0.35rem solid var(--lombardo-pink); font-family: var(--font-body); font-size: clamp(1.55rem, 2.7vw, 2.35rem); font-weight: 500; line-height: 1.27; letter-spacing: -0.02em; }
 
 .articleClose {
   width: min(100%, 54rem);
@@ -322,37 +336,40 @@
 .articleClose a { padding-bottom: 0.3rem; border-bottom: 1px solid currentColor; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; }
 
 .relatedStories { padding: clamp(5rem, 10vw, 9rem) var(--page-gutter); background: #f3ecde; }
-.relatedStories > h2 { max-width: 10ch; margin: 1.5rem 0 clamp(3rem, 5vw, 5rem); font-family: var(--font-display); font-size: clamp(3.2rem, 6vw, 6.5rem); line-height: 0.86; letter-spacing: -0.05em; text-transform: uppercase; }
+.relatedStories > h2 { max-width: 10ch; margin: 1.5rem 0 clamp(3rem, 5vw, 5rem); font-family: var(--font-display); font-size: clamp(2.8rem, 4.8vw, 5rem); line-height: 0.92; letter-spacing: -0.043em; text-transform: uppercase; }
 .relatedStories > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--neutral-line); border: 1px solid var(--neutral-line); }
 .relatedStories > div > a { min-height: 17rem; padding: clamp(1.5rem, 4vw, 3rem); display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; background: var(--neutral-paper); }
 .relatedStories span { color: var(--lombardo-red); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em; }
-.relatedStories h3 { max-width: 15ch; font-family: var(--font-display); font-size: clamp(2.2rem, 4vw, 4rem); line-height: 0.92; text-transform: uppercase; }
+.relatedStories h3 { max-width: 17ch; font-family: var(--font-display); font-size: clamp(2rem, 3vw, 3.15rem); line-height: 0.97; text-transform: uppercase; }
 .relatedStories strong { font-size: 0.7rem; letter-spacing: 0.08em; }
 
 .commercialCta { padding: clamp(5rem, 10vw, 9rem) var(--page-gutter); background: var(--lombardo-blue); color: var(--neutral-paper); }
-.commercialCta h2 { max-width: 14ch; margin: 1.5rem 0 clamp(3rem, 5vw, 5rem); font-family: var(--font-display); font-size: clamp(3rem, 6vw, 6.5rem); line-height: 0.86; letter-spacing: -0.05em; text-transform: uppercase; }
+.commercialCta h2 { max-width: 16ch; margin: 1.5rem 0 clamp(3rem, 5vw, 5rem); font-family: var(--font-display); font-size: clamp(2.8rem, 4.8vw, 5rem); line-height: 0.92; letter-spacing: -0.043em; text-transform: uppercase; }
 .commercialCta > div { display: flex; gap: clamp(2rem, 7vw, 7rem); }
 .commercialCta a { min-width: min(100%, 19rem); padding: 1rem 0; border-bottom: 1px solid currentColor; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; }
 
 @media (max-width: 64rem) {
   .hubTitle { grid-template-columns: minmax(0, 7fr) minmax(18rem, 5fr); }
   .coverLead { grid-template-columns: minmax(0, 7fr) minmax(20rem, 5fr); }
-  .articleHeader h1 { font-size: clamp(4rem, 9.5vw, 7rem); }
+  .articleHeader { grid-template-columns: minmax(0, 7fr) minmax(18rem, 5fr); column-gap: clamp(2rem, 5vw, 4rem); }
+  .articleHeader h1 { font-size: clamp(3.6rem, 7.5vw, 5.8rem); }
 }
 
 @media (max-width: 47.99rem) {
-  .hubHeader { min-height: 35rem; padding-top: calc(var(--header-height-mobile) + 1.5rem); }
+  .hubHeader { min-height: 29rem; padding-top: calc(var(--header-height-mobile) + 1.25rem); gap: 2.5rem; }
   .hubMasthead span { display: none; }
   .hubTitle { grid-template-columns: 1fr; }
-  .hubTitle h1 { font-size: clamp(4rem, 18vw, 6.3rem); }
+  .hubTitle h1 { font-size: clamp(3.5rem, 15vw, 5.2rem); line-height: 0.88; }
   .hubTitle > p:last-child { min-width: 0; }
   .cover { padding-inline: 0; }
   .coverLead { grid-template-columns: 1fr; }
-  .coverLeadImage { min-height: 27rem; }
+  .coverLeadImage { min-height: 23rem; }
   .coverLeadCopy { padding-inline: var(--page-gutter); }
+  .coverLeadCopy h2 { font-size: clamp(2.7rem, 12vw, 3.8rem); }
   .coverSecondary { padding-inline: var(--page-gutter); grid-template-columns: 1fr; }
   .secondaryStory:nth-child(2) { margin-top: 2rem; }
-  .secondaryImage, .secondaryStory:nth-child(2) .secondaryImage { min-height: 27rem; }
+  .secondaryImage, .secondaryStory:nth-child(2) .secondaryImage { min-height: 22rem; }
+  .secondaryStory h2 { font-size: clamp(2.25rem, 10vw, 3rem); }
   .latest > header { grid-template-columns: 1fr; gap: 1.5rem; }
   .latest > div { grid-template-columns: 1fr; gap: 4rem; }
   .latestImage { min-height: 27rem; }
@@ -360,12 +377,12 @@
   .foundationLinks > p { grid-row: auto; margin-bottom: 2rem; }
 
   .breadcrumbs { padding-top: calc(var(--header-height-mobile) + 1rem); }
-  .articleHeader { padding-top: 3rem; }
-  .articleHeader h1 { max-width: none; font-size: clamp(3.6rem, 15vw, 5.5rem); }
-  .articleDek { font-size: 1.25rem; }
+  .articleHeader { padding-top: 2.5rem; display: block; }
+  .articleHeader h1 { max-width: none; margin-top: 1.2rem; font-size: clamp(3.2rem, 13vw, 4.75rem); line-height: 0.92; }
+  .articleDek { max-width: 34rem; margin-top: 2rem; font-size: 1.2rem; line-height: 1.5; }
   .articleMeta { grid-template-columns: 1fr 1fr; }
   .standfirst { grid-template-columns: 1fr; }
-  .standfirst > p { font-size: clamp(2rem, 9vw, 3rem); }
+  .standfirst > p { font-size: clamp(1.55rem, 6.5vw, 2rem); line-height: 1.3; }
   .editorialSection h2 { font-size: clamp(2.6rem, 11vw, 4rem); }
   .sectionCopy > p { font-size: 1.12rem; line-height: 1.68; }
   .relatedStories > div { grid-template-columns: 1fr; }

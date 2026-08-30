@@ -206,6 +206,7 @@ test("la experiencia física conserva alternativas accesibles y la mecánica apr
   assert.match(component, /Todos los días Lombardo esconde una botella/);
   assert.match(component, /% OFF HOY/);
   assert.match(component, /ABRIR LA CAVA/);
+  assert.match(component, /CELLAR_OPEN_DURATION_MS = 1_350/);
   assert.match(component, /onPointerMove/);
   assert.match(stylesheet, /touch-action: none/);
   assert.match(component, /ArrowRight/);
@@ -220,6 +221,10 @@ test("la experiencia física conserva alternativas accesibles y la mecánica apr
   assert.match(component, /REVELANDO LA BOTELLA…/);
   assert.match(stylesheet, /\.revealTransition/);
   assert.match(stylesheet, /\.finalDoorLeft/);
+  assert.match(stylesheet, /rotateY\(calc\(var\(--open-progress\) \* -94deg\)\)/);
+  assert.match(stylesheet, /@keyframes enter-cellar-threshold/);
+  assert.match(stylesheet, /@keyframes bottle-awaken/);
+  assert.match(stylesheet, /@keyframes cellar-light-wash/);
   assert.match(stylesheet, /\.candidate\[data-discarded="true"\][\s\S]*--discard-depth/);
   assert.match(stylesheet, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.revealTransition[\s\S]*animation: none/);
   assert.doesNotMatch(`${component}\n${stylesheet}`, /confetti|ne[oó]n|casino|roulette|audio|sound|glow/i);
