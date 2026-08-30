@@ -30,6 +30,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: GuidePageProps): Promise<Metadata> {
   const guide = getGuideDefinition((await params).slug);
   if (!guide) return { title: "Guía no encontrada", robots: { index: false } };
+  const socialImage = guide.heroImage ?? `/guias/${guide.slug}/opengraph-image`;
 
   return {
     title: guide.title,
@@ -44,13 +45,13 @@ export async function generateMetadata({ params }: GuidePageProps): Promise<Meta
       modifiedTime: `${guide.updatedAt}T09:00:00-03:00`,
       authors: ["LOMBARDO."],
       section: guide.cluster,
-      images: [{ url: `/guias/${guide.slug}/opengraph-image`, width: 1200, height: 630, alt: guide.title }],
+      images: [{ url: socialImage, width: 1536, height: 1024, alt: guide.heroAlt ?? guide.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: guide.title,
       description: guide.description,
-      images: [`/guias/${guide.slug}/opengraph-image`],
+      images: [socialImage],
     },
   };
 }
@@ -88,6 +89,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
       publishedAt: `${guide.publishedAt}T09:00:00-03:00`,
       updatedAt: `${guide.updatedAt}T09:00:00-03:00`,
       category: guide.cluster,
+      heroImage: guide.heroImage,
       productImages: products.flatMap((product) => product.images.slice(0, 1).map((image) => image.src)).slice(0, 4),
     }),
     {
@@ -104,6 +106,18 @@ export default async function GuidePage({ params }: GuidePageProps) {
     },
   ];
 
+  const renderSection = (section: (typeof guide.sections)[number]) => (
+    <section className={styles.editorialSection} key={section.title}>
+      <p className={styles.sectionKicker}>{section.eyebrow}</p>
+      <h2>{section.title}</h2>
+      <div className={styles.sectionCopy}>
+        {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        {section.bullets ? <ul>{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
+        {section.quote ? <blockquote>{section.quote}</blockquote> : null}
+      </div>
+    </section>
+  );
+
   return (
     <>
       <main className={styles.articlePage} data-tone={guide.heroTone}>
@@ -114,57 +128,44 @@ export default async function GuidePage({ params }: GuidePageProps) {
           <Link href="/">Inicio</Link><span>/</span><Link href="/guias">Guías</Link><span>/</span><span>{guide.cluster}</span>
         </nav>
 
-        <header className={styles.articleHero}>
-          <div className={styles.heroCopy}>
-            <p>{guide.eyebrow}</p>
-            <h1 aria-label={guide.title}>
-              {guide.titleLines.map((line) => (
-                <span className={line.length > 10 ? styles.longTitleLine : undefined} key={line} aria-hidden="true">{line}</span>
-              ))}
-            </h1>
-            <p>{guide.dek}</p>
-            <dl>
-              <div><dt>FECHA</dt><dd>{formattedDate(guide.publishedAt)}</dd></div>
-              <div><dt>LECTURA</dt><dd>{guide.readingMinutes} MIN</dd></div>
-              <div><dt>AUTOR</dt><dd>LOMBARDO.</dd></div>
-            </dl>
-          </div>
-          <GuideHeroVisual products={products} />
+        <header className={styles.articleHeader}>
+          <p className={styles.articleKicker}>{guide.eyebrow}</p>
+          <h1>{guide.title}</h1>
+          <p className={styles.articleDek}>{guide.dek}</p>
+          <dl className={styles.articleMeta}>
+            <div><dt>PUBLICADO</dt><dd>{formattedDate(guide.publishedAt)}</dd></div>
+            <div><dt>LECTURA</dt><dd>{guide.readingMinutes} MIN</dd></div>
+            <div><dt>POR</dt><dd>LOMBARDO.</dd></div>
+          </dl>
         </header>
+
+        <GuideHeroVisual
+          image={guide.heroImage}
+          alt={guide.heroAlt}
+          caption={guide.heroCaption ?? guide.visualCaptions[0]}
+          products={products}
+        />
 
         <article className={styles.articleBody}>
           <div className={styles.standfirst}>
             <p>{guide.intro}</p>
             <aside>
-              <span>PARA ELEGIR MEJOR / {guide.cluster}</span>
+              <span>COMPARTIR ESTA HISTORIA</span>
               <GuideShare guideSlug={guide.slug} title={guide.title} />
             </aside>
           </div>
 
           <div className={styles.editorialSections}>
-            {guide.sections.map((section, index) => (
-              <div key={section.title}>
-                <section className={styles.editorialSection}>
-                  <div>
-                    <p>{section.eyebrow}</p>
-                    <h2>{section.title}</h2>
-                  </div>
-                  <div className={styles.sectionCopy}>
-                    {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-                    {section.bullets ? <ul>{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
-                    {section.quote ? <blockquote>{section.quote}</blockquote> : null}
-                  </div>
-                </section>
-                {index === 0 || index === 2 ? (
-                  <GuideVisualMoment
-                    products={products.slice(index === 0 ? 2 : 4, index === 0 ? 4 : 6)}
-                    caption={guide.visualCaptions[index === 0 ? 0 : 1]}
-                    index={index === 0 ? 0 : 1}
-                  />
-                ) : null}
-              </div>
-            ))}
+            {guide.sections.slice(0, 2).map(renderSection)}
           </div>
+
+          <GuideVisualMoment
+            image={guide.heroImage}
+            alt=""
+            products={products.slice(2, 4)}
+            caption={guide.visualCaptions[1]}
+            index={1}
+          />
         </article>
 
         <GuideProductGrid
@@ -176,18 +177,20 @@ export default async function GuidePage({ params }: GuidePageProps) {
           allLabel={guide.catalog.allLabel}
         />
 
-        <section className={styles.commercialCta}>
-          <p>¿QUERÉS RESOLVERLO CON ALGUIEN?</p>
-          <h2>Contanos la ocasión. Nosotros acortamos la lista.</h2>
-          <div>
-            <Link href={guide.catalog.allHref}>VER CATÁLOGO →</Link>
-            <Link href="/#contacto">HABLAR CON LOMBARDO ↗</Link>
+        <article className={styles.articleBody}>
+          <div className={styles.editorialSections}>
+            {guide.sections.slice(2).map(renderSection)}
           </div>
-        </section>
+          <footer className={styles.articleClose}>
+            <p>PARA QUEDARSE CON UNA IDEA</p>
+            <blockquote>{guide.visualCaptions[0]}</blockquote>
+            <Link href={guide.catalog.allHref}>VER LA SELECCIÓN COMPLETA →</Link>
+          </footer>
+        </article>
 
         <section className={styles.relatedStories} aria-labelledby="related-title">
-          <p>SEGUIR LEYENDO</p>
-          <h2 id="related-title">Una buena botella lleva a otra.</h2>
+          <p>LECTURAS RELACIONADAS</p>
+          <h2 id="related-title">Seguir leyendo.</h2>
           <div>
             {relatedGuides.map((related, index) => (
               <GuideRelatedLink guideSlug={guide.slug} relatedSlug={related.slug} key={related.slug}>
@@ -196,6 +199,15 @@ export default async function GuidePage({ params }: GuidePageProps) {
                 <strong>LEER →</strong>
               </GuideRelatedLink>
             ))}
+          </div>
+        </section>
+
+        <section className={styles.commercialCta}>
+          <p>¿QUERÉS RESOLVERLO CON ALGUIEN?</p>
+          <h2>Contanos la ocasión. Nosotros acortamos la lista.</h2>
+          <div>
+            <Link href={guide.catalog.allHref}>VER CATÁLOGO →</Link>
+            <Link href="/#contacto">HABLAR CON LOMBARDO ↗</Link>
           </div>
         </section>
       </main>

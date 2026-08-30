@@ -87,6 +87,9 @@ test("las cinco piezas editoriales tienen metadatos, lectura, visuales y catálo
     assert.ok(guide.titleLines.length >= 3);
     assert.ok(guide.readingMinutes >= 5);
     assert.equal(guide.publishedAt, "2026-08-29");
+    assert.match(guide.heroImage ?? "", /^\/images\/guides\/.+\.jpg$/);
+    assert.ok((guide.heroAlt?.length ?? 0) > 30);
+    assert.ok((guide.heroCaption?.length ?? 0) > 30);
   }
   const priceGuide = FEATURED_GUIDES.find((guide) => guide.slug === "vinos-por-menos-de-20000");
   assert.equal(priceGuide?.catalog.mode, "price-cap");

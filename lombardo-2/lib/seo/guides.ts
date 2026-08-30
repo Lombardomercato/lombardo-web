@@ -42,6 +42,9 @@ export interface GuideDefinition {
   readingMinutes: number;
   publishedAt: string;
   updatedAt: string;
+  heroImage?: string;
+  heroAlt?: string;
+  heroCaption?: string;
   heroTone: "blue" | "red" | "green" | "pink" | "beige";
   visualCaptions: readonly [string, string];
   sections: readonly GuideSection[];
@@ -73,7 +76,10 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     intro: "Hay una diferencia entre llevar vino y llevar un vino bien elegido. La primera opción resuelve una obligación. La segunda dice que prestaste atención. Para lograrlo no necesitás una cava propia: con tres datos —qué tan formal es la comida, cuánta gente habrá y cuándo se va a abrir la botella— ya podés decidir bastante bien.",
     readingMinutes: 6,
     publishedAt: "2026-08-29",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-08-30",
+    heroImage: "/images/guides/que-vino-llevar-a-una-cena.jpg",
+    heroAlt: "Una persona entrega una botella envuelta al llegar a una cena",
+    heroCaption: "Llegar con una botella no es adivinar el menú: es leer la invitación.",
     heroTone: "blue",
     visualCaptions: [
       "La botella que llevás no tiene que dominar la mesa: tiene que abrirla.",
@@ -115,7 +121,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
         ],
       },
     ],
-    catalog: { mode: "category", categorySlug: "vinos", limit: 8, heading: "Botellas que saben llegar a una cena", description: "Una selección viva para mesas distintas. Precio y disponibilidad consultados ahora en Runia.", allHref: "/categorias/vinos", allLabel: "Ver todos los vinos" },
+    catalog: { mode: "category", categorySlug: "vinos", limit: 3, heading: "3 botellas que elegiríamos", description: "Tres puntos de partida para mesas distintas, con precio y disponibilidad consultados ahora en Runia.", allHref: "/categorias/vinos", allLabel: "Ver todos los vinos" },
     relatedSlugs: ["regalar-vino-sin-saber-de-vino", "vino-para-asado-no-siempre-malbec"],
     featured: true,
   },
@@ -132,7 +138,10 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     intro: "Una lista de precio-calidad sólo sirve si cumple dos cosas: los vinos existen y los precios son los de hoy. Esta selección no está pegada a un número viejo. Se arma con el catálogo SAFE de Lombardo y muestra únicamente botellas cuyo precio vigente está debajo de $20.000. Si una sale del rango o deja de estar disponible, otra ocupa su lugar.",
     readingMinutes: 5,
     publishedAt: "2026-08-29",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-08-30",
+    heroImage: "/images/guides/vinos-por-menos-de-20000.jpg",
+    heroAlt: "Diez botellas sin marca reunidas sobre una mesa de selección",
+    heroCaption: "Diez lugares, siempre ocupados por botellas disponibles y dentro del rango.",
     heroTone: "red",
     visualCaptions: ["Precio-calidad no significa barato: significa que cada peso aparece en la copa.", "Diez lugares, siempre ocupados por botellas disponibles y dentro del rango."],
     sections: [
@@ -170,7 +179,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
         ],
       },
     ],
-    catalog: { mode: "price-cap", categorySlug: "vinos", priceMax: 20000, limit: 10, heading: "Los 10 de hoy", description: "Todos debajo de $20.000 al cargar esta página. Si el precio cambia, cambia la selección.", allHref: "/categorias/vinos", allLabel: "Explorar todos los vinos" },
+    catalog: { mode: "price-cap", categorySlug: "vinos", priceMax: 20000, limit: 10, heading: "La selección Lombardo: los 10 de hoy", description: "Todos debajo de $20.000 al cargar esta página. Si el precio cambia, cambia la selección.", allHref: "/categorias/vinos", allLabel: "Explorar todos los vinos" },
     relatedSlugs: ["que-vino-llevar-a-una-cena", "malbec-7-botellas-para-entenderlo"],
     featured: true,
   },
@@ -187,7 +196,10 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     intro: "El Malbec se volvió familiar, y esa familiaridad a veces lo aplana: parece que todas las botellas deberían saber a lo mismo. No. Cambian el lugar, la altura, el momento de cosecha, el tipo de suelo, el uso de madera y la intención de quien hace el vino. Probarlos uno al lado del otro es la manera más rápida —y más entretenida— de verlo.",
     readingMinutes: 7,
     publishedAt: "2026-08-29",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-08-30",
+    heroImage: "/images/guides/malbec-7-botellas-para-entenderlo.jpg",
+    heroAlt: "Siete copas de Malbec frente a un paisaje de montaña al atardecer",
+    heroCaption: "Una uva, muchos paisajes: el lugar aparece cuando las copas se prueban juntas.",
     heroTone: "pink",
     visualCaptions: ["Una uva, muchos paisajes: el lugar aparece cuando las botellas se prueban juntas.", "No busques la respuesta correcta. Buscá la diferencia que podés nombrar."],
     sections: [
@@ -226,7 +238,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
         ],
       },
     ],
-    catalog: { mode: "search", categorySlug: "vinos", search: "malbec", limit: 7, heading: "Siete maneras de decir Malbec", description: "Botellas SAFE disponibles ahora para probar diferencias reales de productor y estilo.", allHref: "/categorias/vinos?buscar=malbec", allLabel: "Ver más Malbec" },
+    catalog: { mode: "search", categorySlug: "vinos", search: "malbec", limit: 7, heading: "7 Malbec para probar el mapa", description: "Botellas SAFE disponibles ahora para probar diferencias reales de productor y estilo.", allHref: "/categorias/vinos?buscar=malbec", allLabel: "Ver más Malbec" },
     relatedSlugs: ["vino-para-asado-no-siempre-malbec", "vinos-por-menos-de-20000"],
     featured: true,
   },
@@ -243,7 +255,10 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     intro: "El miedo más común al regalar vino es elegir “mal”. En realidad, una botella rara vez falla por su cepa. Falla cuando parece automática: la más cara del estante, la etiqueta más solemne o cualquier Malbec porque “a todo el mundo le gusta”. Un buen regalo empieza por el destinatario y termina con una presentación cuidada.",
     readingMinutes: 6,
     publishedAt: "2026-08-29",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-08-30",
+    heroImage: "/images/guides/regalar-vino-sin-saber-de-vino.jpg",
+    heroAlt: "Una botella sin marca se envuelve con papel coral junto a una caja azul",
+    heroCaption: "El envoltorio abre el regalo. El criterio termina de entregarlo.",
     heroTone: "green",
     visualCaptions: ["Una botella elegida con una razón vale más que una botella elegida por precio.", "El envoltorio abre el regalo. La historia termina de entregarlo."],
     sections: [
@@ -281,7 +296,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
         ],
       },
     ],
-    catalog: { mode: "category", categorySlug: "vinos", limit: 8, heading: "Botellas que funcionan como regalo", description: "Puntos de partida con precio y disponibilidad actuales. La elección final la completa la persona.", allHref: "/categorias/regalos", allLabel: "Ver regalos" },
+    catalog: { mode: "category", categorySlug: "vinos", limit: 3, heading: "3 botellas para regalar con una razón", description: "Puntos de partida con precio y disponibilidad actuales. La elección final la completa la persona.", allHref: "/categorias/regalos", allLabel: "Ver regalos" },
     relatedSlugs: ["que-vino-llevar-a-una-cena", "vinos-por-menos-de-20000"],
     featured: true,
   },
@@ -298,7 +313,10 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
     intro: "Malbec y asado forman una pareja querida, pero convertirla en regla nos hace perder vinos buenísimos. El maridaje no depende de la nacionalidad del menú: depende de grasa, cocción, textura, sal, salsas y ritmo de la comida. En una parrilla completa hay varias escenas, y se puede elegir una botella para cada una o una muy versátil para atravesarlas.",
     readingMinutes: 7,
     publishedAt: "2026-08-29",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-08-30",
+    heroImage: "/images/guides/vino-para-asado-no-siempre-malbec.jpg",
+    heroAlt: "Una mesa de asado al anochecer con copas, comida y fuego de parrilla",
+    heroCaption: "En la mesa del asado, la frescura puede importar más que la potencia.",
     heroTone: "beige",
     visualCaptions: ["La parrilla tiene humo, grasa, sal y texturas. El vino necesita frescura, no sólo fuerza.", "Un tinto apenas refrescado puede cambiar por completo la mesa del asado."],
     sections: [
@@ -337,7 +355,7 @@ const EDITORIAL_GUIDES: readonly GuideDefinition[] = [
         ],
       },
     ],
-    catalog: { mode: "search-list", categorySlug: "vinos", searchTerms: ["cabernet franc", "bonarda", "syrah", "pinot noir", "blend", "chardonnay", "rose", "espumante"], limit: 8, heading: "Vinos para poner al lado del fuego", description: "Una selección actual para salir del piloto automático. Probá estilos, no sólo etiquetas.", allHref: "/categorias/vinos", allLabel: "Ver todos los vinos" },
+    catalog: { mode: "search-list", categorySlug: "vinos", searchTerms: ["cabernet franc", "bonarda", "syrah", "pinot noir", "blend", "chardonnay", "rose", "espumante"], limit: 3, heading: "3 botellas para poner junto al fuego", description: "Una selección actual para salir del piloto automático. Probá estilos, no sólo etiquetas.", allHref: "/categorias/vinos", allLabel: "Ver todos los vinos" },
     relatedSlugs: ["malbec-7-botellas-para-entenderlo", "que-vino-llevar-a-una-cena"],
     featured: true,
   },
