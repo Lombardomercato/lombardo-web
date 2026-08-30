@@ -168,6 +168,43 @@ test("EAN exacto prevalece y los conflictos explícitos quedan auditados", () =>
   assert.ok(match.matchedFields.includes("EAN exacto"));
 });
 
+test("línea y edad distintas impiden que un candidato quede activo", () => {
+  const match = buildCompetitorMatcher([
+    {
+      id: "runia-terruno",
+      sku: "FM028B",
+      name: "FABRE MONTMAYOU Terruño Malbec x 750cc",
+      presentation: "750 ml",
+      brand: "FABRE MONTMAYOU",
+      retailPrice: 12_586.8,
+    },
+  ])(external({
+    externalName: "FABRE MONTMAYOU MALBEC X 750 CC",
+    brand: "FABRE MONTMAYOU",
+    externalSku: undefined,
+  }));
+  assert.equal(match.runiaProductId, undefined);
+  assert.ok(match.conflicts.includes("línea diferente"));
+
+  const age = buildCompetitorMatcher([
+    {
+      id: "runia-chivas-12",
+      sku: "WI009A",
+      name: "CHIVAS REGAL 12 Años x 700 c.c.",
+      presentation: "700 ml",
+      brand: "CHIVAS REGAL",
+      retailPrice: 66_073.7,
+    },
+  ])(external({
+    externalName: "CHIVAS REGAL 25 AÑOS X 700 CC",
+    brand: "CHIVAS REGAL",
+    presentation: "700 ml",
+    externalSku: undefined,
+  }));
+  assert.equal(age.runiaProductId, undefined);
+  assert.ok(age.conflicts.includes("edad/añejamiento diferente"));
+});
+
 test("diferencia positiva significa que Lombardo está más caro", () => {
   assert.deepEqual(priceDifference(11_000, 10_000), { amount: 1_000, percentage: 10 });
   assert.deepEqual(priceDifference(9_000, 10_000), { amount: -1_000, percentage: -10 });

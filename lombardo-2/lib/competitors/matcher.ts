@@ -24,6 +24,7 @@ const LINE_MARKERS = [
   "gran reserva", "grand reserve", "single vineyard", "reserva", "reserve", "coleccion",
   "collection", "alta", "altitud", "estate", "icono", "premium", "roble", "clasico",
   "millesime", "blanc de blancs", "golden reserve", "family reserve", "edicion limitada",
+  "terruno", "pequenas producciones", "pequena produccion",
 ] as const;
 
 const PACKAGING = ["pack", "caja", "combo", "estuche", "cofre", "lata", "bag in box"] as const;
@@ -36,6 +37,8 @@ interface Features {
   varietals: string[];
   lines: string[];
   packaging: string[];
+  ages: string[];
+  vintages: string[];
 }
 
 interface PreparedRuniaProduct {
@@ -76,6 +79,8 @@ function features(input: {
     varietals: markers(full, VARIETALS),
     lines: markers(full, LINE_MARKERS),
     packaging: markers(full, PACKAGING),
+    ages: [...new Set([...normalizeImageMatchText(full).matchAll(/\b(\d{1,2})\s+anos\b/g)].map((match) => match[1]))],
+    vintages: [...new Set([...normalizeImageMatchText(full).matchAll(/\b(19\d{2}|20\d{2})\b/g)].map((match) => match[1]))],
   };
 }
 
@@ -141,6 +146,10 @@ function compare(
     conflicts.push("línea diferente");
   }
   if (!sameSet(externalFeatures.packaging, runiaFeatures.packaging)) conflicts.push("pack/presentación diferente");
+  if (externalFeatures.ages.length && runiaFeatures.ages.length &&
+    !sameSet(externalFeatures.ages, runiaFeatures.ages)) conflicts.push("edad/añejamiento diferente");
+  if (externalFeatures.vintages.length && runiaFeatures.vintages.length &&
+    !sameSet(externalFeatures.vintages, runiaFeatures.vintages)) conflicts.push("añada diferente");
   if (externalFeatures.brand && runiaFeatures.brand && !brandMatch) conflicts.push("marca diferente");
   if (common < Math.min(2, externalFeatures.tokens.size, runiaFeatures.tokens.size)) {
     conflicts.push("identidad insuficiente");
