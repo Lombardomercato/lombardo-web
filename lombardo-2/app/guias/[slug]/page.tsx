@@ -71,7 +71,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
     loadGuideProducts(guide, pricingContext),
     loadLiveGuideProducts(guide.slug, pricingContext).catch(() => []),
   ]);
-  const products = liveProducts.length ? liveProducts : fallbackProducts;
+  const products = (liveProducts.length ? liveProducts : fallbackProducts).slice(0, guide.catalog.limit);
   if (!hasGuideQuality(guide, products.length)) notFound();
 
   const url = absoluteUrl(`/guias/${guide.slug}`);
