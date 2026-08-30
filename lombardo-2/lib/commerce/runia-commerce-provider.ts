@@ -159,11 +159,13 @@ export class RuniaCommerceProvider
   ) {
     return new URLSearchParams({
       select:
-        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price)",
+        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),lombardo_prices:lombardo_selling_prices(price_type,current_price,version,active)",
       supplier_id: `eq.${supplierId}`,
       eligibility_status: "eq.safe",
       active: "is.true",
       "retail_prices.price_type": `eq.${pricingContext.basePriceType}`,
+      "lombardo_prices.price_type": "eq.retail",
+      "lombardo_prices.active": "is.true",
     });
   }
 

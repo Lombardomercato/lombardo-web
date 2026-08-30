@@ -87,6 +87,20 @@ export interface RuniaSupplierProductRow {
     | Array<{ price_type: string; current_price: number | string }>
     | { price_type: string; current_price: number | string }
     | null;
+  lombardo_prices?:
+    | Array<{
+        price_type: string;
+        current_price: number | string;
+        version: number | string;
+        active: boolean;
+      }>
+    | {
+        price_type: string;
+        current_price: number | string;
+        version: number | string;
+        active: boolean;
+      }
+    | null;
 }
 
 export interface RuniaPublicMediaRow {
@@ -179,7 +193,15 @@ function selectedPrice(
   const selected = prices.find(
     (price) => price.price_type === pricingContext.basePriceType,
   );
-  const price = Number(selected?.current_price);
+  const lombardoPrices = Array.isArray(row.lombardo_prices)
+    ? row.lombardo_prices
+    : row.lombardo_prices
+      ? [row.lombardo_prices]
+      : [];
+  const sellingPrice = pricingContext.basePriceType === "retail"
+    ? lombardoPrices.find((price) => price.price_type === "retail" && price.active)
+    : undefined;
+  const price = Number(sellingPrice?.current_price ?? selected?.current_price);
   if (!Number.isFinite(price) || price <= 0) {
     throw new Error(
       `El producto SAFE no tiene un precio ${pricingContext.basePriceType} válido.`,
