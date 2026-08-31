@@ -150,6 +150,29 @@ test("CUSTOM_DISCOUNT redondea el precio final a dos decimales", () => {
   assert.equal(product.price, 90.01);
 });
 
+test("LOMBARDO SELLING PRICE reemplaza sólo la base retail y conserva VINROS", () => {
+  const row = productRow("retail", 20_000);
+  row.lombardo_prices = [{
+    price_type: "retail",
+    current_price: 17_990,
+    version: 1,
+    active: true,
+  }];
+  const retail = mapRuniaSupplierProduct(row, pricingContext());
+  assert.equal(retail.basePrice, 17_990);
+  assert.equal(retail.price, 17_990);
+  assert.equal(row.retail_prices && Array.isArray(row.retail_prices) ? row.retail_prices[0]?.current_price : undefined, 20_000);
+
+  const wholesaleRow = productRow("wholesale", 15_000);
+  wholesaleRow.lombardo_prices = row.lombardo_prices;
+  const wholesale = mapRuniaSupplierProduct(wholesaleRow, pricingContext({
+    accountType: "WHOLESALE",
+    policy: "WHOLESALE",
+    basePriceType: "wholesale",
+  }));
+  assert.equal(wholesale.price, 15_000);
+});
+
 test("una política incoherente no puede seleccionar otra lista", () => {
   const context = pricingContext({
     policy: "WHOLESALE",

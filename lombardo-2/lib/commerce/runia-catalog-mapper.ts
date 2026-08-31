@@ -87,6 +87,24 @@ export interface RuniaSupplierProductRow {
     | Array<{ price_type: string; current_price: number | string }>
     | { price_type: string; current_price: number | string }
     | null;
+  lombardo_prices?:
+    | Array<{
+        price_type: string;
+        current_price: number | string;
+        version: number | string;
+        active: boolean;
+      }>
+    | {
+        price_type: string;
+        current_price: number | string;
+        version: number | string;
+        active: boolean;
+      }
+    | null;
+  editorial?:
+    | Array<{ brand_name: string | null }>
+    | { brand_name: string | null }
+    | null;
 }
 
 export interface RuniaPublicMediaRow {
@@ -159,6 +177,13 @@ export function inferBrand(name: string) {
   };
 }
 
+function editorialBrand(row: RuniaSupplierProductRow) {
+  const editorial = Array.isArray(row.editorial)
+    ? row.editorial[0]
+    : row.editorial;
+  return editorial?.brand_name?.trim() || null;
+}
+
 function presentationFor(row: RuniaSupplierProductRow) {
   const stored = row.normalized_presentation?.trim() || row.presentation_raw?.trim();
   if (stored) return stored;
@@ -179,7 +204,15 @@ function selectedPrice(
   const selected = prices.find(
     (price) => price.price_type === pricingContext.basePriceType,
   );
-  const price = Number(selected?.current_price);
+  const lombardoPrices = Array.isArray(row.lombardo_prices)
+    ? row.lombardo_prices
+    : row.lombardo_prices
+      ? [row.lombardo_prices]
+      : [];
+  const sellingPrice = pricingContext.basePriceType === "retail"
+    ? lombardoPrices.find((price) => price.price_type === "retail" && price.active)
+    : undefined;
+  const price = Number(sellingPrice?.current_price ?? selected?.current_price);
   if (!Number.isFinite(price) || price <= 0) {
     throw new Error(
       `El producto SAFE no tiene un precio ${pricingContext.basePriceType} válido.`,
@@ -217,7 +250,13 @@ export function mapRuniaSupplierProduct(
 
   const sku = row.supplier_sku.trim();
   const name = row.name_raw.trim();
-  const brand = inferBrand(name);
+  const inferredBrand = inferBrand(name);
+  const brandName = editorialBrand(row) || inferredBrand.name;
+  const brand = {
+    id: `runia-brand-${slugify(brandName) || "vinros"}`,
+    slug: slugify(brandName) || "vinros",
+    name: brandName,
+  };
   const productCategory = categoryForSupplierSku(sku);
   const presentation = presentationFor(row);
   assertPricingList(pricingContext);

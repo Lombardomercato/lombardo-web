@@ -69,6 +69,7 @@ interface ComparisonRuniaRow {
   supplier_sku: string;
   name_raw: string;
   retail_prices: Array<{ price_type: string; current_price: number | string }> | { price_type: string; current_price: number | string } | null;
+  lombardo_prices: Array<{ price_type: string; current_price: number | string; active: boolean }> | { price_type: string; current_price: number | string; active: boolean } | null;
   editorial: Array<{ brand_name: string | null; category_slug: string | null }> | { brand_name: string | null; category_slug: string | null } | null;
 }
 
@@ -577,6 +578,8 @@ export class CompetitorStore {
     const editorial = one(runia?.editorial);
     const currentPrice = positiveNumber(row.current_price);
     const lombardoRetailPrice = positiveNumber(
+      asArray(runia?.lombardo_prices).find((price) => price.price_type === "retail" && price.active)?.current_price,
+    ) ?? positiveNumber(
       asArray(runia?.retail_prices).find((price) => price.price_type === "retail")?.current_price,
     );
     const difference = currentPrice && lombardoRetailPrice
@@ -611,7 +614,7 @@ export class CompetitorStore {
 
   private async comparisonRows(competitorId: string) {
     const search = new URLSearchParams({
-      select: "id,external_name,external_product_url,brand,current_price,list_price,promotion_text,fetched_at,available,match:competitor_product_matches(runia_product_id,suggested_runia_product_id,match_confidence,confidence_band,match_method,manual_override,matched_fields,conflicts,runia:runia_product_id(id,supplier_sku,name_raw,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(brand_name,category_slug)))",
+      select: "id,external_name,external_product_url,brand,current_price,list_price,promotion_text,fetched_at,available,match:competitor_product_matches(runia_product_id,suggested_runia_product_id,match_confidence,confidence_band,match_method,manual_override,matched_fields,conflicts,runia:runia_product_id(id,supplier_sku,name_raw,retail_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(price_type,current_price,active),editorial:supplier_product_editorial(brand_name,category_slug)))",
       competitor_id: `eq.${competitorId}`,
       order: "available.desc,external_name.asc",
       limit: "1000",
@@ -687,7 +690,7 @@ export class CompetitorStore {
   async productDetail(productId: string): Promise<CompetitorProductDetail | null> {
     const competitor = await this.ensurePositano();
     const search = new URLSearchParams({
-      select: "id,external_name,external_product_url,brand,current_price,list_price,promotion_text,fetched_at,available,match:competitor_product_matches(runia_product_id,suggested_runia_product_id,match_confidence,confidence_band,match_method,manual_override,matched_fields,conflicts,runia:runia_product_id(id,supplier_sku,name_raw,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(brand_name,category_slug)))",
+      select: "id,external_name,external_product_url,brand,current_price,list_price,promotion_text,fetched_at,available,match:competitor_product_matches(runia_product_id,suggested_runia_product_id,match_confidence,confidence_band,match_method,manual_override,matched_fields,conflicts,runia:runia_product_id(id,supplier_sku,name_raw,retail_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(price_type,current_price,active),editorial:supplier_product_editorial(brand_name,category_slug)))",
       id: `eq.${productId}`,
       competitor_id: `eq.${competitor.id}`,
       limit: "1",

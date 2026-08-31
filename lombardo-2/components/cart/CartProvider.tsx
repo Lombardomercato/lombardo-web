@@ -32,7 +32,8 @@ interface CartState {
 
 type CartAction =
   | { type: "hydrate"; items: CartItem[]; appliedPromotion?: AppliedPromotion }
-  | { type: "add"; product: Product; quantity: number }
+  | { type: "add"; product: Product; quantity: number; openCart?: boolean }
+  | { type: "add-many"; items: CartItem[]; openCart?: boolean }
   | { type: "remove"; productId: string }
   | { type: "update"; productId: string; quantity: number }
   | { type: "sync-prices"; prices: Record<string, number> }
@@ -65,7 +66,15 @@ interface CartContextValue {
   appliedPromotion: AppliedPromotion | null;
   promotionStatus: CartState["promotionStatus"];
   promotionMessage: string;
-  addItem: (product: Product, quantity?: number) => void;
+  addItem: (
+    product: Product,
+    quantity?: number,
+    options?: { openCart?: boolean },
+  ) => void;
+  addItems: (
+    items: CartItem[],
+    options?: { openCart?: boolean },
+  ) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   syncPrices: (updates: Array<{ productId: string; unitPrice: number }>) => void;
@@ -126,8 +135,36 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         items,
         pricingContextKey:
           action.product.pricingContextKey ?? state.pricingContextKey,
-        drawerOpen: true,
+        drawerOpen: action.openCart ?? true,
         announcement: `${quantity} ${quantity === 1 ? "unidad agregada" : "unidades agregadas"}: ${action.product.name}`,
+        appliedPromotion: null,
+        promotionStatus: "idle",
+        promotionMessage: "",
+      };
+    }
+    case "add-many": {
+      const itemsByProduct = new Map(
+        state.items.map((item) => [item.product.id, item]),
+      );
+      for (const item of action.items) {
+        const quantity = clampQuantity(item.quantity);
+        const existing = itemsByProduct.get(item.product.id);
+        itemsByProduct.set(item.product.id, {
+          product: item.product,
+          quantity: clampQuantity((existing?.quantity ?? 0) + quantity),
+        });
+      }
+      const addedQuantity = action.items.reduce(
+        (total, item) => total + clampQuantity(item.quantity),
+        0,
+      );
+      return {
+        ...state,
+        items: Array.from(itemsByProduct.values()),
+        pricingContextKey:
+          action.items[0]?.product.pricingContextKey ?? state.pricingContextKey,
+        drawerOpen: action.openCart ?? true,
+        announcement: `${addedQuantity} ${addedQuantity === 1 ? "unidad agregada" : "unidades agregadas"} al carrito`,
         appliedPromotion: null,
         promotionStatus: "idle",
         promotionMessage: "",
@@ -310,9 +347,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [pathname, productIds, state.catalogRequest, state.hydrated]);
 
-  const addItem = useCallback((product: Product, quantity = 1) => {
-    dispatch({ type: "add", product, quantity });
+  const addItem = useCallback((
+    product: Product,
+    quantity = 1,
+    options?: { openCart?: boolean },
+  ) => {
+    dispatch({ type: "add", product, quantity, openCart: options?.openCart });
     trackCommerceEvent({ name: "add_to_cart", productId: product.id, quantity });
+  }, []);
+
+  const addItems = useCallback((
+    items: CartItem[],
+    options?: { openCart?: boolean },
+  ) => {
+    if (!items.length) return;
+    dispatch({ type: "add-many", items, openCart: options?.openCart });
+    for (const { product, quantity } of items) {
+      trackCommerceEvent({ name: "add_to_cart", productId: product.id, quantity });
+    }
   }, []);
 
   const removeItem = useCallback(
@@ -413,6 +465,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       promotionStatus: state.promotionStatus,
       promotionMessage: state.promotionMessage,
       addItem,
+      addItems,
       removeItem,
       updateQuantity,
       syncPrices,
@@ -437,6 +490,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       state.promotionStatus,
       state.promotionMessage,
       addItem,
+      addItems,
       removeItem,
       updateQuantity,
       syncPrices,

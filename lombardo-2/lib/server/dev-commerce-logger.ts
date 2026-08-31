@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 type DevCommerceEvent =
   | "catalog.request_failed"
+  | "quick_order.search_failed"
+  | "quick_order.repeat_failed"
   | "secret_cellar.challenge_failed"
   | "order.created"
   | "order.reused"
@@ -95,6 +97,8 @@ export function logCommerceError(
   event: Extract<
     DevCommerceEvent,
     | "catalog.request_failed"
+    | "quick_order.search_failed"
+    | "quick_order.repeat_failed"
     | "secret_cellar.challenge_failed"
     | "order.request_failed"
     | "whatsapp.coordination_failed"

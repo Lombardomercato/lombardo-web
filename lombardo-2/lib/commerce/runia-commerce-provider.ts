@@ -1,4 +1,13 @@
 import type { Category, ProductImage } from "../../types/commerce.ts";
+import type {
+  QuickOrderProduct,
+  QuickOrderProvider,
+  QuickOrderSearchInput,
+} from "../quick-order/types.ts";
+import {
+  QUICK_ORDER_MAX_SEARCH_LIMIT,
+  QUICK_ORDER_SEARCH_LIMIT,
+} from "../quick-order/types.ts";
 import {
   retailPricingContext,
   type CustomerPricingContext,
@@ -49,6 +58,18 @@ interface IndexableProductRow {
   name_raw: string;
 }
 
+interface QuickOrderSupplierProductRow extends RuniaSupplierProductRow {
+  public_prices:
+    | Array<{ price_type: string; current_price: number | string }>
+    | { price_type: string; current_price: number | string }
+    | null;
+}
+
+interface QuickOrderBrandRow {
+  supplier_product_id: string;
+  brand_name: string | null;
+}
+
 function providerError(message: string): never {
   throw new ServerOrderError("SERVER_NOT_CONFIGURED", message, { status: 503 });
 }
@@ -70,13 +91,42 @@ function sanitizedSearch(value: string | undefined) {
     .trim();
 }
 
+function relationRows<T>(value: T | T[] | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  return value ? [value] : [];
+}
+
+function quickOrderPublicPrice(row: QuickOrderSupplierProductRow) {
+  const lombardoRetail = relationRows(row.lombardo_prices).find(
+    (price) => price.price_type === "retail" && price.active,
+  );
+  const retail = relationRows(row.public_prices).find(
+    (price) => price.price_type === "retail",
+  );
+  const price = Number(lombardoRetail?.current_price ?? retail?.current_price);
+  return Number.isFinite(price) && price > 0 ? price : undefined;
+}
+
+function quickOrderRank(product: QuickOrderProduct, term: string) {
+  const normalizedSku = product.product.sku.toLocaleLowerCase("es-AR");
+  const normalizedName = product.product.name.toLocaleLowerCase("es-AR");
+  const normalizedBrand = product.product.brand.name.toLocaleLowerCase("es-AR");
+  if (normalizedSku === term) return 0;
+  if (normalizedSku.startsWith(term)) return 1;
+  if (normalizedName.startsWith(term)) return 2;
+  if (normalizedBrand.startsWith(term)) return 3;
+  if (normalizedName.includes(term)) return 4;
+  if (normalizedBrand.includes(term)) return 5;
+  return 6;
+}
+
 function contentRangeTotal(response: Response, fallback: number) {
   const total = response.headers.get("content-range")?.match(/\/(\d+)$/)?.[1];
   return total ? Number(total) : fallback;
 }
 
 export class RuniaCommerceProvider
-  implements CommerceProvider, ServerProductSource
+  implements CommerceProvider, ServerProductSource, QuickOrderProvider
 {
   private readonly url: string;
   private readonly secretKey: string;
@@ -159,11 +209,30 @@ export class RuniaCommerceProvider
   ) {
     return new URLSearchParams({
       select:
-        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price)",
+        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),lombardo_prices:lombardo_selling_prices(price_type,current_price,version,active),editorial:supplier_product_editorial(brand_name)",
       supplier_id: `eq.${supplierId}`,
       eligibility_status: "eq.safe",
       active: "is.true",
       "retail_prices.price_type": `eq.${pricingContext.basePriceType}`,
+      "lombardo_prices.price_type": "eq.retail",
+      "lombardo_prices.active": "is.true",
+    });
+  }
+
+  private quickOrderProductSearch(
+    supplierId: string,
+    pricingContext: CustomerPricingContext,
+  ) {
+    return new URLSearchParams({
+      select:
+        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),public_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(price_type,current_price,version,active),editorial:supplier_product_editorial(brand_name)",
+      supplier_id: `eq.${supplierId}`,
+      eligibility_status: "eq.safe",
+      active: "is.true",
+      "retail_prices.price_type": `eq.${pricingContext.basePriceType}`,
+      "public_prices.price_type": "eq.retail",
+      "lombardo_prices.price_type": "eq.retail",
+      "lombardo_prices.active": "is.true",
     });
   }
 
@@ -278,6 +347,126 @@ export class RuniaCommerceProvider
       limit,
       hasMore: offset + products.length < total,
       queryTimeMs: Math.round((queryTimeMs + mapped.imageQueryTimeMs) * 10) / 10,
+    };
+  }
+
+  async searchProducts(
+    input: QuickOrderSearchInput,
+    pricingContext = this.defaultPricingContext,
+  ) {
+    const term = sanitizedSearch(input.search);
+    if (!term) {
+      return { products: [], queryTimeMs: 0, truncated: false };
+    }
+
+    const supplier = await this.getSupplier();
+    const limit = clampInteger(
+      input.limit,
+      QUICK_ORDER_SEARCH_LIMIT,
+      QUICK_ORDER_MAX_SEARCH_LIMIT,
+    ) || QUICK_ORDER_SEARCH_LIMIT;
+    const candidateLimit = Math.min(limit * 2, 60);
+    const productSearch = this.quickOrderProductSearch(
+      supplier.id,
+      pricingContext,
+    );
+    productSearch.set(
+      "or",
+      `(normalized_name.ilike.*${term}*,supplier_sku.ilike.*${term}*)`,
+    );
+    productSearch.set("order", "normalized_name.asc,id.asc");
+    productSearch.set("limit", String(candidateLimit));
+
+    const brandSearch = new URLSearchParams({
+      select:
+        "supplier_product_id,brand_name,product:supplier_product_id!inner(supplier_id,active,eligibility_status)",
+      brand_name: `ilike.*${term}*`,
+      "product.supplier_id": `eq.${supplier.id}`,
+      "product.active": "is.true",
+      "product.eligibility_status": "eq.safe",
+      order: "brand_name.asc,supplier_product_id.asc",
+      limit: String(candidateLimit),
+    });
+
+    const [primaryResult, brandResult] = await Promise.all([
+      this.fetchRows<QuickOrderSupplierProductRow>(
+        "supplier_products",
+        productSearch,
+      ),
+      this.fetchRows<QuickOrderBrandRow>(
+        "supplier_product_editorial",
+        brandSearch,
+      ),
+    ]);
+
+    const knownIds = new Set(
+      primaryResult.rows.map((row) => row.runia_product_id),
+    );
+    const brandIds = Array.from(
+      new Set(
+        brandResult.rows
+          .map((row) => row.supplier_product_id)
+          .filter((id) => UUID_PATTERN.test(id) && !knownIds.has(id)),
+      ),
+    ).slice(0, candidateLimit);
+
+    let brandProductRows: QuickOrderSupplierProductRow[] = [];
+    let brandProductQueryTimeMs = 0;
+    if (brandIds.length) {
+      const relatedSearch = this.quickOrderProductSearch(
+        supplier.id,
+        pricingContext,
+      );
+      relatedSearch.set("id", `in.(${brandIds.join(",")})`);
+      relatedSearch.set("order", "normalized_name.asc,id.asc");
+      relatedSearch.set("limit", String(candidateLimit));
+      const relatedResult = await this.fetchRows<QuickOrderSupplierProductRow>(
+        "supplier_products",
+        relatedSearch,
+      );
+      brandProductRows = relatedResult.rows;
+      brandProductQueryTimeMs = relatedResult.queryTimeMs;
+    }
+
+    const rowsById = new Map<string, QuickOrderSupplierProductRow>();
+    for (const row of [...primaryResult.rows, ...brandProductRows]) {
+      rowsById.set(row.runia_product_id, row);
+    }
+
+    let products: QuickOrderProduct[];
+    try {
+      products = Array.from(rowsById.values()).map((row) => ({
+        product: mapRuniaSupplierProduct(row, pricingContext),
+        publicUnitPrice: quickOrderPublicPrice(row),
+      }));
+    } catch {
+      providerError("Runia devolvió un producto SAFE con datos inválidos.");
+    }
+
+    products.sort((left, right) => {
+      const rank = quickOrderRank(left, term) - quickOrderRank(right, term);
+      return (
+        rank ||
+        left.product.name.localeCompare(right.product.name, "es-AR", {
+          sensitivity: "base",
+        }) ||
+        left.product.sku.localeCompare(right.product.sku, "es-AR")
+      );
+    });
+
+    return {
+      products: products.slice(0, limit),
+      queryTimeMs:
+        Math.round(
+          (primaryResult.queryTimeMs +
+            brandResult.queryTimeMs +
+            brandProductQueryTimeMs) *
+            10,
+        ) / 10,
+      truncated:
+        products.length > limit ||
+        primaryResult.rows.length === candidateLimit ||
+        brandResult.rows.length === candidateLimit,
     };
   }
 

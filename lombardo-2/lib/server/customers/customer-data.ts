@@ -41,6 +41,13 @@ export interface CustomerAccountData {
   orders: CustomerOrderSummary[];
 }
 
+export interface RepeatableOrderSummary {
+  publicId: string;
+  displayId: string;
+  itemCount: number;
+  createdAt: string;
+}
+
 function mapOrder(row: CustomerOrderRow): CustomerOrderSummary {
   return {
     publicId: row.public_id,
@@ -92,5 +99,49 @@ export async function getCurrentCustomerAccountData(
   return {
     account,
     orders: ((data ?? []) as CustomerOrderRow[]).map(mapOrder),
+  };
+}
+
+export async function getLatestRepeatableOrder(
+  expectedAccount: CustomerAccountSummary,
+): Promise<RepeatableOrderSummary | null> {
+  const supabase = await createSupabaseServerClient();
+  const authUserId = await getClaimsSubjectForClient(supabase);
+  if (!authUserId || authUserId !== expectedAccount.authUserId) return null;
+
+  const account = await getActiveCustomerAccountForClient(
+    supabase,
+    expectedAccount.tenantId,
+    authUserId,
+  );
+  if (!account || account.id !== expectedAccount.id) return null;
+
+  const { data, error } = await supabase
+    .from("commerce_orders")
+    .select("public_id,items,created_at")
+    .eq("tenant_record_id", account.tenantId)
+    .eq("customer_account_id", account.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("No se pudo cargar el último pedido de la cuenta.", {
+      cause: error,
+    });
+  }
+  if (!data) return null;
+
+  const items = Array.isArray(data.items)
+    ? (data.items as OrderItemSnapshot[])
+    : [];
+  return {
+    publicId: String(data.public_id),
+    displayId: String(data.public_id).slice(0, 8).toUpperCase(),
+    itemCount: items.reduce(
+      (total, item) => total + Number(item.quantity || 0),
+      0,
+    ),
+    createdAt: String(data.created_at),
   };
 }

@@ -29,7 +29,9 @@
 
 .headerActions button,
 .rules button,
-.matchForm button {
+.matchForm button,
+.pricingActions button,
+.pricingSettings button {
   min-height: 2.8rem;
   padding: 0.65rem 0.9rem;
   border: 1px solid #003a70;
@@ -38,6 +40,12 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   cursor: pointer;
+}
+
+.sectionNote {
+  margin: -0.25rem 0 0.9rem;
+  color: #697278;
+  line-height: 1.45;
 }
 
 .headerActions small {
@@ -164,6 +172,145 @@
 
 .tableWrap {
   overflow-x: auto;
+}
+
+.pricingTable {
+  min-width: 148rem;
+}
+
+.pricingHeader,
+.pricingRow {
+  display: grid;
+  grid-template-columns: minmax(17rem, 1.7fr) 8.5rem 11rem 9rem 8rem 9rem 11rem 10rem 9rem 13rem;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0.8rem;
+}
+
+.pricingHeader {
+  border-bottom: 2px solid #003a70;
+  color: #697278;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.pricingRow {
+  min-height: 7rem;
+  border-bottom: 1px solid rgba(0, 58, 112, 0.16);
+  background: #fffdf9;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 112px;
+}
+
+.pricingRow:hover { background: #f8f3ea; }
+
+.position {
+  width: fit-content;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid currentColor;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.position[data-position="very_competitive"],
+.position[data-position="competitive"] { color: #355a0e; background: #dff0bc; }
+.position[data-position="in_market"] { color: #584a10; background: #fff0b7; }
+.position[data-position="expensive"] { color: #8c4100; background: #ffe0c2; }
+.position[data-position="very_expensive"] { color: #851e18; background: #ffd3cd; }
+
+.pricingActions {
+  display: grid;
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.pricingActions form { margin: 0; }
+
+.pricingActions button {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.68rem;
+}
+
+.pricingActions button[data-action="secondary"] {
+  border-color: rgba(0, 58, 112, 0.45);
+  background: transparent;
+  color: #003a70;
+}
+
+.guardrail {
+  color: #8c4100;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.manualPrice {
+  scroll-margin-top: 2rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #f8f3ea;
+}
+
+.manualPrice summary {
+  color: #003a70;
+  font-size: 0.75rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.manualPrice form,
+.sensitivityForm {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.manualPrice label,
+.sensitivityForm label,
+.pricingSettings label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.manualPrice label > span,
+.sensitivityForm label > span,
+.pricingSettings label > span {
+  color: #697278;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.manualPrice input,
+.manualPrice select,
+.sensitivityForm select,
+.pricingSettings input {
+  width: 100%;
+  min-height: 2.6rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(0, 58, 112, 0.35);
+  background: white;
+  color: #15212b;
+}
+
+.permission {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.permission input { width: 1rem; min-height: 1rem; }
+
+.pricingSettings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  padding: 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #fffdf9;
 }
 
 .tableHeader,
@@ -333,6 +480,7 @@
   .metricGrid { grid-template-columns: repeat(2, minmax(9rem, 1fr)); }
   .filters { grid-template-columns: repeat(2, minmax(8rem, 1fr)); }
   .detailGrid { grid-template-columns: 1fr; }
+  .pricingSettings { grid-template-columns: repeat(2, minmax(9rem, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -341,6 +489,7 @@
   .metricGrid,
   .filters,
   .rule,
-  .matchForm { grid-template-columns: 1fr; }
+  .matchForm,
+  .pricingSettings { grid-template-columns: 1fr; }
   .runStatus { grid-template-columns: 1fr; }
 }

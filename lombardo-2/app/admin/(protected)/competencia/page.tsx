@@ -2,11 +2,14 @@ import Link from "next/link";
 import {
   runCompetitorIngestionAction,
   updateCompetitorAlertRulesAction,
+  updatePricingIntelligenceSettingsAction,
 } from "@/app/admin/actions";
 import { COMPETITOR_CONFIDENCE_BANDS } from "@/lib/competitors/types";
 import { formatAdminDate } from "@/lib/admin/presentation";
 import { createCompetitorServices } from "@/lib/server/competitors";
+import { createPricingIntelligenceServices } from "@/lib/server/pricing-intelligence";
 import { formatCurrency } from "@/lib/utils/format-currency";
+import { PricingOpportunityActions } from "./PricingOpportunityActions";
 import styles from "../../admin.module.css";
 import localStyles from "./CompetitorDashboard.module.css";
 
@@ -36,6 +39,21 @@ const RULE_LABELS = {
   match_lost: "Producto pierde el match",
 } as const;
 
+const POSITION_LABELS = {
+  very_competitive: "MUY COMPETITIVO",
+  competitive: "COMPETITIVO",
+  in_market: "EN MERCADO",
+  expensive: "CARO",
+  very_expensive: "MUY CARO",
+} as const;
+
+const SCENARIO_LABELS = {
+  match_competitor: "IGUALAR COMPETIDOR",
+  competitor_plus_5: "COMPETIDOR +5%",
+  competitor_minus_5: "COMPETIDOR -5%",
+  target_margin: "TARGET MARGIN",
+} as const;
+
 export default async function CompetitorDashboardPage({
   searchParams,
 }: {
@@ -43,14 +61,24 @@ export default async function CompetitorDashboardPage({
 }) {
   const query = await searchParams;
   const confidence = value(query, "confidence");
-  const dashboard = await createCompetitorServices().store.dashboard({
-    brand: value(query, "marca") || undefined,
-    category: value(query, "categoria") || undefined,
-    confidence: COMPETITOR_CONFIDENCE_BANDS.includes(confidence as never)
-      ? confidence as (typeof COMPETITOR_CONFIDENCE_BANDS)[number]
-      : undefined,
-    minimumDifferencePct: numeric(query, "diferenciaMin"),
-    maximumDifferencePct: numeric(query, "diferenciaMax"),
+  const [dashboard, pricing] = await Promise.all([
+    createCompetitorServices().store.dashboard({
+      brand: value(query, "marca") || undefined,
+      category: value(query, "categoria") || undefined,
+      confidence: COMPETITOR_CONFIDENCE_BANDS.includes(confidence as never)
+        ? confidence as (typeof COMPETITOR_CONFIDENCE_BANDS)[number]
+        : undefined,
+      minimumDifferencePct: numeric(query, "diferenciaMin"),
+      maximumDifferencePct: numeric(query, "diferenciaMax"),
+    }),
+    createPricingIntelligenceServices().store.opportunities(),
+  ]);
+  const filteredRuniaProducts = new Set(
+    dashboard.rows.map((row) => row.runiaProductId).filter(Boolean),
+  );
+  const pricingRows = pricing.opportunities.filter((row) => {
+    if (row.decisionStatus === "ignored") return false;
+    return filteredRuniaProducts.has(row.runiaProductId);
   });
 
   const metrics = [
@@ -84,7 +112,7 @@ export default async function CompetitorDashboardPage({
       {value(query, "success") ? <p className={localStyles.feedback} role="status">{value(query, "success")}</p> : null}
       {value(query, "error") ? <p className={localStyles.error} role="alert">{value(query, "error")}</p> : null}
       <p className={localStyles.notice}>
-        Los precios del competidor son señales para decisión humana. Este módulo no escribe en VINROS, listas ni políticas de pricing.
+        VINROS aporta costo y retail. Lombardo decide su selling price en una capa separada. Ninguna recomendación cambia precios sin aprobación humana.
       </p>
 
       <section className={localStyles.runStatus} data-state={dashboard.competitor.circuitState} data-status={dashboard.latestRun?.status}>
@@ -119,6 +147,32 @@ export default async function CompetitorDashboardPage({
       </form>
 
       <section className={styles.section}>
+        <div className={styles.sectionTitle}><h2>OPORTUNIDADES DE PRECIO</h2><span>{pricingRows.length} COMPARABLES · ORDEN IMPACTO</span></div>
+        <p className={localStyles.sectionNote}>Impacto = brecha positiva en pesos × confidence. Si falta costo, no se calcula margen ni se habilita aprobación.</p>
+        {pricingRows.length ? (
+          <div className={localStyles.tableWrap}>
+            <div className={localStyles.pricingTable}>
+              <div className={localStyles.pricingHeader}><span>PRODUCTO</span><span>POSICIÓN</span><span>LOMBARDO</span><span>COMPETIDOR</span><span>DIF.</span><span>COSTO</span><span>MARGEN ACTUAL</span><span>SUGERIDO</span><span>MARGEN SUG.</span><span>ACCIONES</span></div>
+              {pricingRows.slice(0, 100).map((row) => (
+                <article className={localStyles.pricingRow} data-status={row.decisionStatus} key={row.competitorProductId}>
+                  <div className={localStyles.productName}><strong>{row.runiaName}</strong><small>{row.runiaSku} · {row.confidenceBand.toLocaleUpperCase("es-AR")} {Math.round(row.matchConfidence * 100)}%</small></div>
+                  <span className={localStyles.position} data-position={row.position}>{POSITION_LABELS[row.position]}</span>
+                  <div className={localStyles.price}><strong>{formatCurrency(row.lombardoSellingPrice)}</strong><small>VINROS retail {formatCurrency(row.supplierRetail)} · {row.sellingPriceSource === "LOMBARDO_SELLING_PRICE" ? "SELLING PRICE" : "FALLBACK"}</small></div>
+                  <div className={localStyles.price}><strong>{formatCurrency(row.competitorPrice)}</strong><small>{row.competitorName}</small></div>
+                  <div className={localStyles.price}><strong>{formatCurrency(row.differenceAmount)}</strong><small>{percentage(row.differencePct)}</small></div>
+                  <div className={localStyles.price}><strong>{row.supplierCost ? formatCurrency(row.supplierCost) : "SIN COSTO"}</strong><small>VINROS</small></div>
+                  <div className={localStyles.price}><strong>{row.currentMargin ? percentage(row.currentMargin.percentage) : "NO CALCULABLE"}</strong><small>{row.currentMargin ? `${formatCurrency(row.currentMargin.amount)} · markup ${percentage(row.currentMargin.markupPercentage)}` : "No se inventa margen"}</small></div>
+                  <div className={localStyles.price}><strong>{row.recommendation?.price ? formatCurrency(row.recommendation.price) : "SIN SUGERENCIA"}</strong><small>{row.recommendation ? SCENARIO_LABELS[row.recommendation.type] : "Guardrail activo"}</small></div>
+                  <div className={localStyles.price}><strong>{row.recommendation?.margin ? percentage(row.recommendation.margin.percentage) : "—"}</strong><small>{row.recommendation?.margin ? formatCurrency(row.recommendation.margin.amount) : "—"}</small></div>
+                  <PricingOpportunityActions opportunity={row} compact />
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : <p className={styles.emptyState}>No hay oportunidades para estos filtros.</p>}
+      </section>
+
+      <section className={styles.section}>
         <div className={styles.sectionTitle}><h2>PRECIO LOMBARDO VS POSITANO</h2><span>{dashboard.rows.length}</span></div>
         {dashboard.rows.length ? (
           <div className={localStyles.tableWrap}>
@@ -141,6 +195,20 @@ export default async function CompetitorDashboardPage({
             </div>
           </div>
         ) : <p className={styles.emptyState}>No hay comparaciones para estos filtros.</p>}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}><h2>CONFIGURACIÓN DE PRICING</h2><span>UMBRAL HUMANO · V1</span></div>
+        <form action={updatePricingIntelligenceSettingsAction} className={localStyles.pricingSettings}>
+          <label><span>MUY COMP. HASTA %</span><input name="veryCompetitiveMaxPct" type="number" step="0.1" defaultValue={pricing.settings.veryCompetitiveMaxPct} /></label>
+          <label><span>COMPETITIVO HASTA %</span><input name="competitiveMaxPct" type="number" step="0.1" defaultValue={pricing.settings.competitiveMaxPct} /></label>
+          <label><span>EN MERCADO HASTA %</span><input name="marketMaxPct" type="number" step="0.1" defaultValue={pricing.settings.marketMaxPct} /></label>
+          <label><span>CARO HASTA %</span><input name="expensiveMaxPct" type="number" step="0.1" defaultValue={pricing.settings.expensiveMaxPct} /></label>
+          <label><span>MARGEN MÍNIMO %</span><input name="minimumMarginPct" type="number" min="0" max="95" step="0.1" defaultValue={pricing.settings.minimumMarginPct} /></label>
+          <label><span>TARGET MARGIN %</span><input name="targetMarginPct" type="number" min="0" max="95" step="0.1" defaultValue={pricing.settings.targetMarginPct} /></label>
+          <label><span>VIGENCIA COMP. HORAS</span><input name="competitorMaxAgeHours" type="number" min="1" max="720" defaultValue={pricing.settings.competitorMaxAgeHours} /></label>
+          <button type="submit">GUARDAR UMBRALES</button>
+        </form>
       </section>
 
       <section className={styles.section}>

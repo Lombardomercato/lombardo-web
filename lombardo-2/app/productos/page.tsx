@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CatalogExplorer } from "@/components/catalog/CatalogExplorer";
 import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
+import { isQuickOrderPricingContext } from "@/lib/quick-order/types";
 
 export const metadata: Metadata = {
   title: "Tienda online de vinos, destilados y regalos en Rosario",
@@ -46,6 +47,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       initialPage={initialPage}
       categories={categories}
       initialCategory={initialCategory}
+      quickOrderAvailable={isQuickOrderPricingContext(pricingContext)}
     />
   );
 }

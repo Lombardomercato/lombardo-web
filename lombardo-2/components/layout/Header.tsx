@@ -17,6 +17,7 @@ const navigation = [
 export function Header() {
   const pathname = usePathname();
   const isSecretCellar = pathname.startsWith("/cava-secreta");
+  const isEditorial = pathname === "/guias" || pathname.startsWith("/guias/");
   const { getItemCount, isDrawerOpen, openCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -52,6 +53,8 @@ export function Header() {
   return (
     <header
       className={`${styles.header} ${isSecretCellar ? styles.cellarHeader : ""} ${
+        isEditorial ? styles.editorialHeader : ""
+      } ${
         pathname !== "/" && isScrolled ? styles.scrolledHeader : ""
       }`}
     >

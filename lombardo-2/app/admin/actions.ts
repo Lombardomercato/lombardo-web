@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   authenticateAdminCredentials,
@@ -42,6 +42,13 @@ import { AutomationStoreError } from "@/lib/server/automations/automation-store"
 import { createCompetitorServices } from "@/lib/server/competitors";
 import { CompetitorStoreError } from "@/lib/server/competitors/competitor-store";
 import { COMPETITOR_ALERT_TYPES, type CompetitorAlertType } from "@/lib/competitors/types";
+import { createPricingIntelligenceServices } from "@/lib/server/pricing-intelligence";
+import { PricingIntelligenceStoreError } from "@/lib/server/pricing-intelligence/pricing-store";
+import {
+  COMMERCIAL_SENSITIVITIES,
+  type CommercialSensitivity,
+  type PricingIntelligenceSettings,
+} from "@/lib/pricing-intelligence/types";
 
 export interface AdminLoginState {
   error?: string;
@@ -88,6 +95,19 @@ function validStatus(value: string): value is FulfillmentStatus {
 
 function validAutomationType(value: string): value is AutomationType {
   return AUTOMATION_TYPES.includes(value as AutomationType);
+}
+
+function formNumber(formData: FormData, name: string) {
+  const raw = formText(formData, name, 32).replace(",", ".");
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new PricingIntelligenceStoreError("La información de precio no es válida.", 422);
+  }
+  return value;
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 export async function runAutomationAction(formData: FormData) {
@@ -213,6 +233,133 @@ export async function updateCompetitorAlertRulesAction(formData: FormData) {
     destination += `?success=${encodeURIComponent("Alertas competitivas actualizadas.")}`;
   } catch (error) {
     destination += `?error=${encodeURIComponent(error instanceof CompetitorStoreError ? error.message : "No pudimos actualizar las alertas.")}`;
+  }
+  redirect(destination);
+}
+
+export async function setCommercialSensitivityAction(formData: FormData) {
+  let destination = "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const productId = formText(formData, "runiaProductId", 36);
+    const competitorProductId = formText(formData, "competitorProductId", 36);
+    const sensitivity = formText(formData, "sensitivity", 40);
+    if (!isUuid(productId) || !isUuid(competitorProductId)) {
+      throw new PricingIntelligenceStoreError("El producto no es válido.", 400);
+    }
+    if (!COMMERCIAL_SENSITIVITIES.includes(sensitivity as CommercialSensitivity)) {
+      throw new PricingIntelligenceStoreError("La sensibilidad comercial no es válida.", 422);
+    }
+    await createPricingIntelligenceServices().store.setSensitivity(
+      productId,
+      sensitivity as CommercialSensitivity,
+      session.authUserId,
+    );
+    revalidatePath("/admin/competencia");
+    revalidatePath(`/admin/competencia/${competitorProductId}`);
+    destination += `?success=${encodeURIComponent("Sensibilidad comercial actualizada.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos actualizar la sensibilidad.")}`;
+  }
+  redirect(destination);
+}
+
+export async function updatePricingIntelligenceSettingsAction(formData: FormData) {
+  let destination = "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const settings: PricingIntelligenceSettings = {
+      veryCompetitiveMaxPct: formNumber(formData, "veryCompetitiveMaxPct"),
+      competitiveMaxPct: formNumber(formData, "competitiveMaxPct"),
+      marketMaxPct: formNumber(formData, "marketMaxPct"),
+      expensiveMaxPct: formNumber(formData, "expensiveMaxPct"),
+      minimumMarginPct: formNumber(formData, "minimumMarginPct"),
+      targetMarginPct: formNumber(formData, "targetMarginPct"),
+      competitorMaxAgeHours: Math.trunc(formNumber(formData, "competitorMaxAgeHours")),
+    };
+    if (!(
+      settings.veryCompetitiveMaxPct < settings.competitiveMaxPct &&
+      settings.competitiveMaxPct < settings.marketMaxPct &&
+      settings.marketMaxPct < settings.expensiveMaxPct &&
+      settings.minimumMarginPct >= 0 &&
+      settings.targetMarginPct >= settings.minimumMarginPct &&
+      settings.targetMarginPct < 100 &&
+      settings.competitorMaxAgeHours >= 1
+    )) {
+      throw new PricingIntelligenceStoreError("Los umbrales no forman una configuración válida.", 422);
+    }
+    await createPricingIntelligenceServices().store.updateSettings(settings, session.authUserId);
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Umbrales y márgenes actualizados.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos actualizar Pricing Intelligence.")}`;
+  }
+  redirect(destination);
+}
+
+export async function ignorePricingOpportunityAction(formData: FormData) {
+  let destination = "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const competitorProductId = formText(formData, "competitorProductId", 36);
+    if (!isUuid(competitorProductId)) {
+      throw new PricingIntelligenceStoreError("La oportunidad no es válida.", 400);
+    }
+    await createPricingIntelligenceServices().store.ignoreOpportunity(
+      competitorProductId,
+      session.authUserId,
+      formText(formData, "note", 300),
+    );
+    revalidatePath(destination);
+    revalidatePath(`/admin/competencia/${competitorProductId}`);
+    destination += `?success=${encodeURIComponent("Oportunidad ignorada; no se modificó ningún precio.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos ignorar la oportunidad.")}`;
+  }
+  redirect(destination);
+}
+
+export async function applyLombardoSellingPriceAction(formData: FormData) {
+  const competitorProductId = formText(formData, "competitorProductId", 36);
+  let destination = isUuid(competitorProductId)
+    ? `/admin/competencia/${competitorProductId}`
+    : "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const productId = formText(formData, "runiaProductId", 36);
+    const reason = formText(formData, "reason", 40);
+    const source = formText(formData, "approvalSource", 40);
+    const reasons = ["MANUAL", "COMPETITOR_REVIEW", "PROMOTION", "OTHER"] as const;
+    if (!isUuid(productId) || !isUuid(competitorProductId)) {
+      throw new PricingIntelligenceStoreError("El producto no es válido.", 400);
+    }
+    if (!reasons.includes(reason as (typeof reasons)[number])) {
+      throw new PricingIntelligenceStoreError("Elegí un motivo válido.", 422);
+    }
+    if (source !== "ADMIN" && source !== "PRICING_INTELLIGENCE") {
+      throw new PricingIntelligenceStoreError("La fuente de aprobación no es válida.", 422);
+    }
+    const result = await createPricingIntelligenceServices().store.setSellingPrice({
+      productId,
+      newPrice: formNumber(formData, "newPrice"),
+      reason: reason as (typeof reasons)[number],
+      source,
+      approvedBy: session.authUserId,
+      expectedCurrentPrice: formNumber(formData, "expectedCurrentPrice"),
+      expectedVersion: Math.trunc(formNumber(formData, "expectedVersion")),
+      expectedSupplierCost: formNumber(formData, "expectedSupplierCost"),
+      expectedCompetitorProductId: competitorProductId,
+      expectedCompetitorPrice: formNumber(formData, "expectedCompetitorPrice"),
+      expectedCompetitorFetchedAt: formText(formData, "expectedCompetitorFetchedAt", 64),
+      allowAtOrBelowCost: formData.get("allowAtOrBelowCost") === "on",
+    });
+    revalidateTag("runia-real-catalog", "max");
+    revalidatePath("/");
+    revalidatePath("/admin/competencia");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent(result.changed ? "Precio Lombardo aprobado y auditado." : "El precio ya era el vigente; no hubo cambios.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos aplicar el precio Lombardo.")}`;
   }
   redirect(destination);
 }

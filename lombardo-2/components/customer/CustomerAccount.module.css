@@ -97,6 +97,54 @@
   padding-top: var(--space-6);
 }
 
+.quickOrderAccess {
+  margin-top: var(--space-6);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-5);
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
+}
+
+.quickOrderAccess h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+
+.quickOrderAccess > div > p:last-child {
+  max-width: 38rem;
+  margin-top: 0.8rem;
+  color: rgba(255, 253, 249, 0.72);
+  line-height: 1.5;
+}
+
+.quickOrderAccess nav {
+  min-width: 18rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.quickOrderAccess nav a {
+  min-height: 3.2rem;
+  padding-inline: 0.8rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 253, 249, 0.5);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.quickOrderAccess nav a + a {
+  border-left: 0;
+  background: var(--lombardo-red);
+}
+
 .sectionTitle {
   margin-bottom: var(--space-5);
   color: var(--lombardo-blue);
@@ -173,6 +221,16 @@
 
   .profile {
     grid-template-columns: 1fr;
+  }
+
+  .quickOrderAccess {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .quickOrderAccess nav {
+    width: 100%;
+    min-width: 0;
   }
 
   .orderLink {

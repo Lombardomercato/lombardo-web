@@ -10,10 +10,38 @@
     clamp(3rem, 7vh, 5rem);
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   column-gap: clamp(1rem, 2vw, 2.5rem);
   background: var(--lombardo-beige);
   overflow: hidden;
+}
+
+.purchaseModes {
+  grid-column: 1 / 7;
+  width: min(100%, 28rem);
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid rgba(0, 58, 112, 0.36);
+}
+
+.purchaseModes a {
+  min-height: 3rem;
+  padding-inline: 0.9rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.purchaseModes a + a {
+  border-left: 1px solid rgba(0, 58, 112, 0.36);
+}
+
+.purchaseModes a[aria-current="page"] {
+  background: var(--lombardo-blue);
+  color: var(--neutral-paper);
 }
 
 .heroKicker {
