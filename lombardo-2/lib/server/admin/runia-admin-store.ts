@@ -214,6 +214,23 @@ interface ProductImageRenderRow {
   master: ProductMediaRow | ProductMediaRow[] | null;
 }
 
+interface NormalizableProductMediaRow extends ProductMediaRow {
+  supplier_product_id: string;
+  width: number | null;
+  height: number | null;
+  product:
+    | { supplier_id: string; active: boolean; eligibility_status: string }
+    | Array<{ supplier_id: string; active: boolean; eligibility_status: string }>
+    | null;
+}
+
+export interface NormalizableProductMedia {
+  id: string;
+  productId: string;
+  sourceUrl: string;
+  altText: string;
+}
+
 interface PublishableImageCandidateRow {
   id: string;
   supplier_product_id: string;
@@ -825,6 +842,82 @@ export class RuniaAdminStore {
       .map((segment) => encodeURIComponent(segment))
       .join("/");
     return `${this.url}/storage/v1/object/public/${encodeURIComponent(row.bucket_id)}/${path}`;
+  }
+
+  async listPrimaryProductMediaForNormalization(input: {
+    cursor?: string;
+    limit: number;
+  }): Promise<NormalizableProductMedia[]> {
+    const supplierId = await this.supplierId();
+    const search = new URLSearchParams({
+      select: "id,supplier_product_id,bucket_id,storage_path,mime_type,byte_size,width,height,alt_text,position,is_primary,source,source_url,approval_status,rights_status,product:supplier_product_id!inner(supplier_id,active,eligibility_status)",
+      is_primary: "eq.true",
+      approval_status: "eq.approved",
+      rights_status: "in.(owned,licensed,approved)",
+      "product.supplier_id": `eq.${supplierId}`,
+      "product.active": "eq.true",
+      "product.eligibility_status": "eq.safe",
+      storage_path: "not.like.*/renders/product-image-system-v1/*",
+      order: "id.asc",
+      limit: String(Math.min(Math.max(input.limit, 1), 20)),
+    });
+    if (input.cursor && UUID_PATTERN.test(input.cursor)) search.set("id", `gt.${input.cursor}`);
+    const { rows } = await this.rows<NormalizableProductMediaRow>(
+      `supplier_product_media?${search}`,
+      "No pudimos cargar las imágenes pendientes de normalización.",
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      productId: row.supplier_product_id,
+      sourceUrl: this.mediaUrl(row),
+      altText: row.alt_text,
+    }));
+  }
+
+  async uploadNormalizedProductRender(input: {
+    sourceMediaId: string;
+    productId: string;
+    bytes: Uint8Array;
+    contentSha256: string;
+    backgroundConfidence: "high" | "medium";
+    edgeCoverage: number;
+    operatorUserId: string;
+  }) {
+    if (!UUID_PATTERN.test(input.sourceMediaId) || !UUID_PATTERN.test(input.productId)) {
+      throw new AdminStoreError("La imagen de origen no es válida.", 422);
+    }
+    const path = `${input.productId}/renders/product-image-system-v1/${input.sourceMediaId}.webp`;
+    const storageHeaders: Record<string, string> = {
+      apikey: this.secretKey,
+      "Content-Type": "image/webp",
+      "Cache-Control": "31536000, immutable",
+      "x-upsert": "false",
+    };
+    if (!this.secretKey.startsWith("sb_secret_")) storageHeaders.Authorization = `Bearer ${this.secretKey}`;
+    const upload = await this.fetcher(
+      `${this.url}/storage/v1/object/product-media/${path}`,
+      {
+        method: "POST",
+        headers: storageHeaders,
+        body: Uint8Array.from(input.bytes).buffer,
+        cache: "no-store",
+      },
+    );
+    if (!upload.ok) throw new AdminStoreError("No pudimos subir el render normalizado.", 502);
+    try {
+      await this.rpc("supplier_publish_normalized_product_render", {
+        p_source_media_id: input.sourceMediaId,
+        p_storage_path: path,
+        p_byte_size: input.bytes.byteLength,
+        p_content_sha256: input.contentSha256,
+        p_background_confidence: input.backgroundConfidence,
+        p_edge_coverage: input.edgeCoverage,
+        p_created_by: input.operatorUserId,
+      });
+    } catch (error) {
+      await this.deleteStorageObject("product-media", path).catch(() => undefined);
+      throw error;
+    }
   }
 
   private mapProduct(row: ProductRow): AdminProduct {

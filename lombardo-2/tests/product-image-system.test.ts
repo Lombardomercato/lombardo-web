@@ -5,6 +5,8 @@ import test from "node:test";
 
 const files = {
   migration: fileURLToPath(new URL("../supabase/migrations/20260829052000_lombardo_product_image_system.sql", import.meta.url)),
+  normalizationMigration: fileURLToPath(new URL("../supabase/migrations/20260830193000_product_image_transparent_renders.sql", import.meta.url)),
+  normalizationRoute: fileURLToPath(new URL("../app/admin/api/product-images/normalize/route.ts", import.meta.url)),
   render: fileURLToPath(new URL("../components/product/LombardoProductRender.tsx", import.meta.url)),
   renderStyles: fileURLToPath(new URL("../components/product/LombardoProductRender.module.css", import.meta.url)),
   publicVisualStyles: fileURLToPath(new URL("../components/product/ProductVisual.module.css", import.meta.url)),
@@ -26,6 +28,22 @@ test("product image system separates source masters from versioned renders", asy
   assert.match(migration, /'pending', 'approved'/);
   assert.match(store, /workflow === "source_master"/);
   assert.match(store, /supplier_attach_product_source_master/);
+});
+
+test("normalized renders preserve the master and publish only for SAFE products", async () => {
+  const [migration, route] = await Promise.all([
+    readFile(files.normalizationMigration, "utf8"),
+    readFile(files.normalizationRoute, "utf8"),
+  ]);
+  assert.match(migration, /supplier_publish_normalized_product_render/);
+  assert.match(migration, /source_media_id = excluded\.source_media_id/);
+  assert.match(migration, /product\.eligibility_status = 'safe'/);
+  assert.match(migration, /'backgroundTreatment', 'transparent-edge-connected-v1'/);
+  assert.match(migration, /'productOccupancy', 0\.8/);
+  assert.match(migration, /revoke all on function[\s\S]*from public, anon, authenticated/);
+  assert.match(route, /requireAdminRole\("admin"\)/);
+  assert.match(route, /sameOrigin\(request\)/);
+  assert.match(route, /removed\.confidence === "low"/);
 });
 
 test("public product imagery uses one transparent 80-percent canvas", async () => {
