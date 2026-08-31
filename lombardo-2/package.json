@@ -15,11 +15,15 @@
     "test": "node --conditions=react-server --test tests/*.test.ts"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "2.0.41",
+    "@ai-sdk/react": "4.0.88",
     "@supabase/ssr": "0.12.5",
     "@supabase/supabase-js": "2.112.4",
+    "ai": "^7.0.85",
     "next": "16.3.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/node": "^20",
