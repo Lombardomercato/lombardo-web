@@ -125,15 +125,16 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(2rem, 4vw, 4rem);
-  align-items: start;
+  align-items: stretch;
 }
 
-.secondaryStory:nth-child(2) { margin-top: clamp(3rem, 6vw, 6rem); }
+.secondaryStory { display: flex; flex-direction: column; }
 .secondaryImage { min-height: clamp(23rem, 34vw, 34rem); }
 .secondaryStory:nth-child(2) .secondaryImage { min-height: clamp(23rem, 34vw, 34rem); }
-.secondaryStory > div { padding-top: 1rem; border-top: 1px solid currentColor; }
+.secondaryStory > div { flex: 1; padding-top: 1rem; display: flex; flex-direction: column; align-items: flex-start; border-top: 1px solid currentColor; }
 .secondaryStory h2 { max-width: 16ch; margin: 1rem 0; font-family: var(--font-display); font-size: clamp(2.25rem, 3.3vw, 3.65rem); line-height: 0.96; letter-spacing: -0.038em; text-transform: uppercase; }
 .secondaryStory > div > p:nth-of-type(2) { max-width: 39rem; font-size: 0.97rem; line-height: 1.55; }
+.secondaryStory > div > a { margin-top: auto; padding-top: 2rem; }
 
 .latest {
   padding: clamp(4.5rem, 8vw, 8rem) var(--page-gutter);
@@ -366,8 +367,7 @@
   .coverLeadImage { min-height: 23rem; }
   .coverLeadCopy { padding-inline: var(--page-gutter); }
   .coverLeadCopy h2 { font-size: clamp(2.7rem, 12vw, 3.8rem); }
-  .coverSecondary { padding-inline: var(--page-gutter); grid-template-columns: 1fr; }
-  .secondaryStory:nth-child(2) { margin-top: 2rem; }
+  .coverSecondary { padding-inline: var(--page-gutter); grid-template-columns: 1fr; gap: 4rem; }
   .secondaryImage, .secondaryStory:nth-child(2) .secondaryImage { min-height: 22rem; }
   .secondaryStory h2 { font-size: clamp(2.25rem, 10vw, 3rem); }
   .latest > header { grid-template-columns: 1fr; gap: 1.5rem; }
