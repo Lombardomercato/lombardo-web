@@ -45,6 +45,8 @@ export interface GuideDefinition {
   heroImage?: string;
   heroAlt?: string;
   heroCaption?: string;
+  momentImage?: string;
+  momentAlt?: string;
   heroTone: "blue" | "red" | "green" | "pink" | "beige";
   visualCaptions: readonly [string, string];
   sections: readonly GuideSection[];
@@ -400,7 +402,12 @@ const FOUNDATION_GUIDES: readonly GuideDefinition[] = [
     intro: "Lombardo combina una selección online de vinos y cosas buenas con coordinación para empresas en Rosario. Esta guía ayuda a definir destinatarios, presupuesto y entrega antes de confirmar cantidades y presentaciones.",
     readingMinutes: 4,
     publishedAt: "2026-08-29",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-08-31",
+    heroImage: "/images/guides/regalos-empresariales-rosario-editorial-v2.jpg",
+    heroAlt: "Dos cajas de regalo empresariales azules con vino y objetos gourmet sobre una escenografía coral",
+    heroCaption: "Una selección coherente convierte muchas entregas en un gesto que sigue sintiéndose personal.",
+    momentImage: "/images/guides/regalos-empresariales-rosario-moment-v2.jpg",
+    momentAlt: "Manos terminan un regalo empresarial con cinta verde, papel coral y una botella dentro de una caja azul",
     heroTone: "green",
     visualCaptions: ["Primero definí a quién querés reconocer.", "La entrega también forma parte del regalo."],
     sections: [

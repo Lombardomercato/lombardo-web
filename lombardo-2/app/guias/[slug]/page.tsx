@@ -160,8 +160,8 @@ export default async function GuidePage({ params }: GuidePageProps) {
           </div>
 
           <GuideVisualMoment
-            image={guide.heroImage}
-            alt=""
+            image={guide.momentImage ?? guide.heroImage}
+            alt={guide.momentAlt ?? ""}
             products={products.slice(2, 4)}
             caption={guide.visualCaptions[1]}
             index={1}

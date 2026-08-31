@@ -48,6 +48,10 @@
   align-items: end;
 }
 
+.moment[data-reverse="true"] {
+  grid-template-columns: minmax(15rem, 3fr) minmax(0, 9fr);
+}
+
 .moment[data-reverse="true"] .momentVisual { order: 2; }
 
 .momentVisual {
@@ -94,6 +98,7 @@
   .heroPhoto figcaption p { margin-top: 0.45rem; text-align: left; }
   .fallbackHero > div { min-height: 26rem; }
   .moment { grid-template-columns: 1fr; }
+  .moment[data-reverse="true"] { grid-template-columns: 1fr; }
   .moment[data-reverse="true"] .momentVisual { order: initial; }
   .momentVisual { min-height: 23rem; }
 }
