@@ -110,6 +110,15 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function formReviewAt(formData: FormData) {
+  const raw = formText(formData, "reviewAt", 64);
+  const reviewAt = new Date(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw) ? `${raw}:00-03:00` : raw);
+  if (!Number.isFinite(reviewAt.getTime())) {
+    throw new PricingIntelligenceStoreError("La fecha de revisión no es válida.", 422);
+  }
+  return reviewAt;
+}
+
 export async function runAutomationAction(formData: FormData) {
   let destination = "/admin/automatizaciones";
   const type = formText(formData, "automationType", 40);
@@ -360,6 +369,90 @@ export async function applyLombardoSellingPriceAction(formData: FormData) {
     destination += `?success=${encodeURIComponent(result.changed ? "Precio Lombardo aprobado y auditado." : "El precio ya era el vigente; no hubo cambios.")}`;
   } catch (error) {
     destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos aplicar el precio Lombardo.")}`;
+  }
+  redirect(destination);
+}
+
+export async function publishLombardoOpportunityAction(formData: FormData) {
+  const competitorProductId = formText(formData, "competitorProductId", 36);
+  let destination = isUuid(competitorProductId)
+    ? `/admin/competencia/${competitorProductId}`
+    : "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const productId = formText(formData, "runiaProductId", 36);
+    const reviewAt = formReviewAt(formData);
+    if (!isUuid(productId) || !isUuid(competitorProductId)) {
+      throw new PricingIntelligenceStoreError("El producto no es válido.", 400);
+    }
+    await createPricingIntelligenceServices().store.publishOpportunity({
+      productId,
+      newPrice: formNumber(formData, "newPrice"),
+      expectedCurrentPrice: formNumber(formData, "expectedCurrentPrice"),
+      expectedVersion: Math.trunc(formNumber(formData, "expectedVersion")),
+      expectedSupplierCost: formNumber(formData, "expectedSupplierCost"),
+      expectedCompetitorProductId: competitorProductId,
+      expectedCompetitorPrice: formNumber(formData, "expectedCompetitorPrice"),
+      expectedCompetitorFetchedAt: formText(formData, "expectedCompetitorFetchedAt", 64),
+      reviewAt: reviewAt.toISOString(),
+      approvedBy: session.authUserId,
+    });
+    revalidateTag("runia-real-catalog", "max");
+    revalidateTag("lombardo-opportunities", "max");
+    revalidatePath("/");
+    revalidatePath("/oportunidades");
+    revalidatePath("/sitemap.xml");
+    revalidatePath("/admin/competencia");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Oportunidad publicada con precio e historial auditados.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos publicar la oportunidad.")}`;
+  }
+  redirect(destination);
+}
+
+export async function removeLombardoOpportunityAction(formData: FormData) {
+  let destination = "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const productId = formText(formData, "runiaProductId", 36);
+    if (!isUuid(productId)) throw new PricingIntelligenceStoreError("El producto no es válido.", 400);
+    await createPricingIntelligenceServices().store.removePublishedOpportunity(productId, session.authUserId);
+    revalidateTag("runia-real-catalog", "max");
+    revalidateTag("lombardo-opportunities", "max");
+    revalidatePath("/");
+    revalidatePath("/oportunidades");
+    revalidatePath("/sitemap.xml");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Oportunidad quitada. El selling price no fue modificado.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos quitar la oportunidad.")}`;
+  }
+  redirect(destination);
+}
+
+export async function scheduleLombardoOpportunityReviewAction(formData: FormData) {
+  let destination = "/admin/competencia";
+  try {
+    const session = await requireAdminRole("admin");
+    const productId = formText(formData, "runiaProductId", 36);
+    const reviewAt = formReviewAt(formData);
+    if (!isUuid(productId)) {
+      throw new PricingIntelligenceStoreError("Producto o fecha de revisión inválidos.", 422);
+    }
+    await createPricingIntelligenceServices().store.scheduleOpportunityReview(
+      productId,
+      reviewAt.toISOString(),
+      session.authUserId,
+    );
+    revalidateTag("runia-real-catalog", "max");
+    revalidateTag("lombardo-opportunities", "max");
+    revalidatePath("/");
+    revalidatePath("/oportunidades");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Revisión de oportunidad programada.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(error instanceof PricingIntelligenceStoreError ? error.message : "No pudimos programar la revisión.")}`;
   }
   redirect(destination);
 }

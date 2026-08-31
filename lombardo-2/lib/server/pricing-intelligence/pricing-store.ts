@@ -62,6 +62,24 @@ interface SellingPriceHistoryRow {
   changed_at: string;
 }
 
+interface PublishedOpportunityRow {
+  opportunity_id: string;
+  runia_product_id: string;
+  runia_sku: string;
+  runia_name: string;
+  eligibility_status: string;
+  product_active: boolean;
+  reference_price: number | string;
+  selling_price: number | string;
+  selling_price_version: number | string;
+  supplier_cost: number | string | null;
+  supplier_retail: number | string;
+  opportunity: boolean;
+  opportunity_start: string;
+  opportunity_review_at: string;
+  disabled_reason: string | null;
+}
+
 const DATABASE_MESSAGES: Record<string, string> = {
   SELLING_PRICE_MUST_BE_POSITIVE: "El precio Lombardo debe ser mayor a cero.",
   INVALID_SELLING_PRICE_REASON: "El motivo del cambio no es válido.",
@@ -79,6 +97,10 @@ const DATABASE_MESSAGES: Record<string, string> = {
   MINIMUM_MARGIN_GUARDRAIL: "El precio queda debajo del margen mínimo configurado.",
   INVALID_COMMERCIAL_SENSITIVITY: "La sensibilidad comercial no es válida.",
   PRICING_OPPORTUNITY_NOT_FOUND: "La oportunidad ya no está disponible.",
+  OPPORTUNITY_PRICE_MUST_BE_LOWER: "El precio oportunidad debe ser menor al precio de referencia real.",
+  INVALID_OPPORTUNITY_REVIEW_AT: "La fecha de revisión debe estar entre mañana y los próximos 90 días.",
+  PUBLIC_IMAGE_REQUIRED: "El producto no tiene una imagen pública y no puede publicarse.",
+  PUBLISHED_OPPORTUNITY_NOT_FOUND: "La oportunidad publicada ya no existe.",
 };
 
 function positiveNumber(value: number | string | null | undefined) {
@@ -288,6 +310,31 @@ export class PricingIntelligenceStore {
     }));
   }
 
+  async publishedOpportunities() {
+    const rows = await this.rpc<PublishedOpportunityRow[]>(
+      "lombardo_published_opportunities",
+      { p_tenant_id: await this.tenantId() },
+      "No pudimos cargar las oportunidades publicadas.",
+    );
+    return rows.map((row) => ({
+      id: row.opportunity_id,
+      productId: row.runia_product_id,
+      sku: row.runia_sku,
+      name: row.runia_name,
+      eligibilityStatus: row.eligibility_status,
+      productActive: row.product_active,
+      referencePrice: Number(row.reference_price),
+      sellingPrice: Number(row.selling_price),
+      sellingPriceVersion: Number(row.selling_price_version),
+      supplierCost: positiveNumber(row.supplier_cost),
+      supplierRetail: Number(row.supplier_retail),
+      opportunity: row.opportunity,
+      startAt: row.opportunity_start,
+      reviewAt: row.opportunity_review_at,
+      disabledReason: row.disabled_reason ?? undefined,
+    }));
+  }
+
   async setSensitivity(productId: string, sensitivity: CommercialSensitivity, operatorId: string) {
     await this.rpc<void>("lombardo_set_commercial_sensitivity", {
       p_tenant_id: await this.tenantId(),
@@ -353,5 +400,57 @@ export class PricingIntelligenceStore {
       },
       "No pudimos aplicar el precio Lombardo.",
     );
+  }
+
+  async publishOpportunity(input: {
+    productId: string;
+    newPrice: number;
+    expectedCurrentPrice: number;
+    expectedVersion: number;
+    expectedSupplierCost: number;
+    expectedCompetitorProductId: string;
+    expectedCompetitorPrice: number;
+    expectedCompetitorFetchedAt: string;
+    reviewAt: string;
+    approvedBy: string;
+  }) {
+    return this.rpc<{
+      changed: boolean;
+      price: number;
+      version: number;
+      opportunityId: string;
+      referencePrice: number;
+      reviewAt: string;
+    }>("lombardo_publish_opportunity", {
+      p_tenant_id: await this.tenantId(),
+      p_supplier_product_id: input.productId,
+      p_new_price: input.newPrice,
+      p_expected_current_price: input.expectedCurrentPrice,
+      p_expected_version: input.expectedVersion,
+      p_expected_supplier_cost: input.expectedSupplierCost,
+      p_expected_competitor_product_id: input.expectedCompetitorProductId,
+      p_expected_competitor_price: input.expectedCompetitorPrice,
+      p_expected_competitor_fetched_at: input.expectedCompetitorFetchedAt,
+      p_review_at: input.reviewAt,
+      p_approved_by: input.approvedBy,
+    }, "No pudimos publicar la oportunidad.");
+  }
+
+  async removePublishedOpportunity(productId: string, operatorId: string) {
+    await this.rpc<void>("lombardo_remove_opportunity", {
+      p_tenant_id: await this.tenantId(),
+      p_supplier_product_id: productId,
+      p_operator_id: operatorId,
+      p_reason: "REMOVED_BY_OPERATOR",
+    }, "No pudimos quitar la oportunidad.");
+  }
+
+  async scheduleOpportunityReview(productId: string, reviewAt: string, operatorId: string) {
+    await this.rpc<void>("lombardo_schedule_opportunity_review", {
+      p_tenant_id: await this.tenantId(),
+      p_supplier_product_id: productId,
+      p_review_at: reviewAt,
+      p_operator_id: operatorId,
+    }, "No pudimos programar la revisión.");
   }
 }

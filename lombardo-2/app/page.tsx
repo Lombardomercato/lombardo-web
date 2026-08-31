@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CommercialDiscovery } from "@/components/home/CommercialDiscovery";
 import { FirstAct } from "@/components/home/FirstAct";
 import { HomeGuides } from "@/components/home/HomeGuides";
+import { HomeOpportunities } from "@/components/home/HomeOpportunities";
 import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { loadDailyHomeData } from "@/lib/server/automations/live-data";
@@ -72,13 +73,17 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
 
 export default async function Home() {
   const pricingContext = await getCurrentCustomerPricingContext();
-  const discovery = await loadCommercialDiscovery(pricingContext);
+  const [discovery, opportunities] = await Promise.all([
+    loadCommercialDiscovery(pricingContext),
+    commerceProvider.getActiveOpportunities(6, pricingContext).catch(() => []),
+  ]);
 
   return (
     <>
       <JsonLd data={onlineStoreStructuredData()} />
       <main className={styles.home}>
         <FirstAct />
+        <HomeOpportunities products={opportunities} />
         <CommercialDiscovery {...discovery} />
         <HomeGuides />
       </main>

@@ -1,0 +1,57 @@
+.page {
+  min-height: 100svh;
+  padding-top: var(--header-height);
+  background: var(--lombardo-beige);
+  color: var(--lombardo-blue);
+}
+
+.hero {
+  min-height: min(43rem, 78svh);
+  padding: clamp(4rem, 9vw, 9rem) var(--page-gutter) clamp(3rem, 6vw, 6rem);
+  display: grid;
+  align-content: space-between;
+  gap: 2rem;
+}
+
+.hero > p,
+.hero span {
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(4.6rem, 11.7vw, 12.6rem);
+  line-height: 0.72;
+  letter-spacing: -0.065em;
+}
+
+.hero > div {
+  padding-top: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  border-top: 1px solid currentColor;
+}
+
+.hero > div p {
+  max-width: 34rem;
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  line-height: 1.22;
+}
+
+.products {
+  padding: 0 var(--page-gutter) clamp(5rem, 10vw, 10rem);
+}
+
+.empty {
+  padding: 4rem 0;
+  border-top: 1px solid currentColor;
+}
+
+@media (max-width: 640px) {
+  .page { padding-top: var(--header-height-mobile); }
+  .hero { min-height: 34rem; }
+  .hero > div { display: grid; }
+}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   applyLombardoSellingPriceAction,
   ignorePricingOpportunityAction,
+  publishLombardoOpportunityAction,
   setCommercialSensitivityAction,
 } from "@/app/admin/actions";
 import { COMMERCIAL_SENSITIVITIES, type PricingOpportunity } from "@/lib/pricing-intelligence/types";
@@ -34,6 +35,11 @@ export function PricingOpportunityActions({ opportunity, compact = false }: {
   compact?: boolean;
 }) {
   const recommendation = opportunity.recommendation;
+  const defaultReviewAt = new Date(
+    new Date(opportunity.competitorFetchedAt).getTime() + 7 * 24 * 60 * 60 * 1000,
+  )
+    .toISOString()
+    .slice(0, 16);
   return (
     <div className={styles.pricingActions} data-compact={compact}>
       <Link className={styles.detailLink} href={`/admin/competencia/${opportunity.competitorProductId}`}>
@@ -52,6 +58,22 @@ export function PricingOpportunityActions({ opportunity, compact = false }: {
         <input type="hidden" name="competitorProductId" value={opportunity.competitorProductId} />
         <button data-action="secondary" type="submit">IGNORAR</button>
       </form>
+      {!compact ? (
+        <details className={styles.manualPrice}>
+          <summary>PUBLICAR COMO OPORTUNIDAD</summary>
+          <form action={publishLombardoOpportunityAction}>
+            <ExpectedFields opportunity={opportunity} />
+            <label><span>PRECIO OPORTUNIDAD</span><input name="newPrice" type="number" min="0.01" step="0.01" defaultValue={recommendation?.price} required /></label>
+            <label><span>REVISAR EL</span><input name="reviewAt" type="datetime-local" defaultValue={defaultReviewAt} required /></label>
+            <small>El precio actual se guarda como referencia real. Costo, SAFE, imagen, mercado y margen se revalidan al publicar.</small>
+            <button type="submit">PUBLICAR COMO OPORTUNIDAD</button>
+          </form>
+        </details>
+      ) : (
+        <Link className={styles.detailLink} href={`/admin/competencia/${opportunity.competitorProductId}#precio-manual`}>
+          PUBLICAR OPORTUNIDAD
+        </Link>
+      )}
       {!compact ? (
         <details className={styles.manualPrice}>
           <summary>FIJAR MANUALMENTE</summary>

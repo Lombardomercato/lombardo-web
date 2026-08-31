@@ -60,6 +60,11 @@ export interface Product {
   /** Changes whenever the authenticated pricing identity changes. */
   pricingContextKey: string;
   compareAtPrice?: number;
+  opportunity?: {
+    referencePrice: number;
+    startAt: string;
+    reviewAt: string;
+  };
   availability: AvailabilityStatus;
   stock: Stock;
   images: ProductImage[];

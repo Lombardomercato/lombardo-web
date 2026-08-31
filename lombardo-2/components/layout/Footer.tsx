@@ -12,6 +12,7 @@ export function Footer() {
         </div>
 
         <div className={styles.contactBlock} aria-label="Canales de contacto">
+          <Link href="/oportunidades">Oportunidades</Link>
           <Link href="/guias">Guías</Link>
           {SITE_CONTACT.whatsappUrl ? (
             <Link href={SITE_CONTACT.whatsappUrl}>WhatsApp ↗</Link>

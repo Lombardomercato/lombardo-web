@@ -50,9 +50,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const products = await commerceProvider.getIndexableProducts();
+    const [products, opportunities] = await Promise.all([
+      commerceProvider.getIndexableProducts(),
+      commerceProvider.getActiveOpportunities(4),
+    ]);
     return [
       ...staticEntries,
+      ...(opportunities.length >= 4 ? [{
+        url: `${SITE.url}/oportunidades`,
+        changeFrequency: "daily" as const,
+        priority: 0.9,
+      }] : []),
       ...products.map((product) => ({
         url: `${SITE.url}/productos/${product.slug}`,
         changeFrequency: "weekly" as const,

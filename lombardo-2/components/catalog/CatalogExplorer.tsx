@@ -15,9 +15,9 @@ import {
   getAddLabel,
 } from "@/lib/commerce/availability";
 import type { ProductPage } from "@/lib/commerce";
-import { formatCurrency } from "@/lib/utils/format-currency";
 import type { Category, Product } from "@/types/commerce";
 import styles from "./CatalogExplorer.module.css";
+import { OpportunityPrice } from "@/components/opportunities/OpportunityPrice";
 
 type CatalogMode = "editorial" | "list";
 type CatalogStatus = "ready" | "filtering" | "loading-more" | "error";
@@ -88,10 +88,7 @@ function ProductInfo({ product }: { product: Product }) {
         </p>
       </div>
       <div className={styles.priceBlock}>
-        {product.compareAtPrice ? (
-          <del>{formatCurrency(product.compareAtPrice)}</del>
-        ) : null}
-        <strong>{formatCurrency(product.price)}</strong>
+        <OpportunityPrice product={product} />
       </div>
       <button
         type="button"

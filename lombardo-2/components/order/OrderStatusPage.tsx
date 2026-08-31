@@ -30,7 +30,9 @@ export function OrderStatusPage({
 
   return (
     <main className={styles.page} data-tone={presentation.tone}>
-      {order.paymentStatus === "approved" ? <ClearCartAfterPayment /> : null}
+      {order.paymentStatus === "approved" ? (
+        <ClearCartAfterPayment orderId={order.publicId} total={order.total} />
+      ) : null}
       <div className={styles.meta}>
         <span>PEDIDO #{order.displayId}</span>
         <span>{order.currency}</span>

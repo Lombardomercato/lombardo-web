@@ -89,16 +89,34 @@ export interface RuniaSupplierProductRow {
     | null;
   lombardo_prices?:
     | Array<{
+        id?: string;
         price_type: string;
         current_price: number | string;
         version: number | string;
         active: boolean;
       }>
     | {
+        id?: string;
         price_type: string;
         current_price: number | string;
         version: number | string;
         active: boolean;
+      }
+    | null;
+  opportunities?:
+    | Array<{
+        selling_price_id: string;
+        reference_price: number | string;
+        opportunity: boolean;
+        opportunity_start: string;
+        opportunity_review_at: string;
+      }>
+    | {
+        selling_price_id: string;
+        reference_price: number | string;
+        opportunity: boolean;
+        opportunity_start: string;
+        opportunity_review_at: string;
       }
     | null;
   editorial?:
@@ -221,6 +239,45 @@ function selectedPrice(
   return price;
 }
 
+function activeOpportunity(
+  row: RuniaSupplierProductRow,
+  pricingContext: CustomerPricingContext,
+) {
+  if (pricingContext.basePriceType !== "retail") return undefined;
+  const sellingPrice = (Array.isArray(row.lombardo_prices)
+    ? row.lombardo_prices
+    : row.lombardo_prices
+      ? [row.lombardo_prices]
+      : []).find((price) => price.price_type === "retail" && price.active);
+  const opportunity = (Array.isArray(row.opportunities)
+    ? row.opportunities
+    : row.opportunities
+      ? [row.opportunities]
+      : []).find((candidate) => candidate.opportunity);
+  if (!opportunity || !sellingPrice || opportunity.selling_price_id !== sellingPrice.id) {
+    return undefined;
+  }
+  const referencePrice = Number(opportunity.reference_price);
+  const selling = Number(sellingPrice.current_price);
+  const startAt = Date.parse(opportunity.opportunity_start);
+  const reviewAt = Date.parse(opportunity.opportunity_review_at);
+  const now = Date.now();
+  if (
+    !Number.isFinite(referencePrice) ||
+    !Number.isFinite(selling) ||
+    selling >= referencePrice ||
+    !Number.isFinite(startAt) ||
+    !Number.isFinite(reviewAt) ||
+    startAt > now ||
+    reviewAt <= now
+  ) return undefined;
+  return {
+    referencePrice,
+    startAt: opportunity.opportunity_start,
+    reviewAt: opportunity.opportunity_review_at,
+  };
+}
+
 function assertPricingList(pricingContext: CustomerPricingContext) {
   const expectedPriceType =
     pricingContext.policy === "WHOLESALE"
@@ -264,6 +321,7 @@ export function mapRuniaSupplierProduct(
     selectedPrice(row, pricingContext),
     pricingContext,
   );
+  const opportunity = activeOpportunity(row, pricingContext);
 
   return {
     id: row.runia_product_id,
@@ -286,6 +344,7 @@ export function mapRuniaSupplierProduct(
       resolvedPrice.finalUnitPrice < resolvedPrice.baseUnitPrice
         ? resolvedPrice.baseUnitPrice
         : undefined,
+    opportunity,
     availability: "SUPPLIER_AVAILABLE",
     stock: { available: true, quantity: 0 },
     images,

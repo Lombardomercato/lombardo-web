@@ -38,6 +38,10 @@ export interface CommerceProvider {
     slug: string,
     pricingContext?: CustomerPricingContext,
   ): Promise<Product | null>;
+  getActiveOpportunities(
+    limit?: number,
+    pricingContext?: CustomerPricingContext,
+  ): Promise<Product[]>;
   getIndexableProducts(): Promise<IndexableProduct[]>;
   getCategories(): Promise<Category[]>;
 }
