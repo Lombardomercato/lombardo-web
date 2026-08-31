@@ -6,13 +6,14 @@
 }
 
 .photo {
-  background: #fff;
+  background: transparent;
 }
 
 .photo img {
-  padding: 12% 8%;
+  padding: 10%;
   object-fit: contain;
   object-position: center bottom;
+  mix-blend-mode: multiply;
 }
 
 .photo:hover img {

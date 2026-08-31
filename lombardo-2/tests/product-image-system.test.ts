@@ -28,10 +28,13 @@ test("product image system separates source masters from versioned renders", asy
   assert.match(store, /supplier_attach_product_source_master/);
 });
 
-test("public catalog keeps the full source master visible on desktop", async () => {
+test("public product imagery uses one transparent 80-percent canvas", async () => {
   const styles = await readFile(files.publicVisualStyles, "utf8");
+  assert.match(styles, /\.photo\s*\{[\s\S]*background: transparent/);
   assert.match(styles, /\.photo img[\s\S]*object-fit: contain/);
-  assert.match(styles, /\.photo img[\s\S]*padding: 12% 8%/);
+  assert.match(styles, /\.photo img[\s\S]*padding: 10%/);
+  assert.match(styles, /\.photo img[\s\S]*object-position: center bottom/);
+  assert.match(styles, /\.photo img[\s\S]*mix-blend-mode: multiply/);
   assert.doesNotMatch(styles, /\.photo img[\s\S]*object-fit: cover/);
 });
 
@@ -47,7 +50,8 @@ test("pilot uses one visual grammar with five controlled variants", async () => 
   }
   assert.match(styles, /object-fit: contain/);
   assert.match(styles, /mix-blend-mode: multiply/);
-  assert.match(styles, /inset: 12% 8% 12%/);
+  assert.match(styles, /\.render\s*\{[\s\S]*background: transparent/);
+  assert.match(styles, /inset: 10%/);
   assert.doesNotMatch(styles, /drop-shadow/);
   assert.doesNotMatch(render, /scale=/);
   assert.match(pilot, /products\.length === 12/);
