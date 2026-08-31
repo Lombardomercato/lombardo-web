@@ -19,6 +19,7 @@ import type { CustomerPricingContext } from "../customers/types.ts";
 import { roundCurrency } from "../../pricing/policy.ts";
 import type { PromotionValidator } from "../promotions/promotion-service.ts";
 import { normalizePromotionCode } from "../../promotions/engine.ts";
+import { requiresDeliveryAddress } from "../../checkout/delivery-methods.ts";
 
 interface RuniaOrderRepositoryOptions {
   tenantId: string;
@@ -291,7 +292,9 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       customer: input.customer,
       deliveryMethod: input.deliveryMethod,
       deliveryAddress:
-        input.deliveryMethod === "DELIVERY" ? input.deliveryAddress : undefined,
+        requiresDeliveryAddress(input.deliveryMethod)
+          ? input.deliveryAddress
+          : undefined,
       deliveryCostMode: deliveryQuote.mode,
       baseSubtotal,
       pricingDiscountAmount,

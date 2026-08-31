@@ -1,5 +1,10 @@
 import type { OrderDraft } from "../../types/checkout.ts";
 import { formatCurrency } from "../utils/format-currency.ts";
+import {
+  DELIVERY_COORDINATION_NOTICE,
+  deliveryMethodLabel,
+  requiresDeliveryAddress,
+} from "./delivery-methods.ts";
 
 function compact(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -35,10 +40,10 @@ export function buildWhatsAppCoordinationMessage(order: OrderDraft) {
     ),
     "",
     `${order.deliveryCostMode === "TO_BE_CONFIRMED" ? "Total provisorio" : "Total"}: ${formatCurrency(order.total)}`,
-    `Entrega: ${order.deliveryMethod === "PICKUP" ? "Retiro en Lombardo" : "Envío"}`,
+    `Entrega: ${deliveryMethodLabel(order.deliveryMethod)}`,
   ];
 
-  if (order.deliveryMethod === "DELIVERY" && order.deliveryAddress) {
+  if (requiresDeliveryAddress(order.deliveryMethod) && order.deliveryAddress) {
     const address = [
       `${compact(order.deliveryAddress.street)} ${compact(order.deliveryAddress.number)}`,
       order.deliveryAddress.floorApartment
@@ -56,6 +61,7 @@ export function buildWhatsAppCoordinationMessage(order: OrderDraft) {
   lines.push(
     `Cliente: ${compact(order.customer.firstName)} ${compact(order.customer.lastName)}`,
     `WhatsApp de contacto: ${compact(order.customer.whatsapp)}`,
+    DELIVERY_COORDINATION_NOTICE,
     "",
     "Entiendo que el pedido fue recibido y que el pago todavía está pendiente de coordinación.",
   );

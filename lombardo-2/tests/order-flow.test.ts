@@ -101,7 +101,13 @@ function input(overrides: Partial<CreateOrderInput> = {}): CreateOrderInput {
       whatsapp: "+5493415550000",
       email: "alex@example.com",
     },
-    deliveryMethod: "PICKUP",
+    deliveryMethod: "DELIVERY_ROSARIO",
+    deliveryAddress: {
+      street: "Córdoba",
+      number: "1234",
+      city: "Rosario",
+      province: "Santa Fe",
+    },
     ...overrides,
   };
 }
@@ -414,6 +420,44 @@ test("un total manipulado del navegador se ignora y se recalcula", async () => {
   assert.equal(result.order.items[0].pricingPolicy, "RETAIL");
 });
 
+test("el checkout acepta las dos zonas de envío y rechaza nuevos retiros", () => {
+  const southernDelivery = parseCreateOrderInput(
+    input({
+      deliveryMethod: "DELIVERY_SOUTH",
+      deliveryAddress: {
+        street: "San Martín",
+        number: "250",
+        city: "Pueblo Esther",
+        province: "Santa Fe",
+      },
+    }),
+  );
+  assert.equal(southernDelivery.deliveryMethod, "DELIVERY_SOUTH");
+  assert.equal(southernDelivery.deliveryAddress?.city, "Pueblo Esther");
+
+  assert.throws(
+    () => parseCreateOrderInput(input({ deliveryMethod: "PICKUP" })),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "INVALID_REQUEST",
+  );
+  assert.throws(
+    () =>
+      parseCreateOrderInput(
+        input({
+          deliveryMethod: "DELIVERY_SOUTH",
+          deliveryAddress: {
+            street: "San Martín",
+            number: "250",
+            city: "Rosario",
+            province: "Santa Fe",
+          },
+        }),
+      ),
+    (error: unknown) =>
+      error instanceof ServerOrderError && error.code === "INVALID_REQUEST",
+  );
+});
+
 test("cupón se revalida y persiste un snapshot completo sin confiar en el navegador", async () => {
   const { repository } = setup([product()], retailPricingContext, tenPercentPromotion);
   const parsed = parseCreateOrderInput({
@@ -594,7 +638,8 @@ test("el mensaje de coordinación contiene el pedido y omite email y DNI", async
   assert.match(message, new RegExp(order.publicId.slice(0, 8).toUpperCase()));
   assert.match(message, /2 × Producto uno/);
   assert.match(message, /\$ 20\.000/);
-  assert.match(message, /Retiro en Lombardo/);
+  assert.match(message, /Envío a Rosario/);
+  assert.match(message, /Día y horario a coordinar con el comprador/);
   assert.match(message, /Alex Santillán/);
   assert.match(message, /\+5493415550000/);
   assert.doesNotMatch(message, /sensible@example\.com/);

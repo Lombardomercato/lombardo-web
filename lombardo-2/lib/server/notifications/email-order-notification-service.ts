@@ -10,6 +10,7 @@ import type {
   NewOrderNotifier,
   OrderNotificationStore,
 } from "./types.ts";
+import { deliveryMethodLabel } from "../../checkout/delivery-methods.ts";
 
 interface EmailOrderNotificationServiceOptions {
   store: OrderNotificationStore;
@@ -36,7 +37,7 @@ function customerName(order: OrderDraft) {
 }
 
 function deliveryLabel(order: OrderDraft) {
-  return order.deliveryMethod === "PICKUP" ? "Retiro en Lombardo" : "Envío";
+  return deliveryMethodLabel(order.deliveryMethod);
 }
 
 function paymentLabel(order: OrderDraft) {

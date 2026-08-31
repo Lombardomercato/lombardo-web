@@ -1,4 +1,10 @@
 import { CHECKOUT_CONFIG } from "@/lib/config/checkout";
+import {
+  defaultDeliveryCity,
+  deliveryCities,
+  isActiveDeliveryMethod,
+  isDeliveryCityAllowed,
+} from "@/lib/checkout/delivery-methods";
 import type {
   CheckoutCustomer,
   DeliveryAddress,
@@ -37,12 +43,12 @@ export const emptyCheckoutForm: CheckoutFormValues = {
     email: "",
     dni: "",
   },
-  deliveryMethod: "PICKUP",
+  deliveryMethod: "DELIVERY_ROSARIO",
   deliveryAddress: {
     street: "",
     number: "",
     floorApartment: "",
-    city: CHECKOUT_CONFIG.delivery.allowedCity,
+    city: defaultDeliveryCity("DELIVERY_ROSARIO"),
     province: CHECKOUT_CONFIG.delivery.allowedProvince,
     postalCode: "",
     references: "",
@@ -86,15 +92,14 @@ export function validateCheckoutForm(values: CheckoutFormValues) {
     errors.dni = "Revisá el DNI o dejalo vacío.";
   }
 
-  if (values.deliveryMethod === "DELIVERY") {
+  if (!isActiveDeliveryMethod(values.deliveryMethod)) {
+    errors.city = "Elegí una zona de envío disponible.";
+  } else {
     const address = values.deliveryAddress;
     if (address.street.trim().length < 2) errors.street = "Ingresá la calle.";
     if (!address.number.trim()) errors.number = "Ingresá el número.";
-    if (
-      address.city.trim().toLocaleLowerCase("es-AR") !==
-      CHECKOUT_CONFIG.delivery.allowedCity.toLocaleLowerCase("es-AR")
-    ) {
-      errors.city = `Por ahora entregamos únicamente en ${CHECKOUT_CONFIG.delivery.allowedCity}.`;
+    if (!isDeliveryCityAllowed(values.deliveryMethod, address.city)) {
+      errors.city = `Elegí una de estas localidades: ${deliveryCities(values.deliveryMethod).join(", ")}.`;
     }
     if (!address.province.trim()) errors.province = "Ingresá la provincia.";
   }

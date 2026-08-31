@@ -381,7 +381,7 @@ const FOUNDATION_GUIDES: readonly GuideDefinition[] = [
     sections: [
       { eyebrow: "01", title: "Empezá por la ocasión", paragraphs: ["Para un asado suele funcionar un tinto versátil; para una mesa liviana conviene mirar blancos, rosados o espumantes; para regalar, la presentación pesa tanto como el varietal. Elegir desde el uso evita comprar sólo por una marca conocida."] },
       { eyebrow: "02", title: "Compará lo disponible", paragraphs: ["Las listas estáticas envejecen rápido. Abrí las fichas para revisar marca, presentación, precio y estado antes de sumar al carrito. Si ya sabés qué buscás, el catálogo permite ir directo por nombre o SKU."] },
-      { eyebrow: "03", title: "Coordiná en Rosario", paragraphs: ["Armá el carrito y completá el pedido online. Las condiciones concretas de entrega o retiro aparecen durante la compra según la configuración vigente. Si el pedido es para una fecha especial, dejá margen para coordinarlo."] },
+      { eyebrow: "03", title: "Coordiná la entrega", paragraphs: ["Armá el carrito y elegí envío a Rosario o a Pueblo Esther, Lagos o Alvear. El día y horario se coordinan con cada comprador. Si el pedido es para una fecha especial, dejá margen para organizarlo."] },
     ],
     catalog: { mode: "category", categorySlug: "vinos", limit: 8, heading: "Vinos disponibles ahora", description: "Catálogo SAFE con precios actuales.", allHref: "/categorias/vinos", allLabel: "Ver vinos" },
     relatedSlugs: ["que-vino-llevar-a-una-cena", "vinos-por-menos-de-20000"],

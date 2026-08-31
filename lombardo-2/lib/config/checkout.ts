@@ -4,8 +4,6 @@ import type {
   DeliveryQuote,
 } from "@/types/checkout";
 
-const configuredPickupAddress = process.env.NEXT_PUBLIC_PICKUP_ADDRESS?.trim();
-const configuredPickupHours = process.env.NEXT_PUBLIC_PICKUP_HOURS?.trim();
 const configuredDeliveryMode = process.env.NEXT_PUBLIC_DELIVERY_COST_MODE?.trim();
 const configuredFlatRate = Number(process.env.NEXT_PUBLIC_DELIVERY_FLAT_RATE);
 
@@ -25,15 +23,7 @@ const flatRate =
 
 export const CHECKOUT_CONFIG = {
   currency: "ARS",
-  pickup: {
-    label: "Retiro en Lombardo",
-    address: configuredPickupAddress || "Dirección a confirmar",
-    hours: configuredPickupHours || "Horario a confirmar",
-    notice: "Te avisamos cuando esté listo.",
-    courtesyParkingNote: null,
-  },
   delivery: {
-    allowedCity: "Rosario",
     allowedProvince: "Santa Fe",
     pricingMode: deliveryMode,
     flatRate,
@@ -41,6 +31,7 @@ export const CHECKOUT_CONFIG = {
 } as const;
 
 export function getDeliveryQuote(method: DeliveryMethod): DeliveryQuote {
+  // PICKUP only remains for previously created orders.
   if (method === "PICKUP") {
     return { mode: "FREE", amount: 0, label: "Sin costo" };
   }

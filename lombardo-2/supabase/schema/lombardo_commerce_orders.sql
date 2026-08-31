@@ -35,7 +35,12 @@ create table if not exists public.commerce_orders (
   ),
   constraint commerce_orders_currency_check check (currency = 'ARS'),
   constraint commerce_orders_delivery_method_check check (
-    delivery_method in ('PICKUP', 'DELIVERY')
+    delivery_method in (
+      'PICKUP',
+      'DELIVERY',
+      'DELIVERY_ROSARIO',
+      'DELIVERY_SOUTH'
+    )
   ),
   constraint commerce_orders_delivery_cost_mode_check check (
     delivery_cost_mode in ('FREE', 'FLAT_RATE', 'TO_BE_CONFIRMED')
@@ -56,7 +61,7 @@ create table if not exists public.commerce_orders (
   constraint commerce_orders_delivery_address_check check (
     (delivery_method = 'PICKUP' and delivery_address is null)
     or
-    (delivery_method = 'DELIVERY' and jsonb_typeof(delivery_address) = 'object')
+    (delivery_method <> 'PICKUP' and jsonb_typeof(delivery_address) = 'object')
   )
 );
 

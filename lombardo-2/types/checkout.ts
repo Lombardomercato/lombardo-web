@@ -4,7 +4,11 @@ import type {
   SupplierSalePriceType,
 } from "../lib/server/customers/types";
 
-export type DeliveryMethod = "PICKUP" | "DELIVERY";
+export type DeliveryMethod =
+  | "PICKUP"
+  | "DELIVERY"
+  | "DELIVERY_ROSARIO"
+  | "DELIVERY_SOUTH";
 export type DeliveryCostMode = "FREE" | "FLAT_RATE" | "TO_BE_CONFIRMED";
 export type OrderStatus = "pending_payment" | "confirmed" | "cancelled";
 export type PaymentStatus =
