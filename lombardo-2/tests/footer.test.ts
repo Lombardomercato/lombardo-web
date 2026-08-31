@@ -15,6 +15,8 @@ test("el zócalo reutiliza la marca Lombardo con trademark y elimina las flechas
 
 test("el slogan final expresa la propuesta de Lombardo", () => {
   assert.match(component, /LOMBARDO \| Tu vinería, donde estés\./);
+  assert.match(stylesheet, /\.note \{[\s\S]*grid-column:\s*1 \/ -1;[\s\S]*font-size:\s*0\.62rem;/);
+  assert.doesNotMatch(stylesheet, /\.note \{\s*display:\s*none;/);
 });
 
 test("el cierre legal acredita a Runia Web y reserva los derechos", () => {
