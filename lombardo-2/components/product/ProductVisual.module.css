@@ -16,6 +16,11 @@
   mix-blend-mode: multiply;
 }
 
+.photo.normalized img {
+  padding: 0;
+  mix-blend-mode: normal;
+}
+
 .photo:hover img {
   transform: none;
 }

@@ -42,16 +42,18 @@ export function ProductVisual({
 }: ProductVisualProps) {
   const image = product.images[0];
   const variantClass = styles[variant];
+  const isNormalizedRender = image?.src.includes("/renders/product-image-system-v1/") ?? false;
 
   if (image) {
     return (
-      <div className={`${styles.visual} ${styles.photo} ${variantClass}`}>
+      <div className={`${styles.visual} ${styles.photo} ${isNormalizedRender ? styles.normalized : ""} ${variantClass}`}>
         <Image
           src={image.src}
           alt={image.alt}
           fill
           priority={priority}
           sizes={imageSizes[variant]}
+          unoptimized={isNormalizedRender}
         />
         <span className={styles.photoCategory}>{product.category.name}</span>
       </div>

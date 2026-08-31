@@ -11,6 +11,7 @@ const files = {
   renderStyles: fileURLToPath(new URL("../components/product/LombardoProductRender.module.css", import.meta.url)),
   publicVisualStyles: fileURLToPath(new URL("../components/product/ProductVisual.module.css", import.meta.url)),
   pilot: fileURLToPath(new URL("../app/admin/(protected)/imagenes/sistema-lombardo/page.tsx", import.meta.url)),
+  publicVisual: fileURLToPath(new URL("../components/product/ProductVisual.tsx", import.meta.url)),
   store: fileURLToPath(new URL("../lib/server/admin/runia-admin-store.ts", import.meta.url)),
 };
 
@@ -47,13 +48,19 @@ test("normalized renders preserve the master and publish only for SAFE products"
 });
 
 test("public product imagery uses one transparent 80-percent canvas", async () => {
-  const styles = await readFile(files.publicVisualStyles, "utf8");
+  const [styles, visual] = await Promise.all([
+    readFile(files.publicVisualStyles, "utf8"),
+    readFile(files.publicVisual, "utf8"),
+  ]);
   assert.match(styles, /\.photo\s*\{[\s\S]*background: transparent/);
   assert.match(styles, /\.photo img[\s\S]*object-fit: contain/);
   assert.match(styles, /\.photo img[\s\S]*padding: 10%/);
   assert.match(styles, /\.photo img[\s\S]*object-position: center bottom/);
   assert.match(styles, /\.photo img[\s\S]*mix-blend-mode: multiply/);
   assert.doesNotMatch(styles, /\.photo img[\s\S]*object-fit: cover/);
+  assert.match(styles, /\.photo\.normalized img[\s\S]*padding: 0/);
+  assert.match(styles, /\.photo\.normalized img[\s\S]*mix-blend-mode: normal/);
+  assert.match(visual, /unoptimized=\{isNormalizedRender\}/);
 });
 
 test("pilot uses one visual grammar with five controlled variants", async () => {
