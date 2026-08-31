@@ -58,7 +58,7 @@ export function Footer() {
             </Link>
           </div>
 
-          <p className={styles.note}>Vinos, regalos y cosas buenas.</p>
+          <p className={styles.note}>LOMBARDO | Tu vinería, donde estés.</p>
         </div>
 
         <div className={styles.legalRow}>

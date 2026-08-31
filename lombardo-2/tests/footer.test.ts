@@ -7,9 +7,14 @@ const stylesheet = readFileSync("components/layout/Footer.module.css", "utf8");
 
 test("el zócalo reutiliza la marca Lombardo con trademark y elimina las flechas", () => {
   assert.match(component, /LOMBARDO[\s\S]*styles\.trademark[\s\S]*™/);
+  assert.match(stylesheet, /font-size:\s*clamp\(0\.22rem, 0\.28vw, 0\.3rem\)/);
   assert.doesNotMatch(component, /↗/);
   assert.match(component, /function WhatsAppIcon/);
   assert.match(component, /function InstagramIcon/);
+});
+
+test("el slogan final expresa la propuesta de Lombardo", () => {
+  assert.match(component, /LOMBARDO \| Tu vinería, donde estés\./);
 });
 
 test("el cierre legal acredita a Runia Web y reserva los derechos", () => {
