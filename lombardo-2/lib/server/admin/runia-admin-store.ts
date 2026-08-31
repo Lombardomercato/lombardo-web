@@ -52,6 +52,7 @@ import type {
   OrderNotification,
   OrderNotificationStatus,
 } from "../notifications/types";
+import type { CustomerPricingContext } from "../customers/types";
 
 interface RuniaAdminStoreOptions {
   url: string;
@@ -1773,6 +1774,65 @@ export class RuniaAdminStore {
     if (!row) return null;
     const orders = await this.customerOrders(row.id);
     return { ...this.mapCustomer(row, orders), orders };
+  }
+
+  async getCustomerOrderContext(customerId: string): Promise<{
+    customer: AdminCustomer;
+    pricingContext: CustomerPricingContext;
+  } | null> {
+    if (!UUID_PATTERN.test(customerId)) return null;
+    const { rows } = await this.customerRows(customerId);
+    const row = rows[0];
+    if (!row || row.status !== "active") return null;
+
+    const coherentPolicy =
+      (row.account_type === "RETAIL" &&
+        (row.pricing_policy === "RETAIL" || row.pricing_policy === "CUSTOM_DISCOUNT")) ||
+      (row.account_type === "WHOLESALE" && row.pricing_policy === "WHOLESALE") ||
+      (row.account_type === "BUSINESS" && row.pricing_policy === "BUSINESS");
+    const discountPercent = Number(row.discount_percent);
+    const validDiscount = row.pricing_policy === "CUSTOM_DISCOUNT"
+      ? Number.isFinite(discountPercent) && discountPercent > 0 && discountPercent < 100
+      : discountPercent === 0;
+    if (!coherentPolicy || !validDiscount) return null;
+
+    const basePriceType = row.pricing_policy === "WHOLESALE"
+      ? "wholesale"
+      : row.pricing_policy === "BUSINESS"
+        ? "business"
+        : "retail";
+
+    return {
+      customer: this.mapCustomer(row),
+      pricingContext: {
+        tenantRecordId: row.tenant_id,
+        tenantSlug: this.tenantId,
+        authUserId: row.auth_user_id ?? undefined,
+        customerAccountId: row.id,
+        accountType: row.account_type,
+        policy: row.pricing_policy,
+        basePriceType,
+        discountPercent,
+        contextKey: [
+          "admin-order",
+          row.id,
+          row.pricing_policy,
+          String(discountPercent),
+        ].join(":"),
+      },
+    };
+  }
+
+  async getGuestOrderPricingContext(): Promise<CustomerPricingContext> {
+    return {
+      tenantRecordId: await this.tenantRecordId(),
+      tenantSlug: this.tenantId,
+      accountType: "RETAIL",
+      policy: "RETAIL",
+      basePriceType: "retail",
+      discountPercent: 0,
+      contextKey: "admin-order:guest:RETAIL",
+    };
   }
 
   async createCustomerAccount(input: AdminCustomerInput, authUserId: string) {

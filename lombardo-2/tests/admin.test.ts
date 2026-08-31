@@ -151,3 +151,40 @@ test("Admin rechaza combinaciones incoherentes de tipo, lista y descuento", () =
     /no son coherentes/,
   );
 });
+
+test("pedido nuevo permite elegir clientes existentes sin mezclar políticas comerciales", () => {
+  const form = readFileSync(
+    fileURLToPath(new URL("../components/admin/AdminOrderCreateForm.tsx", import.meta.url)),
+    "utf8",
+  );
+  const ordersPage = readFileSync(
+    fileURLToPath(new URL("../app/admin/(protected)/pedidos/page.tsx", import.meta.url)),
+    "utf8",
+  );
+  const productSearch = readFileSync(
+    fileURLToPath(new URL("../app/admin/api/orders/products/route.ts", import.meta.url)),
+    "utf8",
+  );
+  const actions = readFileSync(
+    fileURLToPath(new URL("../app/admin/actions.ts", import.meta.url)),
+    "utf8",
+  );
+  const store = readFileSync(
+    fileURLToPath(new URL("../lib/server/admin/runia-admin-store.ts", import.meta.url)),
+    "utf8",
+  );
+
+  assert.match(ordersPage, /href="\/admin\/pedidos\/nuevo"/);
+  assert.match(form, /name="customerId"/);
+  assert.match(form, /CLIENTE OCASIONAL · MINORISTA/);
+  assert.match(form, /setItems\(\[\]\)/);
+  assert.match(productSearch, /getOptionalAdminSession/);
+  assert.match(productSearch, /getCustomerOrderContext/);
+  assert.match(productSearch, /quickOrderProvider\.searchProducts/);
+  assert.match(actions, /createAdminOrderAction/);
+  assert.match(actions, /parseCreateOrderInput/);
+  assert.match(actions, /savePaymentMethod\([\s\S]*"whatsapp_coordination"/);
+  assert.match(store, /customerAccountId: row\.id/);
+  assert.match(store, /policy: row\.pricing_policy/);
+  assert.doesNotMatch(form, /secretKey|service_role|sb_secret_/);
+});

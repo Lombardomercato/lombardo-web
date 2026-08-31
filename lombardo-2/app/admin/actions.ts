@@ -18,6 +18,8 @@ import {
   createNewOrderNotifier,
   createOrderServices,
 } from "@/lib/server/services";
+import { parseCreateOrderInput } from "@/lib/server/orders/order-input";
+import { ServerOrderError } from "@/lib/server/orders/server-order-error";
 import {
   createCustomerWithInvite,
   updateCustomer,
@@ -52,6 +54,12 @@ import {
 
 export interface AdminLoginState {
   error?: string;
+}
+
+export interface AdminCreateOrderState {
+  status: "idle" | "error" | "success";
+  message: string;
+  publicId?: string;
 }
 
 const FULFILLMENT_STATUSES: readonly FulfillmentStatus[] = [
@@ -719,6 +727,98 @@ export async function retryOrderNotificationAction(formData: FormData) {
     destination += `?error=${encodeURIComponent(message)}`;
   }
   redirect(destination);
+}
+
+export async function createAdminOrderAction(
+  _previousState: AdminCreateOrderState,
+  formData: FormData,
+): Promise<AdminCreateOrderState> {
+  await requireAdminSession();
+
+  try {
+    const customerId = formText(formData, "customerId", 36);
+    const rawItems = formRaw(formData, "items", 24_000);
+    const parsedItems = JSON.parse(rawItems || "[]") as unknown;
+    const store = createAdminStore();
+    const orderContext = customerId === "guest"
+      ? null
+      : await store.getCustomerOrderContext(customerId);
+    if (customerId !== "guest" && !orderContext) {
+      throw new AdminStoreError(
+        "Elegí un cliente activo con una política comercial válida.",
+        422,
+      );
+    }
+
+    const deliveryMethod = formText(formData, "deliveryMethod", 16);
+    const existingCustomer = orderContext?.customer;
+    const input = parseCreateOrderInput({
+      checkoutSessionId: formText(formData, "checkoutSessionId", 160),
+      idempotencyKey: formText(formData, "idempotencyKey", 160),
+      items: parsedItems,
+      customer: {
+        firstName: existingCustomer?.name || formText(formData, "firstName", 100),
+        lastName: existingCustomer ? "_" : formText(formData, "lastName", 100),
+        whatsapp: existingCustomer?.whatsapp || formText(formData, "whatsapp", 20),
+        email: existingCustomer?.email || formText(formData, "email", 254),
+      },
+      deliveryMethod,
+      deliveryAddress: deliveryMethod === "DELIVERY"
+        ? {
+            street: formText(formData, "street", 160),
+            number: formText(formData, "number", 30),
+            floorApartment: formText(formData, "floorApartment", 80),
+            city: formText(formData, "city", 100),
+            province: formText(formData, "province", 100),
+            postalCode: formText(formData, "postalCode", 20),
+            references: formText(formData, "references", 500),
+          }
+        : undefined,
+      couponCode: formText(formData, "couponCode", 40) || undefined,
+    });
+    if (existingCustomer) {
+      input.customer = {
+        firstName: existingCustomer.name,
+        lastName: "",
+        whatsapp: existingCustomer.whatsapp,
+        email: existingCustomer.email,
+      };
+    }
+
+    const pricingContext = orderContext?.pricingContext ??
+      await store.getGuestOrderPricingContext();
+    const { orders } = createOrderServices(pricingContext);
+    const result = await orders.createOrder(input);
+    const order = await orders.savePaymentMethod(
+      result.order.id,
+      "whatsapp_coordination",
+    );
+
+    if (!result.reused) {
+      const notifiers = [
+        createNewOrderNotifier(),
+        createCustomerOrderConfirmationNotifier(),
+      ].filter((notifier) => notifier !== null);
+      await Promise.allSettled(notifiers.map((notifier) => notifier.notify(order)));
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/pedidos");
+    if (customerId !== "guest") revalidatePath(`/admin/clientes/${customerId}`);
+    return {
+      status: "success",
+      message: "Pedido creado con los precios vigentes de la cuenta.",
+      publicId: order.publicId,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof AdminStoreError || error instanceof ServerOrderError
+          ? error.message
+          : "No pudimos crear el pedido. Revisá los datos e intentá nuevamente.",
+    };
+  }
 }
 
 function productDestination(productId: string, type: "success" | "error", message: string) {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminOrderRow } from "@/components/admin/AdminOrderRow";
 import { DELIVERY_LABELS, FULFILLMENT_LABELS, PAYMENT_LABELS } from "@/lib/admin/presentation";
 import { loadAdminOrders } from "@/lib/server/admin/admin-data";
@@ -52,7 +53,12 @@ export default async function AdminOrdersPage({
           <p className={styles.eyebrow}>OPERACIÓN</p>
           <h1>PEDIDOS.</h1>
         </div>
-        <p>{orders.length} pedidos en esta vista.</p>
+        <div className={styles.headerActions}>
+          <p>{orders.length} pedidos en esta vista.</p>
+          <Link className={styles.primaryLink} href="/admin/pedidos/nuevo">
+            NUEVO PEDIDO →
+          </Link>
+        </div>
       </header>
 
       {queryValue(query, "error") ? (
