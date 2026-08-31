@@ -265,11 +265,25 @@
 
 .editorialGrid .productInfo {
   flex: 1;
-  grid-template-rows: 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  align-content: start;
+  gap: 0.85rem;
 }
 
 .editorialGrid .productInfo > button {
-  grid-row: 2;
+  grid-row: 3;
+  align-self: end;
+}
+
+.editorialGrid .priceBlock {
+  justify-items: start;
+  min-height: 2.75rem;
+  align-content: end;
+}
+
+.editorialGrid .priceBlock strong {
+  font-size: clamp(1.35rem, 1.8vw, 1.75rem);
 }
 
 .editorialGrid .featuredProduct {
@@ -801,6 +815,14 @@
 
   .productInfo h2 {
     font-size: 1.55rem;
+  }
+
+  .editorialGrid .productInfo {
+    gap: 0.7rem;
+  }
+
+  .editorialGrid .priceBlock {
+    min-height: 0;
   }
 
   .listGrid .product {

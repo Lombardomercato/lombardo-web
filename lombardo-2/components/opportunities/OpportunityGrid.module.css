@@ -1,17 +1,25 @@
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  max-width: 100%;
+  overflow: clip;
   border-top: 1px solid rgba(0, 58, 112, 0.36);
   border-left: 1px solid rgba(0, 58, 112, 0.36);
 }
 
 .card {
+  grid-column: span 6;
   min-width: 0;
   display: grid;
   grid-template-rows: auto 1fr;
   border-right: 1px solid rgba(0, 58, 112, 0.36);
   border-bottom: 1px solid rgba(0, 58, 112, 0.36);
   background: rgba(255, 255, 255, 0.13);
+  contain: inline-size;
+}
+
+.card:nth-child(n + 3) {
+  grid-column: span 4;
 }
 
 .visual {
@@ -42,7 +50,9 @@
 }
 
 .details h2 {
-  font-size: 0.94rem;
+  max-width: 24ch;
+  overflow-wrap: anywhere;
+  font-size: clamp(0.98rem, 1.35vw, 1.35rem);
   line-height: 1.08;
 }
 
@@ -76,15 +86,29 @@
 }
 
 @media (max-width: 1100px) {
-  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card,
+  .card:nth-child(n + 3) { grid-column: span 6; }
+
+  .card:last-child:nth-child(odd) { grid-column: 4 / span 6; }
 }
 
 @media (max-width: 720px) {
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .visual { min-height: 13rem; }
-}
+  .grid { grid-template-columns: minmax(0, 1fr); }
 
-@media (max-width: 430px) {
-  .grid { grid-template-columns: 1fr; }
+  .card,
+  .card:nth-child(n + 3),
+  .card:last-child:nth-child(odd) {
+    grid-column: 1;
+  }
+
   .visual { min-height: 20rem; }
+
+  .details {
+    padding: 1.15rem;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .details h2 {
+    font-size: clamp(1.35rem, 6.4vw, 2rem);
+  }
 }

@@ -124,6 +124,10 @@ export function Header() {
         aria-hidden={!isOpen}
       >
         <nav className={styles.mobileNav} aria-label="Navegación móvil">
+          <div className={styles.mobileIntro} aria-hidden="true">
+            <span>NAVEGACIÓN / 01—07</span>
+            <strong>ELEGÍ<br />TU PRÓXIMO<br />PLAN.</strong>
+          </div>
           {navigation.map((item, index) => (
             <Link
               key={item.label}
