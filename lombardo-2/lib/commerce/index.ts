@@ -135,6 +135,21 @@ const cachedIndexableProducts = unstable_cache(
   { revalidate: 3600, tags: ["runia-real-catalog"] },
 );
 
+const cachedActiveOpportunities = unstable_cache(
+  (
+    basePriceType: SupplierSalePriceType,
+    policy: CustomerPricingPolicy,
+    discountPercent: number,
+    limit: number,
+  ) =>
+    getRuniaProvider().getActiveOpportunities(
+      limit,
+      cachePricingContext(basePriceType, policy, discountPercent),
+    ),
+  ["runia-active-opportunities-v1"],
+  { revalidate: 300, tags: ["runia-real-catalog", "lombardo-opportunities"] },
+);
+
 export const commerceProvider: CommerceProvider = {
   getProductPage: async (
     query: ProductPageQuery = {},
@@ -182,6 +197,19 @@ export const commerceProvider: CommerceProvider = {
     return product ? attachPricingIdentity(product, context.contextKey) : null;
   },
   getIndexableProducts: () => cachedIndexableProducts(),
+  getActiveOpportunities: async (limit = 48, pricingContext) => {
+    const context = normalizedPricingContext(pricingContext);
+    if (context.basePriceType !== "retail") return [];
+    const products = await cachedActiveOpportunities(
+      context.basePriceType,
+      context.policy,
+      context.discountPercent,
+      limit,
+    );
+    return products.map((product) =>
+      attachPricingIdentity(product, context.contextKey),
+    );
+  },
   getCategories: () => getRuniaProvider().getCategories(),
 };
 

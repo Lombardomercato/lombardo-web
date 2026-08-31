@@ -10,15 +10,16 @@ import {
   canAddToCart,
   getAddLabel,
 } from "@/lib/commerce/availability";
-import { formatCurrency } from "@/lib/utils/format-currency";
 import type { Product } from "@/types/commerce";
 import { ProductVisual } from "./ProductVisual";
+import { OpportunityPrice } from "@/components/opportunities/OpportunityPrice";
 import styles from "./ProductDetail.module.css";
 
 export function ProductDetail({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   const isAddable = canAddToCart(product.availability);
+  const isOpportunity = Boolean(product.opportunity);
   const detailAddLabel =
     product.availability === "AVAILABLE_NOW"
       ? "AGREGAR AL CARRITO"
@@ -26,7 +27,10 @@ export function ProductDetail({ product }: { product: Product }) {
 
   useEffect(() => {
     trackCommerceEvent({ name: "view_item", productId: product.id });
-  }, [product.id]);
+    if (isOpportunity) {
+      trackCommerceEvent({ name: "opportunity_view", productId: product.id, surface: "product" });
+    }
+  }, [isOpportunity, product.id]);
 
   return (
     <main
@@ -65,10 +69,7 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <div className={styles.price} id="purchase-title">
-            {product.compareAtPrice ? (
-              <del>{formatCurrency(product.compareAtPrice)}</del>
-            ) : null}
-            <strong>{formatCurrency(product.price)}</strong>
+            <OpportunityPrice product={product} size="detail" />
           </div>
 
           <div className={styles.purchaseActions}>

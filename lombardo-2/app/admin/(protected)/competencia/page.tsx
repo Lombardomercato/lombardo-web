@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {
   runCompetitorIngestionAction,
+  removeLombardoOpportunityAction,
+  scheduleLombardoOpportunityReviewAction,
   updateCompetitorAlertRulesAction,
   updatePricingIntelligenceSettingsAction,
 } from "@/app/admin/actions";
@@ -13,6 +15,7 @@ import { createPricingIntelligenceServices } from "@/lib/server/pricing-intellig
 import { formatCurrency } from "@/lib/utils/format-currency";
 import styles from "../../admin.module.css";
 import localStyles from "./CompetitorDashboard.module.css";
+import { PricingOpportunityActions } from "./PricingOpportunityActions";
 
 export const maxDuration = 300;
 
@@ -67,7 +70,8 @@ export default async function CompetitorDashboardPage({
   const query = await searchParams;
   const confidence = value(query, "confidence");
   const competitorStore = createCompetitorServices().store;
-  const [dashboard, multi, pricingSettings] = await Promise.all([
+  const pricingStore = createPricingIntelligenceServices().store;
+  const [dashboard, multi, pricing, published] = await Promise.all([
     competitorStore.dashboard({
       brand: value(query, "marca") || undefined,
       category: value(query, "categoria") || undefined,
@@ -78,8 +82,14 @@ export default async function CompetitorDashboardPage({
       maximumDifferencePct: numeric(query, "diferenciaMax"),
     }),
     competitorStore.multiCompetitorDashboard(),
-    createPricingIntelligenceServices().store.settings(),
+    pricingStore.opportunities(),
+    pricingStore.publishedOpportunities(),
   ]);
+  const pricingSettings = pricing.settings;
+  const publishedIds = new Set(published.filter((item) => item.opportunity).map((item) => item.productId));
+  const suggestions = pricing.opportunities
+    .filter((item) => !publishedIds.has(item.runiaProductId) && item.decisionStatus !== "ignored")
+    .slice(0, 10);
 
   const metrics = [
     ["CATÁLOGO POSITANO", dashboard.metrics.total, ""],
@@ -239,6 +249,60 @@ export default async function CompetitorDashboardPage({
             </div>
           </div>
         ) : <p className={styles.emptyState}>No hay comparaciones para estos filtros.</p>}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}><h2>OPORTUNIDADES PUBLICADAS</h2><span>{published.filter((item) => item.opportunity).length} ACTIVAS</span></div>
+        <p className={localStyles.sectionNote}>Precio de referencia real + selling price auditado. Quitar el badge no restaura ni modifica el precio.</p>
+        {published.length ? (
+          <div className={localStyles.publishedGrid}>
+            {published.map((item) => {
+              const market = pricing.opportunities.find((candidate) => candidate.runiaProductId === item.productId);
+              const marginAmount = item.supplierCost ? item.sellingPrice - item.supplierCost : undefined;
+              const marginPct = marginAmount !== undefined ? marginAmount / item.sellingPrice * 100 : undefined;
+              return (
+                <article key={item.id} data-active={item.opportunity}>
+                  <header><div><strong>{item.name}</strong><small>{item.sku}</small></div><span>{item.opportunity ? "PUBLICADA" : `INACTIVA · ${item.disabledReason ?? "REVISAR"}`}</span></header>
+                  <dl>
+                    <div><dt>PRECIO VINROS</dt><dd>{formatCurrency(item.supplierRetail)}</dd></div>
+                    <div><dt>COSTO</dt><dd>{item.supplierCost ? formatCurrency(item.supplierCost) : "—"}</dd></div>
+                    <div><dt>SELLING PRICE</dt><dd>{formatCurrency(item.sellingPrice)}</dd></div>
+                    <div><dt>REFERENCE PRICE</dt><dd>{formatCurrency(item.referencePrice)}</dd></div>
+                    <div><dt>MERCADO</dt><dd>{market ? formatCurrency(market.competitorPrice) : "—"}</dd></div>
+                    <div><dt>MARGEN</dt><dd>{marginAmount !== undefined ? `${formatCurrency(marginAmount)} · ${percentage(marginPct)}` : "—"}</dd></div>
+                    <div><dt>INICIO</dt><dd>{formatAdminDate(item.startAt)}</dd></div>
+                    <div><dt>REVISIÓN</dt><dd>{formatAdminDate(item.reviewAt)}</dd></div>
+                  </dl>
+                  <div className={localStyles.publishedActions}>
+                    {market ? <Link href={`/admin/competencia/${market.competitorProductId}#precio-manual`}>CAMBIAR PRECIO</Link> : null}
+                    {item.opportunity ? <form action={removeLombardoOpportunityAction}><input type="hidden" name="runiaProductId" value={item.productId} /><button data-action="secondary" type="submit">QUITAR OPORTUNIDAD</button></form> : null}
+                    <form action={scheduleLombardoOpportunityReviewAction}>
+                      <input type="hidden" name="runiaProductId" value={item.productId} />
+                      <label><span>PROGRAMAR REVISIÓN</span><input name="reviewAt" type="datetime-local" defaultValue={new Date(item.reviewAt).toISOString().slice(0, 16)} required /></label>
+                      <button type="submit">GUARDAR</button>
+                    </form>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : <p className={styles.emptyState}>Todavía no hay oportunidades publicadas.</p>}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}><h2>OPORTUNIDADES SUGERIDAS</h2><span>AUTO-PUBLISH: NO</span></div>
+        <p className={localStyles.sectionNote}>Ordenadas por impacto comercial, brecha de mercado, margen posible y confianza. Cada publicación requiere aprobación humana.</p>
+        <div className={localStyles.suggestionList}>
+          {suggestions.map((item) => (
+            <article key={item.competitorProductId}>
+              <div><strong>{item.runiaName}</strong><small>{item.runiaSku} · IMPACTO {item.impactScore.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</small></div>
+              <div><span>LOMBARDO</span><strong>{formatCurrency(item.lombardoSellingPrice)}</strong></div>
+              <div><span>MERCADO</span><strong>{formatCurrency(item.competitorPrice)}</strong></div>
+              <div><span>MARGEN</span><strong>{item.currentMargin ? percentage(item.currentMargin.percentage) : "—"}</strong></div>
+              <PricingOpportunityActions opportunity={item} compact />
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className={styles.section}>

@@ -6,6 +6,10 @@ export type CommerceEvent =
   | { name: "begin_checkout"; itemCount: number; subtotal: number }
   | { name: "add_shipping_info"; method: "PICKUP" | "DELIVERY" }
   | { name: "purchase"; orderId: string; total: number; currency: "ARS" }
+  | { name: "opportunity_view"; productId: string; surface: "home" | "opportunities" | "product" }
+  | { name: "opportunity_product_click"; productId: string; surface: "home" | "opportunities" }
+  | { name: "opportunity_add_to_cart"; productId: string; quantity: number }
+  | { name: "opportunity_order"; orderId: string; productId: string; quantity: number; total: number }
   | { name: "guide_view"; guideSlug: string }
   | { name: "guide_product_click"; guideSlug: string; productId: string }
   | { name: "guide_add_to_cart"; guideSlug: string; productId: string }

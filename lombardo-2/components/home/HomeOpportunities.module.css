@@ -1,0 +1,49 @@
+.section {
+  padding: clamp(4rem, 8vw, 8rem) var(--page-gutter);
+  background: var(--lombardo-beige);
+  color: var(--lombardo-blue);
+}
+
+.section > header {
+  margin-bottom: clamp(2rem, 4vw, 3.5rem);
+  padding-top: 0.8rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(15rem, 0.65fr) auto;
+  align-items: end;
+  gap: clamp(1.5rem, 4vw, 5rem);
+  border-top: 1px solid currentColor;
+}
+
+.section header p:first-child {
+  margin-bottom: 1.1rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.section h2 {
+  font-family: var(--font-display);
+  font-size: clamp(3.4rem, 7vw, 7.5rem);
+  line-height: 0.76;
+  letter-spacing: -0.055em;
+}
+
+.section header > p {
+  max-width: 25rem;
+  line-height: 1.25;
+}
+
+.section header > a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 800px) {
+  .section > header { grid-template-columns: 1fr; }
+  .section header > a { width: fit-content; }
+}

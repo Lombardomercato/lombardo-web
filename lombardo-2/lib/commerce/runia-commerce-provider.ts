@@ -206,16 +206,22 @@ export class RuniaCommerceProvider
   private productSearch(
     supplierId: string,
     pricingContext: CustomerPricingContext,
+    requireOpportunity = false,
   ) {
     return new URLSearchParams({
       select:
-        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),lombardo_prices:lombardo_selling_prices(price_type,current_price,version,active),editorial:supplier_product_editorial(brand_name)",
+        `runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),lombardo_prices:lombardo_selling_prices(id,price_type,current_price,version,active),opportunities:lombardo_product_opportunities${requireOpportunity ? "!inner" : ""}(selling_price_id,reference_price,opportunity,opportunity_start,opportunity_review_at),editorial:supplier_product_editorial(brand_name)`,
       supplier_id: `eq.${supplierId}`,
       eligibility_status: "eq.safe",
       active: "is.true",
       "retail_prices.price_type": `eq.${pricingContext.basePriceType}`,
       "lombardo_prices.price_type": "eq.retail",
       "lombardo_prices.active": "is.true",
+      ...(requireOpportunity ? {
+        "opportunities.opportunity": "is.true",
+        "opportunities.opportunity_start": `lte.${new Date().toISOString()}`,
+        "opportunities.opportunity_review_at": `gt.${new Date().toISOString()}`,
+      } : {}),
     });
   }
 
@@ -225,7 +231,7 @@ export class RuniaCommerceProvider
   ) {
     return new URLSearchParams({
       select:
-        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),public_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(price_type,current_price,version,active),editorial:supplier_product_editorial(brand_name)",
+        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),public_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(id,price_type,current_price,version,active),opportunities:lombardo_product_opportunities(selling_price_id,reference_price,opportunity,opportunity_start,opportunity_review_at),editorial:supplier_product_editorial(brand_name)",
       supplier_id: `eq.${supplierId}`,
       eligibility_status: "eq.safe",
       active: "is.true",
@@ -510,6 +516,23 @@ export class RuniaCommerceProvider
     }
 
     return (await this.mapRows(rows, pricingContext)).products[0] ?? null;
+  }
+
+  async getActiveOpportunities(
+    limit = 48,
+    pricingContext = this.defaultPricingContext,
+  ) {
+    if (pricingContext.basePriceType !== "retail") return [];
+    const supplier = await this.getSupplier();
+    const search = this.productSearch(supplier.id, pricingContext, true);
+    search.set("order", "normalized_name.asc,id.asc");
+    search.set("limit", String(Math.min(Math.max(Math.trunc(limit), 1), 100)));
+    const { rows } = await this.fetchRows<RuniaSupplierProductRow>(
+      "supplier_products",
+      search,
+    );
+    const mapped = await this.mapRows(rows, pricingContext);
+    return mapped.products.filter((product) => product.opportunity && product.images.length);
   }
 
   async getIndexableProducts() {

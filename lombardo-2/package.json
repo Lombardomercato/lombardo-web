@@ -28,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "server-only": "0.0.1",
+    "sharp": "0.35.3",
     "typescript": "^5"
   },
   "packageManager": "pnpm@11.16.0"

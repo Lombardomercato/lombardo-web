@@ -1,0 +1,45 @@
+.price {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--lombardo-blue);
+}
+
+.badge {
+  width: fit-content;
+  padding: 0.38rem 0.55rem 0.32rem;
+  border: 1px solid currentColor;
+  background: var(--lombardo-green);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.price del {
+  color: rgba(0, 58, 112, 0.56);
+  font-size: 0.76rem;
+  text-decoration-thickness: 1px;
+}
+
+.price strong {
+  font-family: var(--font-functional);
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  line-height: 1;
+}
+
+.price[data-size="detail"] {
+  justify-items: end;
+  gap: 0.55rem;
+}
+
+.price[data-size="detail"] .badge {
+  margin-bottom: 0.4rem;
+}
+
+.price[data-size="detail"] del {
+  font-size: 0.82rem;
+}
+
+.price[data-size="detail"] strong {
+  font-size: clamp(2.6rem, 5vw, 5.2rem);
+}

@@ -618,3 +618,45 @@
   .intelligenceCard > header { grid-template-columns: 1fr; }
   .runStatus { grid-template-columns: 1fr; }
 }
+.publishedGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.publishedGrid > article {
+  padding: 1.1rem;
+  display: grid;
+  gap: 1rem;
+  border: 1px solid rgba(0, 58, 112, 0.25);
+  background: var(--neutral-paper);
+}
+
+.publishedGrid > article[data-active="false"] { opacity: 0.64; }
+.publishedGrid header { display: flex; justify-content: space-between; gap: 1rem; }
+.publishedGrid header div { display: grid; gap: 0.25rem; }
+.publishedGrid header span, .publishedGrid small, .publishedGrid dt,
+.suggestionList span, .suggestionList small {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.publishedGrid dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.8rem; }
+.publishedGrid dl div { display: grid; gap: 0.25rem; }
+.publishedGrid dd { margin: 0; font-size: 0.82rem; }
+.publishedActions { display: flex; flex-wrap: wrap; align-items: end; gap: 0.65rem; }
+.publishedActions form { display: flex; align-items: end; gap: 0.45rem; }
+.publishedActions label { display: grid; gap: 0.3rem; }
+.publishedActions input { min-height: 2.45rem; padding: 0.45rem; border: 1px solid rgba(0,58,112,.35); }
+.publishedActions button, .publishedActions a { min-height: 2.45rem; padding: 0.6rem 0.75rem; display: inline-flex; align-items: center; border: 1px solid var(--lombardo-blue); background: var(--lombardo-blue); color: white; font-size: .62rem; font-weight: 700; }
+.publishedActions button[data-action="secondary"] { background: transparent; color: var(--lombardo-blue); }
+
+.suggestionList { display: grid; border-top: 1px solid rgba(0,58,112,.25); }
+.suggestionList > article { padding: .9rem 0; display: grid; grid-template-columns: minmax(12rem, 1.4fr) repeat(3, minmax(6rem, .55fr)) minmax(18rem, 1fr); align-items: center; gap: 1rem; border-bottom: 1px solid rgba(0,58,112,.25); }
+.suggestionList > article > div { display: grid; gap: .2rem; }
+
+@media (max-width: 900px) {
+  .publishedGrid { grid-template-columns: 1fr; }
+  .publishedGrid dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .suggestionList > article { grid-template-columns: 1fr 1fr; }
+}

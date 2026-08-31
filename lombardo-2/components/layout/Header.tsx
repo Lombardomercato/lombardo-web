@@ -7,6 +7,7 @@ import { useCart } from "@/components/cart/CartProvider";
 import styles from "./Header.module.css";
 
 const navigation = [
+  { label: "Oportunidades", href: "/oportunidades" },
   { label: "Regalos", href: "/categorias/regalos" },
   { label: "Vinos", href: "/categorias/vinos" },
   { label: "Guías", href: "/guias" },
@@ -139,7 +140,7 @@ export function Header() {
             tabIndex={isOpen ? 0 : -1}
             onClick={closeMenu}
           >
-            <span>06</span>
+            <span>07</span>
             Mi cuenta
           </Link>
           <Link

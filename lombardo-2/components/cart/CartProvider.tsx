@@ -354,6 +354,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   ) => {
     dispatch({ type: "add", product, quantity, openCart: options?.openCart });
     trackCommerceEvent({ name: "add_to_cart", productId: product.id, quantity });
+    if (product.opportunity) {
+      trackCommerceEvent({ name: "opportunity_add_to_cart", productId: product.id, quantity });
+    }
   }, []);
 
   const addItems = useCallback((
@@ -364,6 +367,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "add-many", items, openCart: options?.openCart });
     for (const { product, quantity } of items) {
       trackCommerceEvent({ name: "add_to_cart", productId: product.id, quantity });
+      if (product.opportunity) {
+        trackCommerceEvent({ name: "opportunity_add_to_cart", productId: product.id, quantity });
+      }
     }
   }, []);
 
