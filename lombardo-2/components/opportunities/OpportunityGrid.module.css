@@ -8,7 +8,7 @@
 }
 
 .card {
-  grid-column: span 6;
+  grid-column: span 4;
   min-width: 0;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -18,23 +18,28 @@
   contain: inline-size;
 }
 
-.card:nth-child(n + 3) {
-  grid-column: span 4;
+.card:nth-child(4) {
+  grid-column: 3 / span 4;
 }
 
 .visual {
-  min-height: 17rem;
-  padding: clamp(1rem, 2.5vw, 2.2rem);
+  min-height: 0;
+  padding: clamp(0.85rem, 1.5vw, 1.5rem);
   display: grid;
   background: rgba(242, 226, 206, 0.55);
 }
 
+.visual > div {
+  height: clamp(17rem, 25vw, 24rem);
+  aspect-ratio: auto;
+}
+
 .details {
   min-width: 0;
-  padding: 1rem;
+  padding: 0.9rem 1rem 1rem;
   display: grid;
-  grid-template-rows: auto minmax(3rem, auto) 1fr auto;
-  gap: 0.75rem;
+  grid-template-rows: auto minmax(2.5rem, auto) auto auto;
+  gap: 0.58rem;
   border-top: 1px solid rgba(0, 58, 112, 0.25);
 }
 
@@ -50,10 +55,15 @@
 }
 
 .details h2 {
-  max-width: 24ch;
+  max-width: 28ch;
   overflow-wrap: anywhere;
-  font-size: clamp(0.98rem, 1.35vw, 1.35rem);
-  line-height: 1.08;
+  font-size: clamp(0.9rem, 1vw, 1.08rem);
+  line-height: 1.12;
+  letter-spacing: -0.012em;
+}
+
+.details strong {
+  font-size: clamp(1.15rem, 1.45vw, 1.45rem);
 }
 
 .details h2 a:hover {
@@ -62,8 +72,8 @@
 }
 
 .details button {
-  min-height: 2.8rem;
-  padding: 0.7rem 0;
+  min-height: 2.45rem;
+  padding: 0.55rem 0 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -87,21 +97,27 @@
 
 @media (max-width: 1100px) {
   .card,
-  .card:nth-child(n + 3) { grid-column: span 6; }
+  .card:nth-child(4) { grid-column: span 6; }
 
   .card:last-child:nth-child(odd) { grid-column: 4 / span 6; }
+
+  .visual > div {
+    height: clamp(18rem, 39vw, 25rem);
+  }
 }
 
 @media (max-width: 720px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
 
   .card,
-  .card:nth-child(n + 3),
+  .card:nth-child(4),
   .card:last-child:nth-child(odd) {
     grid-column: 1;
   }
 
-  .visual { min-height: 20rem; }
+  .visual > div {
+    height: 19rem;
+  }
 
   .details {
     padding: 1.15rem;
@@ -109,6 +125,6 @@
   }
 
   .details h2 {
-    font-size: clamp(1.35rem, 6.4vw, 2rem);
+    font-size: clamp(1.08rem, 5vw, 1.35rem);
   }
 }

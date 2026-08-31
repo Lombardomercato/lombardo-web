@@ -21,6 +21,8 @@ test("el precio editorial pertenece al flujo de la tarjeta", () => {
 
 test("Oportunidades evita cinco columnas frágiles y colapsa a una en mobile", () => {
   assert.match(opportunitiesCss, /grid-template-columns:\s*repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(opportunitiesCss, /\.card\s*\{[\s\S]*grid-column:\s*span 4/);
+  assert.match(opportunitiesCss, /\.visual > div\s*\{[\s\S]*height:\s*clamp\(17rem, 25vw, 24rem\)/);
   assert.match(opportunitiesCss, /@media \(max-width: 720px\)[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(opportunitiesCss, /overflow-wrap:\s*anywhere/);
 });
