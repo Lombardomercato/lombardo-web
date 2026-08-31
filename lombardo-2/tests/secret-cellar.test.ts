@@ -210,7 +210,8 @@ test("la experiencia física conserva alternativas accesibles y la mecánica apr
   assert.match(component, /PUERTA 02/);
   assert.match(component, /styles\.cellarFrame/);
   assert.match(component, /styles\.doorHandle/);
-  assert.match(component, /LOMBARDO · RESERVA 04/);
+  assert.match(component, /styles\.doorWindow/);
+  assert.match(component, /LOMBARDO · CAVA 04/);
   assert.match(component, /CELLAR_OPEN_DURATION_MS = 1_350/);
   assert.match(component, /onPointerMove/);
   assert.match(stylesheet, /touch-action: none/);
