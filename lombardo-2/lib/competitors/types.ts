@@ -1,6 +1,104 @@
 export const COMPETITOR_CONFIDENCE_BANDS = ["high", "medium", "low", "none"] as const;
 export type CompetitorConfidenceBand = (typeof COMPETITOR_CONFIDENCE_BANDS)[number];
 
+export const ACTIVE_COMPETITOR_SLUGS = [
+  "positano",
+  "vinoteca-campos",
+  "al-vino-vino",
+  "vinos-rosario",
+  "rosario-vinos-exclusivos",
+] as const;
+export type ActiveCompetitorSlug = (typeof ACTIVE_COMPETITOR_SLUGS)[number];
+
+export const PRICE_SIGNALS = ["strong", "medium", "weak", "invalid"] as const;
+export type PriceSignal = (typeof PRICE_SIGNALS)[number];
+
+export const ECONOMIC_SCENARIOS = [
+  "product_price",
+  "pickup_total",
+  "delivery_small_basket",
+  "delivery_large_basket",
+] as const;
+export type EconomicScenario = (typeof ECONOMIC_SCENARIOS)[number];
+
+export type PriceSource = "ecommerce" | "tariff" | "whatsapp" | "secondary";
+export type CheckoutType = "full" | "whatsapp" | "none";
+export type StockStatus = "in_stock" | "out_of_stock" | "unknown";
+export type MarketPosition = "cheaper" | "in_market" | "more_expensive" | "insufficient_data";
+
+export interface CompetitorCommercialObservation {
+  id: string;
+  competitorSlug: ActiveCompetitorSlug;
+  competitorName: string;
+  productKey: string;
+  externalName: string;
+  sourceUrl?: string;
+  priceSource: PriceSource;
+  listPrice?: number;
+  promotionalPrice?: number;
+  transferPrice?: number;
+  transferDiscountPct?: number;
+  unitPrice?: number;
+  bulkPrice?: number;
+  unitsPerBulk?: number;
+  stockStatus: StockStatus;
+  cartAvailable?: boolean;
+  pickupCost?: number;
+  deliveryCost?: number;
+  freeDeliveryThreshold?: number;
+  otherPaymentSurchargePct?: number;
+  paymentConditions?: string;
+  availabilityTerms?: string;
+  priceChangeConditional: boolean;
+  checkoutType: CheckoutType;
+  checkoutConfidence: number;
+  priceSignal: PriceSignal;
+  executable: boolean;
+  observedAt: string;
+  note?: string;
+}
+
+export interface ScenarioPrice {
+  amount?: number;
+  signal: PriceSignal;
+  executable: boolean;
+  note: string;
+}
+
+export interface ScenarioConclusion {
+  scenario: EconomicScenario;
+  lombardoTotal?: number;
+  marketReference?: number;
+  position: MarketPosition;
+  usableSignals: number;
+}
+
+export interface TopCompetitorPriceRow {
+  productKey: string;
+  productName: string;
+  runiaProductId?: string;
+  runiaSku?: string;
+  vinrosCost?: number;
+  lombardoPrice?: number;
+  competitors: Partial<Record<ActiveCompetitorSlug, CompetitorCommercialObservation>>;
+  scenarioPrices: Partial<Record<ActiveCompetitorSlug, Record<EconomicScenario, ScenarioPrice>>>;
+  conclusions: Record<EconomicScenario, ScenarioConclusion>;
+  recommendation: string;
+}
+
+export interface MultiCompetitorDashboard {
+  generatedAt: string;
+  sources: Array<{
+    slug: ActiveCompetitorSlug;
+    name: string;
+    priority: "high" | "medium" | "secondary" | "b2b";
+    priceSource: PriceSource;
+    checkoutType: CheckoutType;
+    active: boolean;
+  }>;
+  topTen: TopCompetitorPriceRow[];
+}
+
 export const COMPETITOR_ALERT_TYPES = [
   "lombardo_more_expensive",
   "competitor_price_change",
@@ -34,6 +132,7 @@ export interface RuniaCompetitorProduct {
   category?: string;
   ean?: string;
   retailPrice: number;
+  costPrice?: number;
 }
 
 export interface CompetitorMatchDecision {
@@ -94,6 +193,7 @@ export interface CompetitorComparisonRow {
   runiaSku?: string;
   runiaName?: string;
   lombardoRetailPrice?: number;
+  vinrosCost?: number;
   confidence: number;
   confidenceBand: CompetitorConfidenceBand;
   matchMethod: "auto" | "manual" | "none" | "rejected";

@@ -3,6 +3,9 @@ import "server-only";
 import { categoryForSupplierSku } from "@/lib/commerce/runia-catalog-mapper";
 import { normalizeImageMatchText, volumeMl } from "@/lib/images/mass-image-matcher";
 import type {
+  ActiveCompetitorSlug,
+  CheckoutType,
+  CompetitorCommercialObservation,
   CompetitorAlertRule,
   CompetitorAlertType,
   CompetitorComparisonRow,
@@ -12,9 +15,19 @@ import type {
   CompetitorProductDetail,
   CompetitorRunView,
   ExternalCompetitorProduct,
+  MultiCompetitorDashboard,
+  PriceSignal,
+  PriceSource,
   RuniaCompetitorProduct,
+  StockStatus,
 } from "@/lib/competitors/types";
 import { priceDifference } from "@/lib/competitors/matcher";
+import {
+  buildScenarioMatrix,
+  pricingRecommendation,
+  productMatchesTopTen,
+  TOP_TEN_COMPETITOR_PRODUCTS,
+} from "@/lib/competitors/pricing-intelligence";
 
 interface StoreOptions {
   url: string;
@@ -96,6 +109,44 @@ interface ComparisonProductRow {
   fetched_at: string;
   available: boolean;
   match: ComparisonMatchRow | ComparisonMatchRow[] | null;
+}
+
+interface CompetitorSourceRow {
+  slug: ActiveCompetitorSlug;
+  name: string;
+  priority: "high" | "medium" | "secondary" | "b2b";
+  price_source: PriceSource;
+  checkout_type: CheckoutType;
+  active: boolean;
+}
+
+interface MarketObservationRow {
+  id: string;
+  product_key: string;
+  external_name: string;
+  source_url: string | null;
+  list_price: number | string | null;
+  promotional_price: number | string | null;
+  transfer_price: number | string | null;
+  transfer_discount_pct: number | string | null;
+  unit_price: number | string | null;
+  bulk_price: number | string | null;
+  units_per_bulk: number | null;
+  stock_status: StockStatus;
+  cart_available: boolean | null;
+  pickup_cost: number | string | null;
+  delivery_cost: number | string | null;
+  free_delivery_threshold: number | string | null;
+  other_payment_surcharge_pct: number | string | null;
+  payment_conditions: string | null;
+  availability_terms: string | null;
+  price_change_conditional: boolean;
+  checkout_confidence: number | string;
+  price_signal: PriceSignal;
+  executable: boolean;
+  observed_at: string;
+  raw_data: Record<string, unknown>;
+  competitor: CompetitorSourceRow | CompetitorSourceRow[] | null;
 }
 
 interface CompetitorRunRow {
@@ -285,7 +336,11 @@ export class CompetitorStore {
           crawl_delay_ms: 750,
           max_pages: 12,
           parser_version: "positano-tiendanube-v1",
-          config: { source: "public_catalog", robotsRequired: true, externalSignalsOnly: true },
+          config: { source: "public_catalog", robotsRequired: true, externalSignalsOnly: true, executableRequiresCart: true },
+          priority: "high",
+          price_source: "ecommerce",
+          checkout_type: "full",
+          source_reliable: true,
         }),
       },
       "resolution=ignore-duplicates,return=representation",
@@ -418,7 +473,6 @@ export class CompetitorStore {
       supplier_id: `eq.${supplierId}`,
       active: "is.true",
       eligibility_status: "eq.safe",
-      "retail_prices.price_type": "eq.retail",
       order: "id.asc",
     });
     const rows: RuniaRow[] = [];
@@ -434,6 +488,9 @@ export class CompetitorStore {
     }
     return rows.flatMap((row) => {
       const retail = Number(asArray(row.retail_prices).find((price) => price.price_type === "retail")?.current_price);
+      const cost = positiveNumber(
+        asArray(row.retail_prices).find((price) => price.price_type === "cost")?.current_price,
+      );
       if (!Number.isFinite(retail) || retail <= 0) return [];
       const editorial = one(row.editorial);
       return [{
@@ -445,6 +502,7 @@ export class CompetitorStore {
         category: editorial?.category_slug || categoryForSupplierSku(row.supplier_sku).slug,
         ean: sourceIdentifier(row.source_raw, ["ean", "ean13", "barcode", "codigo_barras", "código_barras"]),
         retailPrice: retail,
+        costPrice: cost,
       }];
     });
   }
@@ -600,6 +658,9 @@ export class CompetitorStore {
       runiaSku: runia?.supplier_sku,
       runiaName: runia?.name_raw,
       lombardoRetailPrice,
+      vinrosCost: positiveNumber(
+        asArray(runia?.retail_prices).find((price) => price.price_type === "cost")?.current_price,
+      ),
       confidence: Number(match?.match_confidence ?? 0),
       confidenceBand: match?.confidence_band ?? "none",
       matchMethod: match?.match_method ?? "none",
@@ -684,6 +745,160 @@ export class CompetitorStore {
         lombardoMoreExpensive: comparable.filter((row) => (row.differencePct ?? 0) > 0.5).length,
         recentChanges: latestRun?.priceChanges ?? 0,
       },
+    };
+  }
+
+  private async activeCompetitorSources() {
+    const tenantId = await this.tenantId();
+    const search = new URLSearchParams({
+      select: "slug,name,priority,price_source,checkout_type,active",
+      tenant_id: `eq.${tenantId}`,
+      slug: "in.(positano,vinoteca-campos,al-vino-vino,vinos-rosario,rosario-vinos-exclusivos)",
+      order: "name.asc",
+    });
+    return this.rows<CompetitorSourceRow>(
+      `competitors?${search}`,
+      "No pudimos cargar las fuentes competitivas activas.",
+    );
+  }
+
+  private async commercialObservations() {
+    const tenantId = await this.tenantId();
+    const search = new URLSearchParams({
+      select: "id,product_key,external_name,source_url,list_price,promotional_price,transfer_price,transfer_discount_pct,unit_price,bulk_price,units_per_bulk,stock_status,cart_available,pickup_cost,delivery_cost,free_delivery_threshold,other_payment_surcharge_pct,payment_conditions,availability_terms,price_change_conditional,checkout_confidence,price_signal,executable,observed_at,raw_data,competitor:competitor_id!inner(slug,name,priority,price_source,checkout_type,active)",
+      tenant_id: `eq.${tenantId}`,
+      "competitor.active": "is.true",
+      order: "observed_at.desc",
+      limit: "1000",
+    });
+    const rows = await this.rows<MarketObservationRow>(
+      `competitor_market_observations?${search}`,
+      "No pudimos cargar las observaciones comerciales.",
+    );
+    return rows.flatMap((row): CompetitorCommercialObservation[] => {
+      const competitor = one(row.competitor);
+      if (!competitor) return [];
+      const note = typeof row.raw_data?.deliveryBasketSubtotal === "number"
+        ? `Flete observado con canasta de $${row.raw_data.deliveryBasketSubtotal.toLocaleString("es-AR")}; no extrapolado.`
+        : undefined;
+      return [{
+        id: row.id,
+        competitorSlug: competitor.slug,
+        competitorName: competitor.name,
+        productKey: row.product_key,
+        externalName: row.external_name,
+        sourceUrl: row.source_url ?? undefined,
+        priceSource: competitor.price_source,
+        listPrice: positiveNumber(row.list_price),
+        promotionalPrice: positiveNumber(row.promotional_price),
+        transferPrice: positiveNumber(row.transfer_price),
+        transferDiscountPct: positiveNumber(row.transfer_discount_pct),
+        unitPrice: positiveNumber(row.unit_price),
+        bulkPrice: positiveNumber(row.bulk_price),
+        unitsPerBulk: row.units_per_bulk ?? undefined,
+        stockStatus: row.stock_status,
+        cartAvailable: row.cart_available ?? undefined,
+        pickupCost: row.pickup_cost === null ? undefined : Number(row.pickup_cost),
+        deliveryCost: row.delivery_cost === null ? undefined : Number(row.delivery_cost),
+        freeDeliveryThreshold: positiveNumber(row.free_delivery_threshold),
+        otherPaymentSurchargePct: positiveNumber(row.other_payment_surcharge_pct),
+        paymentConditions: row.payment_conditions ?? undefined,
+        availabilityTerms: row.availability_terms ?? undefined,
+        priceChangeConditional: row.price_change_conditional,
+        checkoutType: competitor.checkout_type,
+        checkoutConfidence: Number(row.checkout_confidence),
+        priceSignal: row.price_signal,
+        executable: row.executable,
+        observedAt: row.observed_at,
+        note,
+      }];
+    });
+  }
+
+  async multiCompetitorDashboard(): Promise<MultiCompetitorDashboard> {
+    const positano = await this.ensurePositano();
+    const [positanoRows, observations, sources, runiaProducts] = await Promise.all([
+      this.comparisonRows(positano.id),
+      this.commercialObservations(),
+      this.activeCompetitorSources(),
+      this.loadRuniaProducts(),
+    ]);
+    const deliveryMode = process.env.DELIVERY_COST_MODE?.trim();
+    const configuredDelivery = Number(process.env.DELIVERY_FLAT_RATE);
+    const lombardoDeliveryCost = deliveryMode === "FREE"
+      ? 0
+      : deliveryMode === "FLAT_RATE" && Number.isFinite(configuredDelivery) && configuredDelivery >= 0
+        ? configuredDelivery
+        : undefined;
+    const topTen = TOP_TEN_COMPETITOR_PRODUCTS.map((definition) => {
+      const runiaProduct = runiaProducts.find((product) =>
+        productMatchesTopTen(definition.key, `${product.name} ${product.presentation}`));
+      const positanoRow = positanoRows
+        .filter((row) => row.runiaProductId === runiaProduct?.id ||
+          productMatchesTopTen(definition.key, `${row.runiaName ?? ""} ${row.externalName}`))
+        .sort((left, right) => right.confidence - left.confidence)[0];
+      const competitors: Partial<Record<ActiveCompetitorSlug, CompetitorCommercialObservation>> = {};
+      for (const observation of observations) {
+        if (observation.productKey === definition.key && !competitors[observation.competitorSlug]) {
+          competitors[observation.competitorSlug] = observation;
+        }
+      }
+      if (!competitors.positano && positanoRow) {
+        competitors.positano = {
+          id: positanoRow.id,
+          competitorSlug: "positano",
+          competitorName: "Positano Vinos",
+          productKey: definition.key,
+          externalName: positanoRow.externalName,
+          sourceUrl: positanoRow.externalProductUrl,
+          priceSource: "ecommerce",
+          listPrice: positanoRow.listPrice,
+          promotionalPrice: positanoRow.listPrice ? positanoRow.currentPrice : undefined,
+          unitPrice: positanoRow.listPrice ? undefined : positanoRow.currentPrice,
+          stockStatus: positanoRow.available ? "in_stock" : "out_of_stock",
+          priceChangeConditional: false,
+          checkoutType: "full",
+          checkoutConfidence: positanoRow.available ? 0.65 : 0,
+          priceSignal: positanoRow.available && positanoRow.currentPrice ? "medium" : "invalid",
+          executable: false,
+          observedAt: positanoRow.fetchedAt,
+          paymentConditions: "Catálogo automático; carrito no auditado para este SKU.",
+        };
+      }
+      const matrix = buildScenarioMatrix({
+        lombardoPrice: runiaProduct?.retailPrice ?? positanoRow?.lombardoRetailPrice,
+        lombardoPickupCost: 0,
+        lombardoDeliveryCost,
+        observations: competitors,
+      });
+      return {
+        productKey: definition.key,
+        productName: definition.label,
+        runiaProductId: runiaProduct?.id ?? positanoRow?.runiaProductId,
+        runiaSku: runiaProduct?.sku ?? positanoRow?.runiaSku,
+        vinrosCost: runiaProduct?.costPrice ?? positanoRow?.vinrosCost,
+        lombardoPrice: runiaProduct?.retailPrice ?? positanoRow?.lombardoRetailPrice,
+        competitors,
+        scenarioPrices: matrix.scenarioPrices,
+        conclusions: matrix.conclusions,
+        recommendation: pricingRecommendation({
+          lombardoPrice: runiaProduct?.retailPrice ?? positanoRow?.lombardoRetailPrice,
+          vinrosCost: runiaProduct?.costPrice ?? positanoRow?.vinrosCost,
+          conclusion: matrix.conclusions.product_price,
+        }),
+      };
+    });
+    return {
+      generatedAt: new Date().toISOString(),
+      sources: sources.map((source) => ({
+        slug: source.slug,
+        name: source.name,
+        priority: source.priority,
+        priceSource: source.price_source,
+        checkoutType: source.checkout_type,
+        active: source.active,
+      })),
+      topTen,
     };
   }
 

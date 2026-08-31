@@ -7,6 +7,14 @@ import {
   robotsAllowsProducts,
 } from "../lib/competitors/positano-parser.ts";
 import type { ExternalCompetitorProduct } from "../lib/competitors/types.ts";
+import type { CompetitorCommercialObservation } from "../lib/competitors/types.ts";
+import {
+  buildScenarioMatrix,
+  classifyPriceSignal,
+  observationScenarioPrices,
+  pricingRecommendation,
+  TOP_TEN_COMPETITOR_PRODUCTS,
+} from "../lib/competitors/pricing-intelligence.ts";
 import { PositanoCatalogSource } from "../lib/server/competitors/positano-source.ts";
 
 const POSITANO_PAGE = String.raw`
@@ -208,6 +216,138 @@ test("línea y edad distintas impiden que un candidato quede activo", () => {
 test("diferencia positiva significa que Lombardo está más caro", () => {
   assert.deepEqual(priceDifference(11_000, 10_000), { amount: 1_000, percentage: 10 });
   assert.deepEqual(priceDifference(9_000, 10_000), { amount: -1_000, percentage: -10 });
+});
+
+function commercial(
+  overrides: Partial<CompetitorCommercialObservation> = {},
+): CompetitorCommercialObservation {
+  return {
+    id: "audit-1",
+    competitorSlug: "positano",
+    competitorName: "Positano Vinos",
+    productKey: "campari-750",
+    externalName: "Campari 750",
+    priceSource: "ecommerce",
+    promotionalPrice: 9_749.8,
+    stockStatus: "in_stock",
+    cartAvailable: true,
+    pickupCost: 0,
+    checkoutType: "full",
+    checkoutConfidence: 0.95,
+    priceSignal: "strong",
+    executable: true,
+    priceChangeConditional: false,
+    observedAt: "2026-08-30T23:00:00.000Z",
+    ...overrides,
+  };
+}
+
+test("PRICE SIGNAL distingue carrito confirmado, stock, tarifario y datos inválidos", () => {
+  assert.equal(classifyPriceSignal({
+    price: 10_000, stockStatus: "in_stock", cartAvailable: true,
+    checkoutType: "full", checkoutConfidence: 0.95, priceSource: "ecommerce",
+  }), "strong");
+  assert.equal(classifyPriceSignal({
+    price: 10_000, stockStatus: "in_stock", checkoutType: "full",
+    checkoutConfidence: 0.6, priceSource: "ecommerce",
+  }), "medium");
+  assert.equal(classifyPriceSignal({
+    price: 10_000, stockStatus: "in_stock", checkoutType: "none",
+    checkoutConfidence: 0.4, priceSource: "tariff",
+  }), "weak");
+  assert.equal(classifyPriceSignal({
+    price: 10_000, stockStatus: "out_of_stock", checkoutType: "full",
+    checkoutConfidence: 0.9, priceSource: "ecommerce",
+  }), "invalid");
+});
+
+test("Positano sólo es EXECUTABLE con carrito y los escenarios no inventan costos", () => {
+  const verified = observationScenarioPrices(commercial({ deliveryCost: 29_376.92 }));
+  assert.equal(verified.product_price.executable, true);
+  assert.equal(verified.pickup_total.amount, 9_749.8);
+  assert.equal(verified.delivery_small_basket.amount, 39_126.72);
+  assert.equal(verified.delivery_large_basket.amount, undefined);
+
+  const catalogOnly = observationScenarioPrices(commercial({
+    cartAvailable: undefined,
+    executable: false,
+    priceSignal: "medium",
+    pickupCost: undefined,
+    deliveryCost: undefined,
+  }));
+  assert.equal(catalogOnly.product_price.executable, false);
+  assert.equal(catalogOnly.pickup_total.amount, undefined);
+  assert.equal(catalogOnly.delivery_small_basket.amount, undefined);
+});
+
+test("señales STRONG pesan más que tarifarios WEAK en la referencia económica", () => {
+  const strong = commercial({ promotionalPrice: 9_800, checkoutConfidence: 0.9 });
+  const weak = commercial({
+    id: "audit-2",
+    competitorSlug: "al-vino-vino",
+    competitorName: "Al Vino Vino",
+    priceSource: "tariff",
+    promotionalPrice: undefined,
+    unitPrice: 12_600,
+    cartAvailable: undefined,
+    pickupCost: undefined,
+    checkoutType: "none",
+    checkoutConfidence: 0.45,
+    priceSignal: "weak",
+    executable: false,
+  });
+  const result = buildScenarioMatrix({
+    lombardoPrice: 11_000,
+    lombardoPickupCost: 0,
+    observations: { positano: strong, "al-vino-vino": weak },
+  });
+  assert.ok((result.conclusions.product_price.marketReference ?? Infinity) < 10_200);
+  assert.ok((result.conclusions.product_price.marketReference ?? 0) > 9_800);
+  assert.equal(result.conclusions.product_price.position, "more_expensive");
+});
+
+test("la recomendación bloquea una referencia de mercado debajo del costo VINROS", () => {
+  const recommendation = pricingRecommendation({
+    lombardoPrice: 10_594.45,
+    vinrosCost: 7_307.25,
+    conclusion: {
+      scenario: "product_price",
+      lombardoTotal: 10_594.45,
+      marketReference: 6_775,
+      position: "more_expensive",
+      usableSignals: 1,
+    },
+  });
+  assert.match(recommendation, /debajo del costo VINROS/i);
+  assert.match(recommendation, /no es aprobable/i);
+});
+
+test("TOP 10 solicitado queda fijado sin duplicados", () => {
+  assert.equal(TOP_TEN_COMPETITOR_PRODUCTS.length, 10);
+  assert.equal(new Set(TOP_TEN_COMPETITOR_PRODUCTS.map((item) => item.key)).size, 10);
+  for (const key of [
+    "coquena-malbec", "coquena-torrontes", "felino-malbec", "nicola-catena-bonarda",
+    "campari-750", "fernet-branca-750", "fernet-branca-450", "chandon-brut-nature",
+    "skyy-750", "gin-spirito-blu",
+  ]) assert.ok(TOP_TEN_COMPETITOR_PRODUCTS.some((item) => item.key === key));
+});
+
+test("schema V2 guarda contexto comercial, es privado y no cambia precios Lombardo", async () => {
+  const migration = await readFile(
+    new URL("../supabase/migrations/20260831000500_competitor_pricing_intelligence_v2.sql", import.meta.url),
+    "utf8",
+  );
+  for (const field of [
+    "promotional_price", "transfer_price", "bulk_price", "units_per_bulk", "stock_status",
+    "cart_available", "pickup_cost", "delivery_cost", "free_delivery_threshold",
+    "payment_conditions", "checkout_confidence", "price_signal", "executable",
+  ]) assert.match(migration, new RegExp(field, "i"));
+  assert.match(migration, /price_source[^;]*tariff/i);
+  assert.match(migration, /checkout_type[^;]*whatsapp/i);
+  assert.match(migration, /force row level security/i);
+  assert.match(migration, /PRECIOS MODIFICADOS|Never mutates supplier_prices|no write path/i);
+  assert.doesNotMatch(migration, /(insert\s+into|update|delete\s+from)\s+public\.(supplier_prices|lombardo_selling_prices)/i);
+  assert.doesNotMatch(migration, /grant[^;]*to\s+(anon|authenticated)/i);
 });
 
 test("schema competitivo es privado, auditable y no puede escribir precios Runia", async () => {
