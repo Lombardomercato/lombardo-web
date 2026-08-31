@@ -21,7 +21,7 @@
   letter-spacing: 0.09em;
 }
 
-.section h2 {
+.section > header h2 {
   font-family: var(--font-display);
   font-size: clamp(3.4rem, 7vw, 7.5rem);
   line-height: 0.76;

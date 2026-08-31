@@ -27,7 +27,11 @@ export function OpportunityGrid({ products, surface }: {
         const href = `/productos/${product.slug}`;
         const addable = canAddToCart(product.availability);
         return (
-          <article className={styles.card} key={product.id}>
+          <article
+            className={styles.card}
+            data-index={String(index + 1).padStart(2, "0")}
+            key={product.id}
+          >
             <Link
               className={styles.visual}
               href={href}
