@@ -8,10 +8,15 @@
   margin-bottom: clamp(2rem, 4vw, 3.5rem);
   padding-top: 0.8rem;
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(15rem, 0.65fr) auto;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   align-items: end;
-  gap: clamp(1.5rem, 4vw, 5rem);
+  gap: 1.5rem clamp(1rem, 2vw, 2.5rem);
   border-top: 1px solid currentColor;
+}
+
+.section > header > div {
+  grid-column: 1 / 9;
+  min-width: 0;
 }
 
 .section header p:first-child {
@@ -23,27 +28,55 @@
 
 .section > header h2 {
   font-family: var(--font-display);
-  font-size: clamp(3.4rem, 7vw, 7.5rem);
-  line-height: 0.76;
+  font-size: clamp(3.4rem, 6.2vw, 6.8rem);
+  line-height: 0.8;
   letter-spacing: -0.055em;
 }
 
 .section header > p {
+  grid-column: 9 / 12;
   max-width: 25rem;
+  margin-bottom: 0.35rem;
   line-height: 1.25;
 }
 
 .section header > a {
+  grid-column: 12;
+  justify-self: end;
   min-height: 2.75rem;
+  margin-bottom: 0.35rem;
   display: inline-flex;
   align-items: center;
   border-bottom: 1px solid currentColor;
   font-size: 0.67rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 @media (max-width: 800px) {
-  .section > header { grid-template-columns: 1fr; }
-  .section header > a { width: fit-content; }
+  .section > header {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 1.25rem;
+  }
+
+  .section > header > div,
+  .section header > p,
+  .section header > a {
+    grid-column: 1;
+  }
+
+  .section > header h2 {
+    font-size: clamp(2.8rem, 12vw, 4rem);
+  }
+
+  .section header > p {
+    margin-bottom: 0;
+  }
+
+  .section header > a {
+    width: fit-content;
+    margin-bottom: 0;
+    justify-self: start;
+  }
 }
