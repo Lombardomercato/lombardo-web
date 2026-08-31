@@ -112,7 +112,7 @@ export async function POST(request: Request) {
         contentSha256: createHash("sha256").update(render.bytes).digest("hex"),
         backgroundConfidence: render.confidence,
         edgeCoverage: render.edgeCoverage,
-        operatorUserId: session.operatorId,
+        operatorUserId: session.authUserId,
       });
       results.push({ mediaId: item.id, status: "published" });
     } catch {
