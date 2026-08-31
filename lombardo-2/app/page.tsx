@@ -45,7 +45,7 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
       Promise.all(
         categorySlugs.map((categorySlug) =>
           commerceProvider.getProductPage(
-            { categorySlug, limit: 2 },
+            { categorySlug, limit: 12 },
             pricingContext,
           ),
         ),
@@ -53,15 +53,28 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
     ]);
 
     const daily = await loadDailyHomeData(pricingContext, categories).catch(() => null);
+    const categoryProducts = Object.fromEntries(
+      categorySlugs.map((categorySlug, index) => [
+        categorySlug,
+        pages[index].products
+          .filter((product) => product.images.length > 0)
+          .slice(0, 2),
+      ]),
+    );
+
     return {
       categories: daily?.categories ?? categories,
-      products: daily?.products ?? pages.flatMap((page) => page.products).slice(0, 6),
+      products:
+        daily?.products ??
+        pages.flatMap((page) => page.products.slice(0, 2)).slice(0, 6),
+      categoryProducts,
       catalogTotal: catalog.total,
     };
   } catch {
     return {
       categories: fallbackCategories,
       products: [],
+      categoryProducts: {},
       catalogTotal: null,
     };
   }
