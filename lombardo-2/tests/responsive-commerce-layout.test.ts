@@ -5,6 +5,7 @@ import test from "node:test";
 const headerCss = readFileSync("components/layout/Header.module.css", "utf8");
 const catalogCss = readFileSync("components/catalog/CatalogExplorer.module.css", "utf8");
 const opportunitiesCss = readFileSync("components/opportunities/OpportunityGrid.module.css", "utf8");
+const homeOpportunitiesCss = readFileSync("components/home/HomeOpportunities.module.css", "utf8");
 const baseCss = readFileSync("styles/base.css", "utf8");
 
 test("el menú mobile tiene una superficie propia a pantalla completa", () => {
@@ -25,6 +26,17 @@ test("Oportunidades evita cinco columnas frágiles y colapsa a una en mobile", (
   assert.match(opportunitiesCss, /\.visual > div\s*\{[\s\S]*height:\s*clamp\(17rem, 25vw, 24rem\)/);
   assert.match(opportunitiesCss, /@media \(max-width: 720px\)[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(opportunitiesCss, /overflow-wrap:\s*anywhere/);
+});
+
+test("la landing limita el título editorial y usa tarjetas con lenguaje de catálogo", () => {
+  assert.match(homeOpportunitiesCss, /\.section > header h2\s*\{/);
+  assert.doesNotMatch(homeOpportunitiesCss, /\.section h2\s*\{/);
+  assert.match(homeOpportunitiesCss, /grid-template-columns:\s*repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(homeOpportunitiesCss, /\.section > header > div\s*\{[\s\S]*grid-column:\s*1 \/ 9/);
+  assert.match(homeOpportunitiesCss, /@media \(max-width: 800px\)[\s\S]*font-size:\s*clamp\(2\.8rem, 12vw, 4rem\)/);
+  assert.match(opportunitiesCss, /\.grid\[data-surface="home"\]\s*\{[\s\S]*border:\s*0/);
+  assert.match(opportunitiesCss, /\.grid\[data-surface="home"\] \.card[\s\S]*border-top:\s*1px solid/);
+  assert.match(opportunitiesCss, /\.grid\[data-surface="home"\] \.details h2\s*\{[\s\S]*font-size:\s*clamp\(1\.35rem, 2vw, 2\.3rem\)/);
 });
 
 test("la raíz impide scroll horizontal accidental", () => {
