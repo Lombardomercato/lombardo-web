@@ -204,35 +204,16 @@ function CellarEntrance({
             if (nextProgress >= 0.55) openCellar();
           }}
         >
-          <span className={styles.leftDoor} aria-hidden="true">
-            <span className={styles.doorWindow}>
-              {challenge.candidates.slice(0, 2).map((candidate) => (
-                <i key={candidate.id}><CandidateArtwork candidate={candidate} /></i>
-              ))}
-            </span>
-            <small className={styles.doorNumber}>PUERTA 01</small>
-            <span className={styles.doorHandle} />
-          </span>
-          <span className={styles.rightDoor} aria-hidden="true">
-            <span className={styles.doorWindow}>
-              {challenge.candidates.slice(2, 4).map((candidate) => (
-                <i key={candidate.id}><CandidateArtwork candidate={candidate} /></i>
-              ))}
-            </span>
-            <small className={styles.doorNumber}>PUERTA 02</small>
-            <span className={styles.doorHandle} />
-          </span>
+          <span className={styles.leftDoor} aria-hidden="true" />
+          <span className={styles.rightDoor} aria-hidden="true" />
           <span className={styles.doorInstruction}>
             <strong>ABRIR LA CAVA</strong>
             <small>DESLIZÁ → · CLICK · ENTER</small>
           </span>
         </button>
-        <span className={styles.cellarFrame} aria-hidden="true">
-          <span className={styles.cellarLintel}>
-            <strong>LA CAVA SECRETA</strong>
-            <small>LOMBARDO · CAVA 04</small>
-          </span>
-          <i className={styles.cellarThreshold} />
+        <span className={styles.cellarPlaque} aria-hidden="true">
+          <strong>LA CAVA SECRETA</strong>
+          <small>LOMBARDO · CAVA 04</small>
         </span>
       </div>
     </section>

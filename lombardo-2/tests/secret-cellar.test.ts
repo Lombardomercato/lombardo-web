@@ -206,12 +206,9 @@ test("la experiencia física conserva alternativas accesibles y la mecánica apr
   assert.match(component, /Todos los días Lombardo esconde una botella/);
   assert.match(component, /% OFF HOY/);
   assert.match(component, /ABRIR LA CAVA/);
-  assert.match(component, /PUERTA 01/);
-  assert.match(component, /PUERTA 02/);
-  assert.match(component, /styles\.cellarFrame/);
-  assert.match(component, /styles\.doorHandle/);
-  assert.match(component, /styles\.doorWindow/);
+  assert.match(component, /styles\.cellarPlaque/);
   assert.match(component, /LOMBARDO · CAVA 04/);
+  assert.match(stylesheet, /secret-cellar-doors-v3\.webp/);
   assert.match(component, /CELLAR_OPEN_DURATION_MS = 1_350/);
   assert.match(component, /onPointerMove/);
   assert.match(stylesheet, /touch-action: none/);
