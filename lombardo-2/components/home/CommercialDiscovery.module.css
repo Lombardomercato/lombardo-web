@@ -61,6 +61,7 @@
 }
 
 .categoryCard {
+  --category-fade: rgba(244, 170, 164, 0.98);
   position: relative;
   isolation: isolate;
   min-height: clamp(21rem, 34vw, 34rem);
@@ -80,14 +81,15 @@
 .categoryCard::after {
   content: "";
   position: absolute;
-  right: -22%;
-  bottom: 18%;
-  width: 65%;
-  aspect-ratio: 1;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  opacity: 0.34;
-  z-index: -1;
+  z-index: 1;
+  inset: 38% 0 0;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--category-fade) 76%, transparent) 30%,
+    var(--category-fade) 78%
+  );
+  pointer-events: none;
 }
 
 .categoryCard:hover {
@@ -96,7 +98,7 @@
   box-shadow: 0 0.55rem 0 var(--lombardo-blue);
 }
 
-.categoryCard > span {
+.categoryIndex {
   position: relative;
   z-index: 2;
   font-size: 0.66rem;
@@ -107,48 +109,19 @@
 .categoryArt {
   position: absolute !important;
   z-index: 0 !important;
-  top: 9%;
-  right: 0;
-  left: 0;
-  height: 61%;
+  inset: 0;
   pointer-events: none;
 }
 
-.categoryProduct {
-  position: absolute !important;
-  display: block;
+.categoryArt img {
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(0.98) contrast(1.02);
   transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.categoryProduct img {
-  object-fit: contain;
-  object-position: center bottom;
-  mix-blend-mode: multiply;
-  filter: saturate(0.94) contrast(1.04);
-}
-
-.categoryProductPrimary {
-  bottom: 0;
-  left: -2%;
-  width: 72%;
-  height: 100%;
-  transform: rotate(-2.5deg);
-}
-
-.categoryProductSecondary {
-  right: -11%;
-  bottom: -2%;
-  width: 61%;
-  height: 84%;
-  transform: rotate(7deg);
-}
-
-.categoryCard:hover .categoryProductPrimary {
-  transform: translate3d(-0.35rem, -0.7rem, 0) rotate(-4deg);
-}
-
-.categoryCard:hover .categoryProductSecondary {
-  transform: translate3d(0.35rem, -0.4rem, 0) rotate(9deg);
+.categoryCard:hover .categoryArt img {
+  transform: scale(1.035);
 }
 
 .categoryCard h3 {
@@ -181,10 +154,30 @@
   z-index: 2;
 }
 
-.wine { background: var(--lombardo-pink); }
-.spirits { background: var(--lombardo-green); }
-.gourmet { background: var(--lombardo-beige); }
-.gifts { background: var(--lombardo-red); color: var(--neutral-paper); }
+.wine {
+  --category-fade: rgba(244, 170, 164, 0.98);
+  background: var(--lombardo-pink);
+}
+
+.spirits {
+  --category-fade: rgba(216, 239, 141, 0.98);
+  background: var(--lombardo-green);
+}
+
+.gourmet {
+  --category-fade: rgba(226, 212, 211, 0.98);
+  background: var(--lombardo-beige);
+}
+
+.gifts {
+  --category-fade: rgba(153, 15, 16, 0.96);
+  background: var(--lombardo-red);
+  color: var(--neutral-paper);
+}
+
+.gifts h3 {
+  font-size: clamp(1.85rem, 2.45vw, 2.85rem);
+}
 
 .products {
   padding-top: clamp(2rem, 5vw, 5rem);
@@ -415,7 +408,7 @@
   }
 
   .categoryCard {
-    min-height: 18rem;
+    min-height: 30rem;
     border: 1px solid var(--lombardo-blue) !important;
     border-top: 0 !important;
   }
@@ -424,17 +417,9 @@
     border-top: 1px solid var(--lombardo-blue) !important;
   }
 
-  .categoryArt {
-    top: 1rem;
-    right: 0.75rem;
-    left: auto;
-    width: 48%;
-    height: calc(100% - 2rem);
-  }
-
   .categoryCard h3,
   .categoryCard p {
-    max-width: 58%;
+    max-width: 82%;
   }
 
   .productHeader > p {
@@ -452,7 +437,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .categoryCard,
-  .categoryProduct {
+  .categoryArt img {
     transition: none;
   }
 
@@ -460,11 +445,7 @@
     transform: none;
   }
 
-  .categoryCard:hover .categoryProductPrimary {
-    transform: rotate(-2.5deg);
-  }
-
-  .categoryCard:hover .categoryProductSecondary {
-    transform: rotate(7deg);
+  .categoryCard:hover .categoryArt img {
+    transform: none;
   }
 }

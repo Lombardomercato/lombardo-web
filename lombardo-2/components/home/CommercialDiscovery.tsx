@@ -23,40 +23,31 @@ const categoryTone: Record<string, string> = {
   regalos: styles.gifts,
 };
 
+const categoryArtwork: Record<string, string> = {
+  vinos: "/images/editorial/categories/vinos-v1.jpg",
+  destilados: "/images/editorial/categories/destilados-v1.jpg",
+  gourmet: "/images/editorial/categories/gourmet-v1.jpg",
+  regalos: "/images/editorial/categories/regalos-v1.jpg",
+};
+
 interface CommercialDiscoveryProps {
   categories: Category[];
   products: Product[];
-  categoryProducts: Record<string, Product[]>;
   catalogTotal: number | null;
 }
 
-function CategoryEditorial({ products }: { products: Product[] }) {
-  if (!products.length) return null;
+function CategoryEditorial({ categorySlug }: { categorySlug: string }) {
+  const artwork = categoryArtwork[categorySlug];
+  if (!artwork) return null;
 
   return (
     <span className={styles.categoryArt} aria-hidden="true">
-      {products.slice(0, 2).map((product, index) => {
-        const image = product.images[0];
-        if (!image) return null;
-
-        return (
-          <span
-            key={image.id}
-            className={`${styles.categoryProduct} ${
-              index === 0
-                ? styles.categoryProductPrimary
-                : styles.categoryProductSecondary
-            }`}
-          >
-            <Image
-              src={image.src}
-              alt=""
-              fill
-              sizes="(max-width: 768px) 48vw, (max-width: 1024px) 38vw, 18vw"
-            />
-          </span>
-        );
-      })}
+      <Image
+        src={artwork}
+        alt=""
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+      />
     </span>
   );
 }
@@ -98,7 +89,6 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 export function CommercialDiscovery({
   categories,
   products,
-  categoryProducts,
   catalogTotal,
 }: CommercialDiscoveryProps) {
   const featuredCategories = categories.filter((category) =>
@@ -125,8 +115,10 @@ export function CommercialDiscovery({
               className={`${styles.categoryCard} ${categoryTone[category.slug] ?? ""}`}
               href={`/categorias/${category.slug}`}
             >
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <CategoryEditorial products={categoryProducts[category.slug] ?? []} />
+              <span className={styles.categoryIndex}>
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <CategoryEditorial categorySlug={category.slug} />
               <h3>{category.name}</h3>
               <p>{categoryCopy[category.slug]}</p>
               <strong aria-hidden="true">↗</strong>
