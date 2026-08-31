@@ -15,7 +15,7 @@ export default async function AdminLoginPage() {
     <div className={styles.loginRoot}>
       <section className={styles.loginCard}>
         <p className={styles.eyebrow}>OPERACIÓN REAL</p>
-        <h1>LOMBARDO ADMIN.</h1>
+        <h1>LOMBARDO<span className={styles.adminTrademark} aria-hidden="true">™</span><br />ADMIN.</h1>
         <p>Acceso exclusivo para operadores autorizados.</p>
         <AdminLoginForm />
       </section>

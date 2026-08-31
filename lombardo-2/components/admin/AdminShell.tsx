@@ -16,7 +16,7 @@ export function AdminShell({
     <div className={styles.adminRoot}>
       <header className={styles.adminHeader}>
         <Link className={styles.adminBrand} href="/admin">
-          <strong>LOMBARDO.</strong>
+          <strong>LOMBARDO<span className={styles.adminTrademark} aria-hidden="true">™</span></strong>
           <span>ADMIN</span>
         </Link>
         <div className={styles.operatorMenu}>

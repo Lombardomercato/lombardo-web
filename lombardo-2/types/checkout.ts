@@ -66,6 +66,8 @@ export interface OrderItemSnapshot {
   sku: string;
   name: string;
   categorySlug?: string;
+  catalogUnitPrice?: number;
+  manualPriceOverride?: boolean;
   baseUnitPrice: number;
   priceType: SupplierSalePriceType;
   pricingPolicy: CustomerPricingPolicy;

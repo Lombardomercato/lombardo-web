@@ -53,6 +53,7 @@ export interface AdminOrder {
   couponDiscountAmount?: number;
   deliveryCost: number;
   total: number;
+  commerceTotal: number;
   currency: OrderCurrency;
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: DeliveryAddress;
@@ -62,6 +63,13 @@ export interface AdminOrder {
   paymentProviderId?: string;
   paymentPreferenceId?: string;
   fulfillmentStatus: FulfillmentStatus;
+  orderSource: "storefront" | "admin_manual";
+  hasManagementOverride: boolean;
+  manualDiscountAmount?: number;
+  manualDiscountReason?: string;
+  managementNotes?: string;
+  managementRevision: number;
+  managementUpdatedAt?: string;
   fulfillmentUpdatedAt: string;
   confirmedAt?: string;
   preparingAt?: string;
@@ -72,6 +80,21 @@ export interface AdminOrder {
   updatedAt: string;
   newOrderNotification?: OrderNotification;
   customerOrderConfirmation?: OrderNotification;
+}
+
+export interface AdminOrderManagementInput {
+  customer: CheckoutCustomer;
+  items: OrderItemSnapshot[];
+  deliveryMethod: DeliveryMethod;
+  deliveryAddress?: DeliveryAddress;
+  itemsSubtotal: number;
+  discountAmount: number;
+  discountReason?: string;
+  subtotal: number;
+  deliveryCost: number;
+  total: number;
+  notes?: string;
+  paymentStatus?: Extract<PaymentStatus, "pending" | "approved">;
 }
 
 export interface AdminDashboard {

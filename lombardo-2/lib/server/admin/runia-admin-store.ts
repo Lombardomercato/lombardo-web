@@ -31,6 +31,7 @@ import type {
   MatchConfidenceBand,
   AdminOrder,
   AdminOrderFilters,
+  AdminOrderManagementInput,
   AdminProduct,
   AdminProductDetail,
   AdminProductEditorial,
@@ -88,6 +89,20 @@ interface OrderRow {
   coupon_discount_amount?: number | string;
   delivery_cost: number | string;
   total: number | string;
+  order_source?: "storefront" | "admin_manual";
+  management_customer?: CheckoutCustomer | null;
+  management_items?: OrderItemSnapshot[] | null;
+  management_delivery_method?: DeliveryMethod | null;
+  management_delivery_address?: DeliveryAddress | null;
+  management_items_subtotal?: number | string | null;
+  management_discount_amount?: number | string | null;
+  management_discount_reason?: string | null;
+  management_subtotal?: number | string | null;
+  management_delivery_cost?: number | string | null;
+  management_total?: number | string | null;
+  management_notes?: string | null;
+  management_revision?: number | null;
+  management_updated_at?: string | null;
   currency: OrderCurrency;
   delivery_method: DeliveryMethod;
   delivery_address: DeliveryAddress | null;
@@ -359,6 +374,20 @@ const ORDER_SELECT = [
   "coupon_discount_amount",
   "delivery_cost",
   "total",
+  "order_source",
+  "management_customer",
+  "management_items",
+  "management_delivery_method",
+  "management_delivery_address",
+  "management_items_subtotal",
+  "management_discount_amount",
+  "management_discount_reason",
+  "management_subtotal",
+  "management_delivery_cost",
+  "management_total",
+  "management_notes",
+  "management_revision",
+  "management_updated_at",
   "currency",
   "delivery_method",
   "delivery_address",
@@ -386,30 +415,52 @@ function mapOrder(row: OrderRow): AdminOrder {
       : row.order_status === "confirmed"
         ? "confirmed"
         : "new");
+  const hasManagementOverride = Array.isArray(row.management_items);
+  const managementDiscount = hasManagementOverride
+    ? Number(row.management_discount_amount ?? 0)
+    : 0;
   return {
     id: String(row.id),
     customerAccountId: row.customer_account_id ?? undefined,
     publicId: row.public_id,
     displayId: row.public_id.slice(0, 8).toUpperCase(),
-    customer: row.customer,
-    items: row.items,
-    subtotal: Number(row.subtotal),
-    baseSubtotal: row.base_subtotal === undefined ? undefined : Number(row.base_subtotal),
-    pricingDiscountAmount: row.pricing_discount_amount === undefined ? undefined : Number(row.pricing_discount_amount),
-    commercialSubtotal: row.commercial_subtotal === undefined ? undefined : Number(row.commercial_subtotal),
-    couponCode: row.coupon_code ?? undefined,
-    couponDiscountAmount: row.coupon_discount_amount === undefined ? undefined : Number(row.coupon_discount_amount),
-    deliveryCost: Number(row.delivery_cost),
-    total: Number(row.total),
+    customer: row.management_customer ?? row.customer,
+    items: row.management_items ?? row.items,
+    subtotal: hasManagementOverride ? Number(row.management_subtotal) : Number(row.subtotal),
+    baseSubtotal: hasManagementOverride
+      ? Number(row.management_items_subtotal)
+      : row.base_subtotal === undefined ? undefined : Number(row.base_subtotal),
+    pricingDiscountAmount: hasManagementOverride
+      ? undefined
+      : row.pricing_discount_amount === undefined ? undefined : Number(row.pricing_discount_amount),
+    commercialSubtotal: hasManagementOverride
+      ? Number(row.management_items_subtotal)
+      : row.commercial_subtotal === undefined ? undefined : Number(row.commercial_subtotal),
+    couponCode: hasManagementOverride ? undefined : row.coupon_code ?? undefined,
+    couponDiscountAmount: hasManagementOverride
+      ? undefined
+      : row.coupon_discount_amount === undefined ? undefined : Number(row.coupon_discount_amount),
+    deliveryCost: hasManagementOverride ? Number(row.management_delivery_cost) : Number(row.delivery_cost),
+    total: hasManagementOverride ? Number(row.management_total) : Number(row.total),
+    commerceTotal: Number(row.total),
     currency: row.currency,
-    deliveryMethod: row.delivery_method,
-    deliveryAddress: row.delivery_address ?? undefined,
+    deliveryMethod: row.management_delivery_method ?? row.delivery_method,
+    deliveryAddress: (hasManagementOverride
+      ? row.management_delivery_address
+      : row.delivery_address) ?? undefined,
     orderStatus: row.order_status,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method,
     paymentProviderId: row.payment_provider_id ?? undefined,
     paymentPreferenceId: row.payment_preference_id ?? undefined,
     fulfillmentStatus,
+    orderSource: row.order_source ?? "storefront",
+    hasManagementOverride,
+    manualDiscountAmount: managementDiscount > 0 ? managementDiscount : undefined,
+    manualDiscountReason: row.management_discount_reason ?? undefined,
+    managementNotes: row.management_notes ?? undefined,
+    managementRevision: Number(row.management_revision ?? 0),
+    managementUpdatedAt: row.management_updated_at ?? undefined,
     fulfillmentUpdatedAt: row.fulfillment_updated_at ?? row.created_at,
     confirmedAt: row.confirmed_at ?? undefined,
     preparingAt: row.preparing_at ?? undefined,
@@ -746,6 +797,108 @@ export class RuniaAdminStore {
         ? mapNotification(customerOrderConfirmation)
         : undefined,
     };
+  }
+
+  async searchOrderProducts(searchTerm: string): Promise<AdminProduct[]> {
+    const search = safeSearch(searchTerm);
+    if (!search) return [];
+    const page = await this.listProducts({
+      search,
+      eligibility: "safe",
+      limit: 30,
+    });
+    return page.products.filter(
+      (product) => product.active && product.retailPrice !== null,
+    );
+  }
+
+  async getOrderProductsByIds(productIds: string[]): Promise<AdminProduct[]> {
+    const ids = [...new Set(productIds)].filter((id) => UUID_PATTERN.test(id)).slice(0, 50);
+    if (!ids.length) return [];
+    const supplierId = await this.supplierId();
+    const search = new URLSearchParams({
+      select:
+        "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status)",
+      supplier_id: `eq.${supplierId}`,
+      id: `in.(${ids.join(",")})`,
+      active: "is.true",
+      eligibility_status: "eq.safe",
+      limit: String(ids.length),
+    });
+    const { rows } = await this.rows<ProductRow>(
+      `supplier_products?${search}`,
+      "No pudimos validar los productos del pedido.",
+    );
+    return rows.map((row) => this.mapProduct(row)).filter(
+      (product) => product.retailPrice !== null,
+    );
+  }
+
+  private async orderManagementRequest(
+    name: "lombardo_admin_create_order" | "lombardo_admin_update_order_management",
+    body: Record<string, unknown>,
+  ) {
+    const response = await this.request(`rpc/${name}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        code?: string;
+        message?: string;
+      };
+      if (payload.code === "40001") {
+        throw new AdminStoreError(
+          "El pedido cambió en otra pantalla. Actualizá antes de volver a guardar.",
+          409,
+        );
+      }
+      if (payload.code === "42501") {
+        throw new AdminStoreError("No tenés permisos para editar pedidos.", 403);
+      }
+      if (payload.code === "P0002") {
+        throw new AdminStoreError("Pedido no encontrado.", 404);
+      }
+      if (payload.code === "23514" || payload.code === "22P02") {
+        throw new AdminStoreError("Los datos o totales del pedido no son válidos.", 422);
+      }
+      throw new AdminStoreError("No pudimos guardar el pedido.", 502);
+    }
+    const rows = (await response.json()) as Array<{ order_record: OrderRow }>;
+    if (!rows[0]?.order_record) {
+      throw new AdminStoreError("Runia no devolvió el pedido guardado.", 502);
+    }
+    return mapOrder(rows[0].order_record);
+  }
+
+  async createManualOrder(
+    input: AdminOrderManagementInput,
+    operatorUserId: string,
+  ) {
+    return this.orderManagementRequest("lombardo_admin_create_order", {
+      p_tenant_id: this.tenantId,
+      p_order: input,
+      p_operator_user_id: operatorUserId,
+    });
+  }
+
+  async updateOrderManagement(
+    orderId: string,
+    expectedRevision: number,
+    input: AdminOrderManagementInput,
+    operatorUserId: string,
+  ) {
+    if (!/^\d{1,18}$/.test(orderId) || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+      throw new AdminStoreError("El pedido no es válido.", 422);
+    }
+    return this.orderManagementRequest("lombardo_admin_update_order_management", {
+      p_tenant_id: this.tenantId,
+      // Keep bigint identifiers as strings so JavaScript never rounds them.
+      p_order_id: orderId,
+      p_expected_revision: expectedRevision,
+      p_management: input,
+      p_operator_user_id: operatorUserId,
+    });
   }
 
   async getDashboard(): Promise<AdminDashboard> {

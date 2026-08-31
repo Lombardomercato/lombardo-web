@@ -45,6 +45,11 @@ import { COMPETITOR_ALERT_TYPES, type CompetitorAlertType } from "@/lib/competit
 import { createPricingIntelligenceServices } from "@/lib/server/pricing-intelligence";
 import { PricingIntelligenceStoreError } from "@/lib/server/pricing-intelligence/pricing-store";
 import {
+  AdminOrderValidationError,
+  buildAdminOrderManagementInput,
+  parseAdminOrderPayload,
+} from "@/lib/server/orders/admin-order-validation";
+import {
   COMMERCIAL_SENSITIVITIES,
   type CommercialSensitivity,
   type PricingIntelligenceSettings,
@@ -677,6 +682,66 @@ export async function transitionOrderAction(formData: FormData) {
         ? error.message
         : "No pudimos actualizar el pedido.";
     destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+function adminOrderError(error: unknown) {
+  if (error instanceof AdminOrderValidationError || error instanceof AdminStoreError) {
+    return error.message;
+  }
+  return "No pudimos guardar el pedido.";
+}
+
+export async function createManualOrderAction(formData: FormData) {
+  let destination = "/admin/pedidos/nuevo";
+  try {
+    const session = await requireAdminRole("admin");
+    const payload = parseAdminOrderPayload(formRaw(formData, "payload", 60_000), {
+      allowLegacyDeliveryMethods: false,
+    });
+    const store = createAdminStore();
+    const products = await store.getOrderProductsByIds(
+      payload.items.map((item) => item.productId),
+    );
+    const input = buildAdminOrderManagementInput(payload, products);
+    const order = await store.createManualOrder(input, session.authUserId);
+    revalidatePath("/admin");
+    revalidatePath("/admin/pedidos");
+    destination = `/admin/pedidos/${order.publicId}?success=${encodeURIComponent("Pedido manual creado.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(adminOrderError(error))}`;
+  }
+  redirect(destination);
+}
+
+export async function updateAdminOrderAction(formData: FormData) {
+  const publicId = formText(formData, "publicId", 36);
+  let destination = /^[0-9a-f-]{36}$/i.test(publicId)
+    ? `/admin/pedidos/${publicId}/editar`
+    : "/admin/pedidos";
+  try {
+    const session = await requireAdminRole("admin");
+    const orderId = formText(formData, "orderId", 18);
+    const revision = Number(formText(formData, "revision", 12));
+    const payload = parseAdminOrderPayload(formRaw(formData, "payload", 60_000));
+    const store = createAdminStore();
+    const products = await store.getOrderProductsByIds(
+      payload.items.map((item) => item.productId),
+    );
+    const input = buildAdminOrderManagementInput(payload, products);
+    const order = await store.updateOrderManagement(
+      orderId,
+      revision,
+      input,
+      session.authUserId,
+    );
+    revalidatePath("/admin");
+    revalidatePath("/admin/pedidos");
+    revalidatePath(`/admin/pedidos/${order.publicId}`);
+    destination = `/admin/pedidos/${order.publicId}?success=${encodeURIComponent("Pedido actualizado. El snapshot comercial original quedó intacto.")}`;
+  } catch (error) {
+    destination += `?error=${encodeURIComponent(adminOrderError(error))}`;
   }
   redirect(destination);
 }
