@@ -9,6 +9,8 @@ const token = tokenFile ? readFileSync(tokenFile, "utf8").trim() : process.env.I
 const confirmation = process.env.MASS_IMAGE_RESUME_CONFIRM || "";
 const runId = process.env.IMAGE_JOB_RUN_ID || "mass-image-coverage-phase2-2026-08-29";
 const markComplete = process.env.IMAGE_JOB_MARK_COMPLETE !== "false";
+const publicationBatchSize = 2;
+const publicationConcurrency = 8;
 
 if (
   !jobId ||
@@ -23,7 +25,8 @@ const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(reso
 
 async function request(path: string, method = "GET", body?: unknown) {
   let lastStatus = 0;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  const attempts = method === "POST" ? 1 : 4;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       const response = await fetch(`${baseUrl}/api/admin/image-jobs/${jobId}/publish${path}`, {
         method,
@@ -39,7 +42,7 @@ async function request(path: string, method = "GET", body?: unknown) {
     } catch {
       lastStatus = 0;
     }
-    await delay(1_000 * (attempt + 1));
+    if (attempt + 1 < attempts) await delay(1_000 * (attempt + 1));
   }
   throw new Error(`Protected job request failed: ${lastStatus || "timeout"}`);
 }
@@ -68,24 +71,28 @@ console.log(JSON.stringify({ stage: "resume-phase2", initialPending: initialPend
 for (let pass = 0; pass < 2; pass += 1) {
   const pending = await loadPendingCandidateIds();
   if (!pending.length) break;
-  for (let index = 0; index < pending.length; index += 5) {
-    const batch = pending.slice(index, index + 5);
-    try {
-      const response = await request("", "POST", { candidateIds: batch });
-      const result = await response.json() as { published: number };
-      published += result.published;
-    } catch {
-      // Reloading the authoritative pending queue on the next pass handles ambiguous timeouts.
-    }
-    if ((index + batch.length) % 50 === 0 || index + batch.length === pending.length) {
-      console.log(JSON.stringify({
-        stage: "resume-phase2",
-        pass: pass + 1,
-        processed: index + batch.length,
-        total: pending.length,
-        published,
-      }));
-    }
+  const groupSize = publicationBatchSize * publicationConcurrency;
+  for (let index = 0; index < pending.length; index += groupSize) {
+    const group = pending.slice(index, index + groupSize);
+    const batches = Array.from({ length: Math.ceil(group.length / publicationBatchSize) }, (_, batchIndex) =>
+      group.slice(batchIndex * publicationBatchSize, (batchIndex + 1) * publicationBatchSize));
+    const results = await Promise.all(batches.map(async (batch) => {
+      try {
+        const response = await request("", "POST", { candidateIds: batch });
+        return await response.json() as { published: number };
+      } catch {
+        // Reloading the authoritative pending queue on the next pass handles ambiguous timeouts.
+        return { published: 0 };
+      }
+    }));
+    published += results.reduce((total, result) => total + result.published, 0);
+    console.log(JSON.stringify({
+      stage: "resume-phase2",
+      pass: pass + 1,
+      processed: Math.min(index + group.length, pending.length),
+      total: pending.length,
+      published,
+    }));
     await delay(180);
   }
 }

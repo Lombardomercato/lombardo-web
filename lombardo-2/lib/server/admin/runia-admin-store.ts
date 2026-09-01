@@ -1083,7 +1083,7 @@ export class RuniaAdminStore {
     productId: string;
     bytes: Uint8Array;
     contentSha256: string;
-    backgroundConfidence: "high" | "medium";
+    backgroundConfidence: "high" | "medium" | "low";
     edgeCoverage: number;
     operatorUserId: string | null;
   }) {
