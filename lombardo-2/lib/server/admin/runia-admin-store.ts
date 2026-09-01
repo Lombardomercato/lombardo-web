@@ -578,10 +578,43 @@ function validImageBytes(bytes: Uint8Array, mimeType: string) {
 }
 
 function htmlImageCandidate(html: string, baseUrl: URL) {
-  const encoded = html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1]
+  let encoded = html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1]
     || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i)?.[1]
     || html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
     || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)?.[1];
+  if (!encoded) {
+    for (const match of html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+      try {
+        const queue: unknown[] = [JSON.parse(match[1])];
+        while (queue.length) {
+          const value = queue.shift();
+          if (Array.isArray(value)) {
+            queue.push(...value);
+            continue;
+          }
+          if (!value || typeof value !== "object") continue;
+          const record = value as Record<string, unknown>;
+          const type = record["@type"];
+          const product = type === "Product" || (Array.isArray(type) && type.includes("Product"));
+          if (product) {
+            const image = record.image;
+            const first = Array.isArray(image) ? image[0] : image;
+            if (typeof first === "string") encoded = first;
+            else if (first && typeof first === "object") {
+              const imageRecord = first as Record<string, unknown>;
+              const url = imageRecord.url ?? imageRecord.contentUrl;
+              if (typeof url === "string") encoded = url;
+            }
+            if (encoded) break;
+          }
+          queue.push(...Object.values(record));
+        }
+      } catch {
+        // Keep reading other structured-data blocks from the approved source page.
+      }
+      if (encoded) break;
+    }
+  }
   if (!encoded) return null;
   const decoded = encoded
     .replaceAll("&amp;", "&")
@@ -1761,39 +1794,46 @@ export class RuniaAdminStore {
       /-480-0([.](?:webp|avif|png|jpe?g))$/i,
       "-1024-1024$1",
     );
-    let imageUrl = await assertPublicHttpsUrl(preferredSourceImage);
-    let imageResponse: Response | undefined;
-    for (let redirect = 0; redirect < 4; redirect += 1) {
-      imageResponse = await this.fetcher(imageUrl, {
-        method: "GET",
-        redirect: "manual",
-        headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
-        cache: "no-store",
-        signal: AbortSignal.timeout(12_000),
-      });
-      if (![301, 302, 303, 307, 308].includes(imageResponse.status)) break;
-      const location = imageResponse.headers.get("location");
-      if (!location) throw new AdminStoreError("La fuente externa redirigió sin destino.", 422);
-      imageUrl = await assertPublicHttpsUrl(new URL(location, imageUrl).toString());
-    }
-    if (!imageResponse?.ok) throw new AdminStoreError("No pudimos descargar la imagen aprobada.", 502);
+    const fetchExternal = async (rawUrl: string, accept: string) => {
+      let url = await assertPublicHttpsUrl(rawUrl);
+      let response: Response | undefined;
+      for (let redirect = 0; redirect < 4; redirect += 1) {
+        response = await this.fetcher(url, {
+          method: "GET",
+          redirect: "manual",
+          headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: accept },
+          cache: "no-store",
+          signal: AbortSignal.timeout(12_000),
+        });
+        if (![301, 302, 303, 307, 308].includes(response.status)) break;
+        const location = response.headers.get("location");
+        if (!location) throw new AdminStoreError("La fuente externa redirigió sin destino.", 422);
+        url = await assertPublicHttpsUrl(new URL(location, url).toString());
+      }
+      if (!response) throw new AdminStoreError("La fuente externa no respondió.", 502);
+      return { url, response };
+    };
+    let external = await fetchExternal(preferredSourceImage, "image/avif,image/webp,image/png,image/jpeg");
+    let imageUrl = external.url;
+    let imageResponse = external.response;
     let mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
-    if (mimeType === "text/html" || mimeType === "application/xhtml+xml") {
-      const declaredHtmlBytes = Number(imageResponse.headers.get("content-length") || 0);
+    const imageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+    if (!imageResponse.ok || !imageTypes.has(mimeType)) {
+      const page = imageResponse.ok && (mimeType === "text/html" || mimeType === "application/xhtml+xml")
+        ? { url: imageUrl, response: imageResponse }
+        : await fetchExternal(candidate.source_url, "text/html,application/xhtml+xml");
+      if (!page.response.ok) throw new AdminStoreError("No pudimos recuperar la página de origen aprobada.", 502);
+      const declaredHtmlBytes = Number(page.response.headers.get("content-length") || 0);
       if (declaredHtmlBytes > 1_000_000) throw new AdminStoreError("La página de origen es demasiado grande.", 422);
-      const html = (await imageResponse.text()).slice(0, 1_000_000);
-      const resolved = htmlImageCandidate(html, imageUrl);
+      const html = (await page.response.text()).slice(0, 1_000_000);
+      const resolved = htmlImageCandidate(html, page.url);
       if (!resolved) throw new AdminStoreError("La página de origen no publica una imagen utilizable.", 422);
-      imageUrl = await assertPublicHttpsUrl(resolved);
-      imageResponse = await this.fetcher(imageUrl, {
-        method: "GET",
-        headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
-        cache: "no-store",
-        signal: AbortSignal.timeout(12_000),
-      });
-      if (!imageResponse.ok) throw new AdminStoreError("No pudimos descargar la imagen indicada por la fuente.", 502);
+      external = await fetchExternal(resolved, "image/avif,image/webp,image/png,image/jpeg");
+      imageUrl = external.url;
+      imageResponse = external.response;
       mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
     }
+    if (!imageResponse.ok) throw new AdminStoreError("No pudimos descargar la imagen indicada por la fuente.", 502);
     const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/avif": "avif" };
     const extension = extensions[mimeType];
     const declaredBytes = Number(imageResponse.headers.get("content-length") || 0);
