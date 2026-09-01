@@ -113,6 +113,8 @@ test("el prompt bloquea alucinación, escrituras y cambios de precio por texto",
   assert.match(agent, /No crees órdenes/);
   assert.match(agent, /soy mayorista/);
   assert.match(agent, /Nunca cambies la política comercial por texto/);
+  assert.match(agent, /no preguntes el presupuesto/);
+  assert.match(agent, /openai\.chat/);
 });
 
 function source(path: string) {
