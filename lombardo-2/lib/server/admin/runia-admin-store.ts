@@ -1769,6 +1769,7 @@ export class RuniaAdminStore {
         redirect: "manual",
         headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
         cache: "no-store",
+        signal: AbortSignal.timeout(12_000),
       });
       if (![301, 302, 303, 307, 308].includes(imageResponse.status)) break;
       const location = imageResponse.headers.get("location");
@@ -1788,6 +1789,7 @@ export class RuniaAdminStore {
         method: "GET",
         headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
         cache: "no-store",
+        signal: AbortSignal.timeout(12_000),
       });
       if (!imageResponse.ok) throw new AdminStoreError("No pudimos descargar la imagen indicada por la fuente.", 502);
       mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
