@@ -2,16 +2,15 @@ import { createHmac } from "node:crypto";
 import { z } from "zod";
 import { AiAuditStore } from "@/lib/server/ai/audit-store";
 import { readAiSalesConfiguration } from "@/lib/server/ai/config";
-import { AI_EVENT_NAMES } from "@/lib/server/ai/types";
+import { PUBLIC_AI_EVENT_NAMES, type AiEventName } from "@/lib/server/ai/types";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { readJsonBody } from "@/lib/server/request-body";
 
 export const dynamic = "force-dynamic";
 
-const browserEvents = AI_EVENT_NAMES.filter((name) => !["tool_call", "tool_error", "chat_error", "chat_message", "chat_start"].includes(name));
 const bodySchema = z.object({
   chatId: z.string().uuid(),
-  eventName: z.enum(browserEvents as [typeof browserEvents[number], ...typeof browserEvents]),
+  eventName: z.enum(PUBLIC_AI_EVENT_NAMES),
   productId: z.string().uuid().optional(),
   metadata: z.record(z.string().max(40), z.union([z.string().max(160), z.number(), z.boolean(), z.null()])).optional(),
 }).strict();
@@ -44,7 +43,7 @@ export async function POST(request: Request) {
     await audit.recordEvent({
       chatId: input.chatId,
       pricing,
-      eventName: input.eventName,
+      eventName: storedEventName(input.eventName),
       source: "storefront",
       productId: input.productId,
       metadata: input.metadata,
@@ -53,4 +52,14 @@ export async function POST(request: Request) {
   } catch {
     return new Response(null, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
+}
+
+function storedEventName(eventName: (typeof PUBLIC_AI_EVENT_NAMES)[number]): AiEventName {
+  return {
+    chat_open: "chat_open",
+    chat_message: "chat_message",
+    recommendation: "recommendation_shown",
+    product_click: "recommendation_click",
+    add_to_cart: "chat_add_to_cart",
+  }[eventName] as AiEventName;
 }

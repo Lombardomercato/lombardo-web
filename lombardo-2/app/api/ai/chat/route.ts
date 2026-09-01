@@ -64,16 +64,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const firstMessage = body.messages.filter(isUserMessage).length === 1;
-    if (firstMessage) {
-      await audit.recordEvent({
-        chatId,
-        pricing,
-        eventName: "chat_start",
-        source: "server",
-        topic: classifyTopic(latestUserText),
-      }).catch(() => undefined);
-    }
     await audit.recordEvent({
       chatId,
       pricing,
@@ -95,28 +85,14 @@ export async function POST(request: Request) {
         "X-Content-Type-Options": "nosniff",
       },
       onError: (error) => {
-        void audit?.recordEvent({
-          chatId: chatId!,
-          pricing: pricing!,
-          eventName: "chat_error",
-          source: "server",
-          metadata: { code: safeErrorCode(error) },
-        }).catch(() => undefined);
-        return "No pude consultar el catálogo ahora. La tienda sigue funcionando; probá de nuevo en un momento.";
+        console.error("Lombardo chat stream failed", { code: safeErrorCode(error) });
+        return "No pude encontrarlo ahora. Probá buscarlo en el catálogo.";
       },
     });
   } catch (error) {
-    if (audit && pricing && chatId) {
-      await audit.recordEvent({
-        chatId,
-        pricing,
-        eventName: "chat_error",
-        source: "server",
-        metadata: { code: safeErrorCode(error) },
-      }).catch(() => undefined);
-    }
+    console.error("Lombardo chat request failed", { code: safeErrorCode(error) });
     return Response.json(
-      { error: "El asistente no está disponible ahora. Podés seguir comprando normalmente." },
+      { error: "No pude encontrarlo ahora. Probá buscarlo en el catálogo." },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }

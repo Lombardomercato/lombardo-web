@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { formatCurrency } from "@/lib/utils/format-currency";
@@ -12,10 +12,11 @@ import type { Product } from "@/types/commerce";
 import styles from "./SalesAssistant.module.css";
 
 const STARTERS = [
-  "¿Qué vino me recomendás para un asado?",
-  "Necesito un regalo de hasta $30.000",
-  "Armame una selección de 6 botellas",
-  "Mostrame oportunidades de hoy",
+  "UN VINO PARA UN ASADO",
+  "QUIERO HACER UN REGALO",
+  "MENOS DE $20.000",
+  "VER OPORTUNIDADES",
+  "ARMAME UNA SELECCIÓN",
 ];
 
 const transport = new DefaultChatTransport<UIMessage>({ api: "/api/ai/chat" });
@@ -57,9 +58,10 @@ export function SalesAssistant() {
     const value = text.trim();
     if (!value || busy) return;
     clearError();
+    trackAiEvent(chatId, "chat_message", undefined, { length: value.length });
     void sendMessage({ text: value });
     setInput("");
-  }, [busy, clearError, sendMessage]);
+  }, [busy, chatId, clearError, sendMessage]);
 
   return (
     <>
@@ -71,8 +73,8 @@ export function SalesAssistant() {
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <span>ASESOR</span>
-        <small>BETA</small>
+        <span>LOMBARDO</span>
+        <small>TE AYUDO A ELEGIR</small>
       </button>
       {open ? <button className={styles.backdrop} type="button" onClick={close} aria-label="Cerrar asistente" /> : null}
       <section
@@ -84,8 +86,8 @@ export function SalesAssistant() {
       >
         <header className={styles.header}>
           <div>
-            <p>LOMBARDO. / BETA</p>
-            <h2 id="sales-assistant-title">TE AYUDO A ELEGIR.</h2>
+            <p>LOMBARDO</p>
+            <h2 id="sales-assistant-title">Te ayudo a elegir.</h2>
           </div>
           <button type="button" onClick={close} aria-label="Cerrar asistente">×</button>
         </header>
@@ -93,7 +95,8 @@ export function SalesAssistant() {
         <div className={styles.messages} aria-live="polite" aria-busy={busy}>
           {messages.length === 0 ? (
             <div className={styles.welcome}>
-              <p>Contame para qué ocasión, qué te gusta o cuánto querés gastar. Busco en el catálogo real y te muestro opciones concretas.</p>
+              <h3>¿QUÉ ESTÁS BUSCANDO?</h3>
+              <p>Puedo ayudarte a elegir entre miles de productos.</p>
               <div className={styles.starters}>
                 {STARTERS.map((starter) => (
                   <button key={starter} type="button" onClick={() => submitText(starter)}>{starter}</button>
@@ -110,10 +113,11 @@ export function SalesAssistant() {
               />
             ))
           )}
-          {busy ? <p className={styles.thinking}>ESTOY BUSCANDO EN RUNIA…</p> : null}
+          {busy ? <p className={styles.thinking}>ESTOY BUSCANDO PRODUCTOS REALES…</p> : null}
           {error ? (
             <div className={styles.error} role="alert">
-              <p>No pude consultar el catálogo ahora. La tienda sigue funcionando normalmente.</p>
+              <p>No pude encontrarlo ahora. Probá buscarlo en el catálogo.</p>
+              <Link href="/productos">VER PRODUCTOS</Link>
               <button type="button" onClick={clearError}>ENTENDIDO</button>
             </div>
           ) : null}
@@ -123,7 +127,6 @@ export function SalesAssistant() {
           <Link
             className={styles.cartLink}
             href="/carrito"
-            onClick={() => trackAiEvent(chatId, "chat_checkout_assist", undefined, { itemCount: getItemCount() })}
           >
             VER CARRITO · {getItemCount()} {getItemCount() === 1 ? "PRODUCTO" : "PRODUCTOS"}
           </Link>
@@ -208,11 +211,11 @@ function ProductRecommendations({ products, reason, chatId, addItem }: {
 }) {
   const [adding, setAdding] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const shownKey = useMemo(() => products.map((product) => product.id).join(","), [products]);
+  const shownKey = products.map((product) => product.id).join(",");
 
   useEffect(() => {
     for (const productId of shownKey.split(",").filter(Boolean)) {
-      trackAiEvent(chatId, "recommendation_shown", productId);
+      trackAiEvent(chatId, "recommendation", productId);
     }
   }, [chatId, shownKey]);
 
@@ -229,7 +232,7 @@ function ProductRecommendations({ products, reason, chatId, addItem }: {
       const payload = (await response.json()) as { product?: Product; quantity?: number; error?: string };
       if (!response.ok || !payload.product) throw new Error(payload.error || "Producto no disponible");
       addItem(payload.product, payload.quantity ?? 1, { openCart: true });
-      trackAiEvent(chatId, "chat_add_to_cart", product.id);
+      trackAiEvent(chatId, "add_to_cart", product.id);
       setMessage(`${product.name} agregado al carrito.`);
     } catch {
       setMessage("No pudimos agregarlo. Puede haber cambiado su disponibilidad.");
@@ -249,8 +252,7 @@ function ProductRecommendations({ products, reason, chatId, addItem }: {
               <Link
                 href={`/productos/${product.slug}`}
                 onClick={() => {
-                  trackAiEvent(chatId, "recommendation_click", product.id);
-                  trackAiEvent(chatId, "chat_product_view", product.id);
+                  trackAiEvent(chatId, "product_click", product.id);
                 }}
               >
                 <ProductVisual product={commerceProduct} variant="list" />
@@ -262,7 +264,7 @@ function ProductRecommendations({ products, reason, chatId, addItem }: {
                 {product.opportunity ? <small>OPORTUNIDAD VIGENTE</small> : null}
               </div>
               <div className={styles.productActions}>
-                <Link href={`/productos/${product.slug}`} onClick={() => trackAiEvent(chatId, "chat_product_view", product.id)}>VER</Link>
+                <Link href={`/productos/${product.slug}`} onClick={() => trackAiEvent(chatId, "product_click", product.id)}>VER PRODUCTO</Link>
                 <button type="button" disabled={Boolean(adding)} onClick={() => void add(product)}>
                   {adding === product.id ? "AGREGANDO…" : "AGREGAR"}
                 </button>
@@ -333,7 +335,7 @@ function visualProduct(product: SalesProduct): Product {
     pricingContextKey: `ai:${product.pricingPolicy}`,
     opportunity: product.opportunity ?? undefined,
     availability: product.availability,
-    stock: { available: true, quantity: 1 },
+    stock: product.stock,
     images: product.imageUrl ? [{ id: product.id, src: product.imageUrl, alt: product.name }] : [],
     active: true,
     featured: false,
@@ -347,7 +349,7 @@ function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-AR").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-type BrowserEventName = "chat_open" | "recommendation_shown" | "recommendation_click" | "chat_add_to_cart" | "chat_product_view" | "chat_checkout_assist";
+type BrowserEventName = "chat_open" | "chat_message" | "recommendation" | "product_click" | "add_to_cart";
 
 function trackAiEvent(chatId: string, eventName: BrowserEventName, productId?: string, metadata?: Record<string, string | number | boolean | null>) {
   if (!chatId || typeof window === "undefined") return;
@@ -355,6 +357,7 @@ function trackAiEvent(chatId: string, eventName: BrowserEventName, productId?: s
   window.dispatchEvent(new CustomEvent("lombardo:analytics", { detail }));
   const analyticsWindow = window as Window & { dataLayer?: Array<Record<string, unknown>> };
   analyticsWindow.dataLayer?.push(detail);
+  if (eventName === "chat_message") return;
   void fetch("/api/ai/events", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

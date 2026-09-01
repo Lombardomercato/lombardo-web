@@ -15,7 +15,6 @@
     "test": "node --conditions=react-server --test tests/*.test.ts"
   },
   "dependencies": {
-    "@ai-sdk/mcp": "2.0.41",
     "@ai-sdk/react": "4.0.88",
     "@supabase/ssr": "0.12.5",
     "@supabase/supabase-js": "2.112.4",

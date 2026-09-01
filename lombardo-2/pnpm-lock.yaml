@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@ai-sdk/mcp':
-        specifier: 2.0.41
-        version: 2.0.41(zod@4.5.4)
       '@ai-sdk/react':
         specifier: 4.0.88
         version: 4.0.88(react@19.2.8)(zod@4.5.4)

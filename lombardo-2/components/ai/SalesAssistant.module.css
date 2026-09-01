@@ -23,7 +23,7 @@
   padding: 0.18rem 0.3rem;
   background: var(--lombardo-pink);
   color: var(--lombardo-blue);
-  font-size: 0.58rem;
+  font-size: 0.5rem;
 }
 
 .backdrop {
@@ -111,6 +111,13 @@
   color: var(--neutral-ink);
   font-size: 1.05rem;
   line-height: 1.45;
+}
+
+.welcome > h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 5vw, 2.4rem);
+  line-height: 0.95;
 }
 
 .starters {
@@ -283,7 +290,8 @@
   line-height: 1.35;
 }
 
-.error button {
+.error button,
+.error a {
   margin-top: 0.6rem;
   padding: 0;
   border: 0;
@@ -292,6 +300,11 @@
   font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.error a {
+  display: inline-block;
+  margin-right: 1rem;
 }
 
 .cartLink {

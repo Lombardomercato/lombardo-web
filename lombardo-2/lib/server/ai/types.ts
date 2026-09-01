@@ -23,7 +23,11 @@ export const salesProductSchema = z.object({
   currency: z.literal("ARS"),
   pricingPolicy: pricingPolicySchema,
   discountPercent: z.number().min(0).max(99),
-  availability: z.literal("SUPPLIER_AVAILABLE"),
+  availability: z.enum(["AVAILABLE_NOW", "SUPPLIER_AVAILABLE"]),
+  stock: z.object({
+    available: z.boolean(),
+    quantity: z.number().int().nonnegative(),
+  }),
   opportunity: z
     .object({
       referencePrice: z.number().positive(),
@@ -60,7 +64,7 @@ export const guidePayloadSchema = z.object({
 
 export type SalesProduct = z.infer<typeof salesProductSchema>;
 
-export const AI_EVENT_NAMES = [
+export const AI_AUDIT_EVENT_NAMES = [
   "chat_open",
   "chat_start",
   "chat_message",
@@ -74,4 +78,14 @@ export const AI_EVENT_NAMES = [
   "chat_error",
 ] as const;
 
-export type AiEventName = (typeof AI_EVENT_NAMES)[number];
+export type AiEventName = (typeof AI_AUDIT_EVENT_NAMES)[number];
+
+export const PUBLIC_AI_EVENT_NAMES = [
+  "chat_open",
+  "chat_message",
+  "recommendation",
+  "product_click",
+  "add_to_cart",
+] as const;
+
+export type PublicAiEventName = (typeof PUBLIC_AI_EVENT_NAMES)[number];
