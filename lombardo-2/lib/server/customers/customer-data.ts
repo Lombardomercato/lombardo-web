@@ -18,7 +18,9 @@ import type { CustomerAccountSummary } from "./types";
 interface CustomerOrderRow {
   public_id: string;
   items: OrderItemSnapshot[];
+  management_items?: OrderItemSnapshot[] | null;
   total: number | string;
+  management_total?: number | string | null;
   currency: OrderCurrency;
   order_status: OrderStatus;
   payment_status: PaymentStatus;
@@ -49,13 +51,16 @@ export interface RepeatableOrderSummary {
 }
 
 function mapOrder(row: CustomerOrderRow): CustomerOrderSummary {
+  const items = Array.isArray(row.management_items)
+    ? row.management_items
+    : row.items;
   return {
     publicId: row.public_id,
     displayId: row.public_id.slice(0, 8).toUpperCase(),
-    itemCount: Array.isArray(row.items)
-      ? row.items.reduce((total, item) => total + Number(item.quantity || 0), 0)
+    itemCount: Array.isArray(items)
+      ? items.reduce((total, item) => total + Number(item.quantity || 0), 0)
       : 0,
-    total: Number(row.total),
+    total: Number(row.management_total ?? row.total),
     currency: row.currency,
     orderStatus: row.order_status,
     paymentStatus: row.payment_status,
@@ -83,7 +88,7 @@ export async function getCurrentCustomerAccountData(
   const { data, error } = await supabase
     .from("commerce_orders")
     .select(
-      "public_id,items,total,currency,order_status,payment_status,created_at",
+      "public_id,items,management_items,total,management_total,currency,order_status,payment_status,created_at",
     )
     .eq("tenant_record_id", account.tenantId)
     .eq("customer_account_id", account.id)
@@ -118,7 +123,7 @@ export async function getLatestRepeatableOrder(
 
   const { data, error } = await supabase
     .from("commerce_orders")
-    .select("public_id,items,created_at")
+    .select("public_id,items,management_items,created_at")
     .eq("tenant_record_id", account.tenantId)
     .eq("customer_account_id", account.id)
     .order("created_at", { ascending: false })
@@ -132,8 +137,11 @@ export async function getLatestRepeatableOrder(
   }
   if (!data) return null;
 
-  const items = Array.isArray(data.items)
-    ? (data.items as OrderItemSnapshot[])
+  const effectiveItems = Array.isArray(data.management_items)
+    ? data.management_items
+    : data.items;
+  const items = Array.isArray(effectiveItems)
+    ? (effectiveItems as OrderItemSnapshot[])
     : [];
   return {
     publicId: String(data.public_id),

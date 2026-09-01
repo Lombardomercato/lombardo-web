@@ -38,6 +38,7 @@ interface AdminOrderCreateFormProps {
 
 interface SelectedItem extends QuickOrderProduct {
   quantity: number;
+  unitPriceInput: string;
 }
 
 type SearchStatus = "idle" | "searching" | "ready" | "error";
@@ -70,6 +71,13 @@ function boundedQuantity(value: number) {
   return Math.min(99, Math.max(1, Math.trunc(value)));
 }
 
+function unitPriceValue(item: SelectedItem) {
+  const value = Number(item.unitPriceInput.replace(",", "."));
+  return Number.isFinite(value) && value > 0
+    ? Math.round(value * 100) / 100
+    : 0;
+}
+
 export function AdminOrderCreateForm({
   customers,
   checkoutSessionId,
@@ -89,6 +97,7 @@ export function AdminOrderCreateForm({
   const [searchStatus, setSearchStatus] = useState<SearchStatus>("idle");
   const [truncated, setTruncated] = useState(false);
   const [items, setItems] = useState<SelectedItem[]>([]);
+  const [manualPriceReason, setManualPriceReason] = useState("");
   const selectedCustomer = customers.find((customer) => customer.id === customerId);
   const isGuest = customerId === "guest";
 
@@ -130,16 +139,22 @@ export function AdminOrderCreateForm({
 
   const subtotal = useMemo(
     () => items.reduce(
-      (total, item) => total + item.product.price * item.quantity,
+      (total, item) => total + unitPriceValue(item) * item.quantity,
       0,
     ),
     [items],
+  );
+
+  const hasInvalidPrice = items.some((item) => unitPriceValue(item) <= 0);
+  const hasManualPrice = items.some(
+    (item) => Math.abs(unitPriceValue(item) - item.product.price) >= 0.01,
   );
 
   const serializedItems = JSON.stringify(items.map((item) => ({
     productId: item.product.id,
     quantity: item.quantity,
     expectedUnitPrice: item.product.price,
+    manualUnitPrice: unitPriceValue(item),
   })));
 
   const changeCustomer = (nextCustomerId: string) => {
@@ -149,6 +164,7 @@ export function AdminOrderCreateForm({
     setTruncated(false);
     setSearchStatus("idle");
     setItems([]);
+    setManualPriceReason("");
   };
 
   const addProduct = (entry: QuickOrderProduct) => {
@@ -160,7 +176,14 @@ export function AdminOrderCreateForm({
           : item);
       }
       if (current.length >= 50) return current;
-      return [...current, { ...entry, quantity: 1 }];
+      return [
+        ...current,
+        {
+          ...entry,
+          quantity: 1,
+          unitPriceInput: String(entry.product.price),
+        },
+      ];
     });
     setQuery("");
     setResults([]);
@@ -279,19 +302,39 @@ export function AdminOrderCreateForm({
               <div key={item.product.id}>
                 <span><strong>{item.product.name}</strong><small>{item.product.sku} · {formatCurrency(item.product.price)} c/u</small></span>
                 <label>
-                  <span className="sr-only">Cantidad de {item.product.name}</span>
+                  <span className={styles.lineFieldLabel}>CANTIDAD</span>
                   <input
                     type="number"
                     min="1"
                     max="99"
                     value={item.quantity}
-                    onChange={(event) => setItems((current) => current.map((currentItem) =>
-                      currentItem.product.id === item.product.id
-                        ? { ...currentItem, quantity: boundedQuantity(event.currentTarget.valueAsNumber) }
-                        : currentItem))}
+                    onChange={(event) => {
+                      const quantity = boundedQuantity(event.currentTarget.valueAsNumber);
+                      setItems((current) => current.map((currentItem) =>
+                        currentItem.product.id === item.product.id
+                          ? { ...currentItem, quantity }
+                          : currentItem));
+                    }}
                   />
                 </label>
-                <strong>{formatCurrency(item.product.price * item.quantity)}</strong>
+                <label>
+                  <span className={styles.lineFieldLabel}>PRECIO UNIT.</span>
+                  <input
+                    inputMode="decimal"
+                    min="0.01"
+                    step="0.01"
+                    type="number"
+                    value={item.unitPriceInput}
+                    onChange={(event) => {
+                      const unitPriceInput = event.currentTarget.value;
+                      setItems((current) => current.map((currentItem) =>
+                        currentItem.product.id === item.product.id
+                          ? { ...currentItem, unitPriceInput }
+                          : currentItem));
+                    }}
+                  />
+                </label>
+                <strong>{formatCurrency(unitPriceValue(item) * item.quantity)}</strong>
                 <button
                   type="button"
                   onClick={() => setItems((current) => current.filter((currentItem) => currentItem.product.id !== item.product.id))}
@@ -300,6 +343,19 @@ export function AdminOrderCreateForm({
                 </button>
               </div>
             ))}
+            {hasManualPrice ? (
+              <label className={styles.manualReason}>
+                <span>MOTIVO DEL PRECIO MANUAL</span>
+                <input
+                  maxLength={500}
+                  name="manualPriceReason"
+                  onChange={(event) => setManualPriceReason(event.currentTarget.value)}
+                  placeholder="Ej. precio acordado con el cliente"
+                  required
+                  value={manualPriceReason}
+                />
+              </label>
+            ) : null}
             <div className={styles.subtotal}><span>SUBTOTAL</span><strong>{formatCurrency(subtotal)}</strong></div>
           </div>
         ) : (
@@ -346,7 +402,12 @@ export function AdminOrderCreateForm({
         </div>
         <label className={styles.field}>
           <span>CUPÓN (OPCIONAL)</span>
-          <input name="couponCode" maxLength={40} />
+          <input
+            disabled={hasManualPrice}
+            name="couponCode"
+            maxLength={40}
+            placeholder={hasManualPrice ? "No se combina con precio manual" : undefined}
+          />
         </label>
       </section>
 
@@ -359,7 +420,14 @@ export function AdminOrderCreateForm({
         <strong>{formatCurrency(subtotal)}</strong>
         <button
           className={adminStyles.primaryButton}
-          disabled={pending || !items.length || !checkoutSessionId || !idempotencyKey}
+          disabled={
+            pending ||
+            !items.length ||
+            hasInvalidPrice ||
+            (hasManualPrice && manualPriceReason.trim().length < 3) ||
+            !checkoutSessionId ||
+            !idempotencyKey
+          }
           type="submit"
         >
           {pending ? "CREANDO PEDIDO…" : "CREAR PEDIDO →"}

@@ -288,6 +288,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       discountPercent: this.pricingContext.discountPercent,
       checkoutSessionId: input.checkoutSessionId,
       idempotencyKey: input.idempotencyKey,
+      orderSource: input.orderSource ?? "storefront",
       items,
       customer: input.customer,
       deliveryMethod: input.deliveryMethod,

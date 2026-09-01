@@ -58,6 +58,7 @@ export interface CreateOrderInput {
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: DeliveryAddress;
   couponCode?: string;
+  orderSource?: "storefront" | "admin_manual";
 }
 
 export interface OrderItemSnapshot {
@@ -102,6 +103,7 @@ export interface CheckoutDraft {
   discountPercent: number;
   checkoutSessionId: string;
   idempotencyKey: string;
+  orderSource?: "storefront" | "admin_manual";
   items: OrderItemSnapshot[];
   customer: CheckoutCustomer;
   deliveryMethod: DeliveryMethod;

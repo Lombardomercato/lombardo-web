@@ -58,6 +58,16 @@ interface OrderRow {
   payment_method: PaymentMethod;
   checkout_session_id: string;
   idempotency_key: string;
+  order_source?: "storefront" | "admin_manual";
+  management_customer?: CheckoutCustomer | null;
+  management_items?: OrderItemSnapshot[] | null;
+  management_delivery_method?: DeliveryMethod | null;
+  management_delivery_address?: DeliveryAddress | null;
+  management_items_subtotal?: number | string | null;
+  management_discount_amount?: number | string | null;
+  management_subtotal?: number | string | null;
+  management_delivery_cost?: number | string | null;
+  management_total?: number | string | null;
   payment_preference_id: string | null;
   payment_checkout_url: string | null;
   payment_provider_id: string | null;
@@ -76,6 +86,8 @@ interface PromotionOrderResultRow {
 }
 
 function mapOrder(row: OrderRow): OrderDraft {
+  const usesAdminManagement =
+    row.order_source === "admin_manual" && Array.isArray(row.management_items);
   return {
     id: String(row.id),
     publicId: row.public_id,
@@ -84,29 +96,42 @@ function mapOrder(row: OrderRow): OrderDraft {
     customerAccountId: row.customer_account_id ?? undefined,
     pricingPolicy: row.pricing_policy,
     discountPercent: Number(row.discount_percent),
-    customer: row.customer,
-    items: row.items,
-    baseSubtotal: Number(row.base_subtotal),
-    pricingDiscountAmount: Number(row.pricing_discount_amount),
-    commercialSubtotal: Number(row.commercial_subtotal ?? row.subtotal),
+    customer: usesAdminManagement ? row.management_customer ?? row.customer : row.customer,
+    items: usesAdminManagement ? row.management_items ?? row.items : row.items,
+    baseSubtotal: usesAdminManagement
+      ? Number(row.management_items_subtotal)
+      : Number(row.base_subtotal),
+    pricingDiscountAmount: usesAdminManagement
+      ? Number(row.management_discount_amount ?? 0)
+      : Number(row.pricing_discount_amount),
+    commercialSubtotal: usesAdminManagement
+      ? Number(row.management_items_subtotal)
+      : Number(row.commercial_subtotal ?? row.subtotal),
     promotionId: row.promotion_id ?? undefined,
     couponCode: row.coupon_code ?? undefined,
     couponDiscountType: row.coupon_discount_type ?? undefined,
     couponDiscountValue: row.coupon_discount_value === null ? undefined : Number(row.coupon_discount_value),
     couponDiscountAmount: Number(row.coupon_discount_amount ?? 0),
     couponStackable: row.coupon_stackable ?? undefined,
-    subtotal: Number(row.subtotal),
-    deliveryCost: Number(row.delivery_cost),
-    total: Number(row.total),
+    subtotal: usesAdminManagement ? Number(row.management_subtotal) : Number(row.subtotal),
+    deliveryCost: usesAdminManagement
+      ? Number(row.management_delivery_cost)
+      : Number(row.delivery_cost),
+    total: usesAdminManagement ? Number(row.management_total) : Number(row.total),
     currency: row.currency,
-    deliveryMethod: row.delivery_method,
-    deliveryAddress: row.delivery_address ?? undefined,
+    deliveryMethod: usesAdminManagement
+      ? row.management_delivery_method ?? row.delivery_method
+      : row.delivery_method,
+    deliveryAddress: (usesAdminManagement
+      ? row.management_delivery_address
+      : row.delivery_address) ?? undefined,
     deliveryCostMode: row.delivery_cost_mode,
     orderStatus: row.order_status,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method,
     checkoutSessionId: row.checkout_session_id,
     idempotencyKey: row.idempotency_key,
+    orderSource: row.order_source ?? "storefront",
     paymentPreferenceId: row.payment_preference_id ?? undefined,
     paymentCheckoutUrl: row.payment_checkout_url ?? undefined,
     paymentProviderId: row.payment_provider_id ?? undefined,
@@ -242,6 +267,7 @@ export class SupabaseOrderStore implements RuniaOrderStore {
       payment_method: record.paymentMethod,
       checkout_session_id: record.checkoutSessionId,
       idempotency_key: record.idempotencyKey,
+      order_source: record.orderSource ?? "storefront",
     };
     const response = await this.request(record.promotionId
       ? "rpc/lombardo_create_order_with_promotion"

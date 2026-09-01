@@ -241,8 +241,14 @@ export function AdminOrderForm({
             {lines.map((line) => (
               <div className={styles.managementLine} key={line.productId} data-override={Math.abs(line.catalogUnitPrice - line.unitPrice) >= 0.01}>
                 <span><strong>{line.name}</strong><small>{line.sku} · Lista {formatCurrency(line.catalogUnitPrice)}</small></span>
-                <input aria-label={`Cantidad de ${line.name}`} min={1} max={999} type="number" value={line.quantity} onChange={(event) => setLines((current) => current.map((item) => item.productId === line.productId ? { ...item, quantity: Math.min(Math.max(Number(event.target.value) || 1, 1), 999) } : item))} />
-                <input aria-label={`Precio de ${line.name}`} min={0.01} max={1_000_000_000} step={0.01} type="number" value={line.unitPrice} onChange={(event) => setLines((current) => current.map((item) => item.productId === line.productId ? { ...item, unitPrice: Math.max(Number(event.target.value) || 0, 0) } : item))} />
+                <input aria-label={`Cantidad de ${line.name}`} min={1} max={999} type="number" value={line.quantity} onChange={(event) => {
+                  const quantity = Math.min(Math.max(Number(event.target.value) || 1, 1), 999);
+                  setLines((current) => current.map((item) => item.productId === line.productId ? { ...item, quantity } : item));
+                }} />
+                <input aria-label={`Precio de ${line.name}`} min={0.01} max={1_000_000_000} step={0.01} type="number" value={line.unitPrice} onChange={(event) => {
+                  const unitPrice = Math.max(Number(event.target.value) || 0, 0);
+                  setLines((current) => current.map((item) => item.productId === line.productId ? { ...item, unitPrice } : item));
+                }} />
                 <strong>{formatCurrency(rounded(line.unitPrice * line.quantity))}</strong>
                 <button aria-label={`Quitar ${line.name}`} type="button" onClick={() => setLines((current) => current.filter((item) => item.productId !== line.productId))}>QUITAR</button>
               </div>

@@ -21,6 +21,13 @@ import {
 import { parseCreateOrderInput } from "@/lib/server/orders/order-input";
 import { ServerOrderError } from "@/lib/server/orders/server-order-error";
 import {
+  AdminAssistedOrderError,
+  adminAssistedManagementMatches,
+  buildAdminAssistedManagement,
+  hasAdminManualPrices,
+  parseAdminAssistedOrderItems,
+} from "@/lib/server/orders/admin-assisted-order";
+import {
   createCustomerWithInvite,
   updateCustomer,
 } from "@/lib/server/customers/customer-admin";
@@ -798,12 +805,12 @@ export async function createAdminOrderAction(
   _previousState: AdminCreateOrderState,
   formData: FormData,
 ): Promise<AdminCreateOrderState> {
-  await requireAdminSession();
-
   try {
+    const session = await requireAdminRole("admin");
     const customerId = formText(formData, "customerId", 36);
     const rawItems = formRaw(formData, "items", 24_000);
     const parsedItems = JSON.parse(rawItems || "[]") as unknown;
+    const submittedItems = parseAdminAssistedOrderItems(parsedItems);
     const store = createAdminStore();
     const orderContext = customerId === "guest"
       ? null
@@ -839,6 +846,13 @@ export async function createAdminOrderAction(
       },
       couponCode: formText(formData, "couponCode", 40) || undefined,
     });
+    input.orderSource = "admin_manual";
+    const manualPricesRequested = hasAdminManualPrices(submittedItems);
+    if (input.couponCode && manualPricesRequested) {
+      throw new AdminAssistedOrderError(
+        "El precio manual no se combina con un cupón.",
+      );
+    }
     if (existingCustomer) {
       input.customer = {
         firstName: existingCustomer.name,
@@ -852,10 +866,35 @@ export async function createAdminOrderAction(
       await store.getGuestOrderPricingContext();
     const { orders } = createOrderServices(pricingContext);
     const result = await orders.createOrder(input);
-    const order = await orders.savePaymentMethod(
+    let order = await orders.savePaymentMethod(
       result.order.id,
       "whatsapp_coordination",
     );
+    if (manualPricesRequested) {
+      const current = await store.getOrder(order.publicId);
+      if (!current) {
+        throw new AdminStoreError("No pudimos recuperar el pedido creado.", 502);
+      }
+      if (!adminAssistedManagementMatches(current.items, submittedItems)) {
+        const management = buildAdminAssistedManagement(
+          order,
+          submittedItems,
+          formText(formData, "manualPriceReason", 500),
+        );
+        if (!management) {
+          throw new AdminAssistedOrderError(
+            "No pudimos aplicar el precio manual.",
+          );
+        }
+        await store.updateOrderManagement(
+          current.id,
+          current.managementRevision,
+          management,
+          session.authUserId,
+        );
+      }
+      order = await orders.getById(order.id) ?? order;
+    }
 
     if (!result.reused) {
       const notifiers = [
@@ -870,14 +909,18 @@ export async function createAdminOrderAction(
     if (customerId !== "guest") revalidatePath(`/admin/clientes/${customerId}`);
     return {
       status: "success",
-      message: "Pedido creado con los precios vigentes de la cuenta.",
+      message: manualPricesRequested
+        ? "Pedido creado con el precio manual auditado."
+        : "Pedido creado con los precios vigentes de la cuenta.",
       publicId: order.publicId,
     };
   } catch (error) {
     return {
       status: "error",
       message:
-        error instanceof AdminStoreError || error instanceof ServerOrderError
+        error instanceof AdminAssistedOrderError ||
+        error instanceof AdminStoreError ||
+        error instanceof ServerOrderError
           ? error.message
           : "No pudimos crear el pedido. Revisá los datos e intentá nuevamente.",
     };
