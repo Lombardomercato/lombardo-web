@@ -41,6 +41,8 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
   PICKUP: "RETIRO",
   DELIVERY: "ENVÍO",
+  DELIVERY_ROSARIO: "ENVÍO A ROSARIO",
+  DELIVERY_SOUTH: "ENVÍO A PUEBLO ESTHER, LAGOS O ALVEAR",
 };
 
 export const ELIGIBILITY_LABELS: Record<

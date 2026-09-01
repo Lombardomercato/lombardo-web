@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminOrderRow } from "@/components/admin/AdminOrderRow";
 import { DELIVERY_LABELS, FULFILLMENT_LABELS, PAYMENT_LABELS } from "@/lib/admin/presentation";
 import { loadAdminOrders } from "@/lib/server/admin/admin-data";
+import { requireAdminSession } from "@/lib/server/admin/admin-auth";
 import type { AdminOrderFilters, FulfillmentStatus } from "@/lib/server/admin/types";
 import type { DeliveryMethod, PaymentStatus } from "@/types/checkout";
 import styles from "../../admin.module.css";
@@ -44,7 +45,10 @@ export default async function AdminOrdersPage({
       : undefined,
     search: queryValue(query, "buscar"),
   };
-  const orders = await loadAdminOrders(filters);
+  const [orders, session] = await Promise.all([
+    loadAdminOrders(filters),
+    requireAdminSession(),
+  ]);
 
   return (
     <>
@@ -55,9 +59,11 @@ export default async function AdminOrdersPage({
         </div>
         <div className={styles.headerActions}>
           <p>{orders.length} pedidos en esta vista.</p>
-          <Link className={styles.primaryLink} href="/admin/pedidos/nuevo">
-            NUEVO PEDIDO →
-          </Link>
+          {session.role === "admin" ? (
+            <Link className={styles.primaryLink} href="/admin/pedidos/nuevo">
+              NUEVO PEDIDO →
+            </Link>
+          ) : null}
         </div>
       </header>
 

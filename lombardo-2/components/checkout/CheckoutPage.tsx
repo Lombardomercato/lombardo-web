@@ -9,6 +9,7 @@ import {
   useRef,
   type FormEvent,
   type InputHTMLAttributes,
+  type SelectHTMLAttributes,
 } from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { trackCommerceEvent } from "@/lib/analytics/commerce-events";
@@ -23,20 +24,25 @@ import {
 import { ApiOrderRepository } from "@/lib/checkout/api-order-repository";
 import { OrderRepositoryError } from "@/lib/checkout/order-repository";
 import {
-  CHECKOUT_CONFIG,
-  getDeliveryQuote,
-} from "@/lib/config/checkout";
+  DELIVERY_COORDINATION_NOTICE,
+  defaultDeliveryCity,
+  deliveryCities,
+  deliveryMethodLabel,
+  isActiveDeliveryMethod,
+  requiresDeliveryAddress,
+  type ActiveDeliveryMethod,
+} from "@/lib/checkout/delivery-methods";
+import { getDeliveryQuote } from "@/lib/config/checkout";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import type {
   CreateOrderInput,
   CreateOrderResult,
-  DeliveryMethod,
   OrderDraft,
 } from "@/types/checkout";
 import styles from "./CheckoutPage.module.css";
 
 const SESSION_STORAGE_KEY = "lombardo-checkout-session-v1";
-const SESSION_STORAGE_VERSION = 3;
+const SESSION_STORAGE_VERSION = 4;
 
 export interface CheckoutCustomerDefaults {
   name: string;
@@ -82,7 +88,7 @@ type CheckoutAction =
       field: keyof CheckoutFormValues["deliveryAddress"];
       value: string;
     }
-  | { type: "set-delivery-method"; method: DeliveryMethod }
+  | { type: "set-delivery-method"; method: ActiveDeliveryMethod }
   | { type: "validation-error"; errors: CheckoutErrors }
   | { type: "submitting" }
   | { type: "retrying-payment" }
@@ -188,13 +194,17 @@ function checkoutReducer(
     case "set-delivery-method":
       return {
         ...state,
-        form: { ...state.form, deliveryMethod: action.method },
+        form: {
+          ...state.form,
+          deliveryMethod: action.method,
+          deliveryAddress: {
+            ...state.form.deliveryAddress,
+            city: defaultDeliveryCity(action.method),
+          },
+        },
         errors: {},
         repositoryError: "",
-        announcement:
-          action.method === "PICKUP"
-            ? "Seleccionaste retiro en Lombardo."
-            : "Seleccionaste envío en Rosario.",
+        announcement: `Seleccionaste ${deliveryMethodLabel(action.method).toLocaleLowerCase("es-AR")}.`,
       };
     case "validation-error":
       return {
@@ -355,6 +365,49 @@ function CheckoutField({
   );
 }
 
+interface CheckoutSelectProps
+  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "id" | "name"> {
+  name: CheckoutFieldName;
+  label: string;
+  error?: string;
+  options: readonly string[];
+}
+
+function CheckoutSelect({
+  name,
+  label,
+  error,
+  options,
+  ...selectProps
+}: CheckoutSelectProps) {
+  const inputId = `checkout-${name}`;
+  const errorId = `${inputId}-error`;
+
+  return (
+    <div className={styles.field}>
+      <label htmlFor={inputId}>{label}</label>
+      <select
+        {...selectProps}
+        id={inputId}
+        name={name}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      {error ? (
+        <p className={styles.fieldError} id={errorId}>
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function OrderPrepared({
   order,
   paymentError,
@@ -376,10 +429,7 @@ function OrderPrepared({
   onCoordinateWhatsApp: () => void;
   onFinalizeWhatsApp: () => void;
 }) {
-  const deliveryLabel =
-    order.deliveryMethod === "PICKUP"
-      ? "Retiro en Lombardo"
-      : "Envío en Rosario";
+  const deliveryLabel = deliveryMethodLabel(order.deliveryMethod);
   const deliveryPending = order.deliveryCostMode === "TO_BE_CONFIRMED";
   const whatsappSelected = order.paymentMethod === "whatsapp_coordination";
 
@@ -716,8 +766,15 @@ export function CheckoutPage({
     persistForm(form);
   };
 
-  const setDeliveryMethod = (method: DeliveryMethod) => {
-    const form = { ...state.form, deliveryMethod: method };
+  const setDeliveryMethod = (method: ActiveDeliveryMethod) => {
+    const form = {
+      ...state.form,
+      deliveryMethod: method,
+      deliveryAddress: {
+        ...state.form.deliveryAddress,
+        city: defaultDeliveryCity(method),
+      },
+    };
     dispatch({ type: "set-delivery-method", method });
     persistForm(form);
     trackCommerceEvent({ name: "add_shipping_info", method });
@@ -750,7 +807,9 @@ export function CheckoutPage({
     customer: form.customer,
     deliveryMethod: form.deliveryMethod,
     deliveryAddress:
-      form.deliveryMethod === "DELIVERY" ? form.deliveryAddress : undefined,
+      requiresDeliveryAddress(form.deliveryMethod)
+        ? form.deliveryAddress
+        : undefined,
     couponCode: appliedPromotion?.code,
   });
 
@@ -1008,8 +1067,8 @@ export function CheckoutPage({
             <div className={styles.sectionHeading}>
               <span>02</span>
               <div>
-                <p>CÓMO LO RECIBÍS</p>
-                <h2 id="delivery-title">Elegí lo más cómodo.</h2>
+                <p>DÓNDE LO RECIBÍS</p>
+                <h2 id="delivery-title">Elegí tu zona de envío.</h2>
               </div>
             </div>
 
@@ -1019,101 +1078,107 @@ export function CheckoutPage({
                 <input
                   type="radio"
                   name="deliveryMethod"
-                  value="PICKUP"
-                  checked={state.form.deliveryMethod === "PICKUP"}
-                  onChange={() => setDeliveryMethod("PICKUP")}
+                  value="DELIVERY_ROSARIO"
+                  checked={state.form.deliveryMethod === "DELIVERY_ROSARIO"}
+                  onChange={() => setDeliveryMethod("DELIVERY_ROSARIO")}
                 />
-                <span>RETIRO</span>
-                <strong>Retiro en Lombardo</strong>
+                <span>ENVÍO</span>
+                <strong>A Rosario</strong>
               </label>
               <label>
                 <input
                   type="radio"
                   name="deliveryMethod"
-                  value="DELIVERY"
-                  checked={state.form.deliveryMethod === "DELIVERY"}
-                  onChange={() => setDeliveryMethod("DELIVERY")}
+                  value="DELIVERY_SOUTH"
+                  checked={state.form.deliveryMethod === "DELIVERY_SOUTH"}
+                  onChange={() => setDeliveryMethod("DELIVERY_SOUTH")}
                 />
                 <span>ENVÍO</span>
-                <strong>En Rosario</strong>
+                <strong>A Pueblo Esther, Lagos o Alvear</strong>
               </label>
             </fieldset>
 
-            {state.form.deliveryMethod === "PICKUP" ? (
-              <div className={styles.pickupDetails} aria-live="polite">
-                <div>
-                  <span>DIRECCIÓN</span>
-                  <strong>{CHECKOUT_CONFIG.pickup.address}</strong>
+            {isActiveDeliveryMethod(state.form.deliveryMethod) ? (
+              <>
+                <p className={styles.deliveryCoordinationNotice}>
+                  * {DELIVERY_COORDINATION_NOTICE}
+                </p>
+                <div className={styles.addressFields} aria-live="polite">
+                  <CheckoutField
+                    name="street"
+                    label="Calle"
+                    value={state.form.deliveryAddress.street}
+                    onChange={(event) =>
+                      updateAddress("street", event.target.value)
+                    }
+                    error={state.errors.street}
+                    autoComplete="address-line1"
+                  />
+                  <CheckoutField
+                    name="number"
+                    label="Número"
+                    inputMode="numeric"
+                    value={state.form.deliveryAddress.number}
+                    onChange={(event) =>
+                      updateAddress("number", event.target.value)
+                    }
+                    error={state.errors.number}
+                    autoComplete="off"
+                  />
+                  <CheckoutField
+                    name="floorApartment"
+                    label="Piso / depto"
+                    optional
+                    value={state.form.deliveryAddress.floorApartment ?? ""}
+                    onChange={(event) =>
+                      updateAddress("floorApartment", event.target.value)
+                    }
+                    autoComplete="address-line2"
+                  />
+                  <CheckoutSelect
+                    name="city"
+                    label="Localidad"
+                    value={state.form.deliveryAddress.city}
+                    onChange={(event) =>
+                      updateAddress("city", event.target.value)
+                    }
+                    error={state.errors.city}
+                    options={deliveryCities(state.form.deliveryMethod)}
+                    autoComplete="address-level2"
+                  />
+                  <CheckoutField
+                    name="province"
+                    label="Provincia"
+                    value={state.form.deliveryAddress.province}
+                    onChange={(event) =>
+                      updateAddress("province", event.target.value)
+                    }
+                    error={state.errors.province}
+                    autoComplete="address-level1"
+                  />
+                  <CheckoutField
+                    name="postalCode"
+                    label="Código postal"
+                    optional
+                    value={state.form.deliveryAddress.postalCode ?? ""}
+                    onChange={(event) =>
+                      updateAddress("postalCode", event.target.value)
+                    }
+                    autoComplete="postal-code"
+                  />
+                  <CheckoutField
+                    name="references"
+                    label="Referencias"
+                    optional
+                    value={state.form.deliveryAddress.references ?? ""}
+                    onChange={(event) =>
+                      updateAddress("references", event.target.value)
+                    }
+                    autoComplete="off"
+                  />
                 </div>
-                <div>
-                  <span>HORARIO</span>
-                  <strong>{CHECKOUT_CONFIG.pickup.hours}</strong>
-                </div>
-                <p>{CHECKOUT_CONFIG.pickup.notice}</p>
-              </div>
-            ) : (
-              <div className={styles.addressFields} aria-live="polite">
-                <CheckoutField
-                  name="street"
-                  label="Calle"
-                  value={state.form.deliveryAddress.street}
-                  onChange={(event) => updateAddress("street", event.target.value)}
-                  error={state.errors.street}
-                  autoComplete="address-line1"
-                />
-                <CheckoutField
-                  name="number"
-                  label="Número"
-                  inputMode="numeric"
-                  value={state.form.deliveryAddress.number}
-                  onChange={(event) => updateAddress("number", event.target.value)}
-                  error={state.errors.number}
-                  autoComplete="off"
-                />
-                <CheckoutField
-                  name="floorApartment"
-                  label="Piso / depto"
-                  optional
-                  value={state.form.deliveryAddress.floorApartment ?? ""}
-                  onChange={(event) =>
-                    updateAddress("floorApartment", event.target.value)
-                  }
-                  autoComplete="address-line2"
-                />
-                <CheckoutField
-                  name="city"
-                  label="Ciudad"
-                  value={state.form.deliveryAddress.city}
-                  onChange={(event) => updateAddress("city", event.target.value)}
-                  error={state.errors.city}
-                  autoComplete="address-level2"
-                />
-                <CheckoutField
-                  name="province"
-                  label="Provincia"
-                  value={state.form.deliveryAddress.province}
-                  onChange={(event) => updateAddress("province", event.target.value)}
-                  error={state.errors.province}
-                  autoComplete="address-level1"
-                />
-                <CheckoutField
-                  name="postalCode"
-                  label="Código postal"
-                  optional
-                  value={state.form.deliveryAddress.postalCode ?? ""}
-                  onChange={(event) => updateAddress("postalCode", event.target.value)}
-                  autoComplete="postal-code"
-                />
-                <CheckoutField
-                  name="references"
-                  label="Referencias"
-                  optional
-                  value={state.form.deliveryAddress.references ?? ""}
-                  onChange={(event) => updateAddress("references", event.target.value)}
-                  autoComplete="off"
-                />
-              </div>
-            )}
+              </>
+            ) : null}
           </section>
         </div>
 

@@ -2,8 +2,11 @@ import type {
   CheckoutCustomer,
   CreateOrderInput,
   DeliveryAddress,
-  DeliveryMethod,
 } from "../../../types/checkout.ts";
+import {
+  isActiveDeliveryMethod,
+  isDeliveryCityAllowed,
+} from "../../checkout/delivery-methods.ts";
 import { ServerOrderError } from "./server-order-error.ts";
 
 const identifierPattern = /^[a-zA-Z0-9_-]{16,160}$/;
@@ -138,8 +141,13 @@ export function parseCreateOrderInput(value: unknown): CreateOrderInput {
   });
 
   const deliveryMethod = value.deliveryMethod;
-  if (deliveryMethod !== "PICKUP" && deliveryMethod !== "DELIVERY") {
-    invalidRequest("Elegí retiro o envío.");
+  if (!isActiveDeliveryMethod(deliveryMethod)) {
+    invalidRequest("Elegí una zona de envío disponible.");
+  }
+
+  const deliveryAddress = parseDeliveryAddress(value.deliveryAddress);
+  if (!isDeliveryCityAllowed(deliveryMethod, deliveryAddress.city)) {
+    invalidRequest("La localidad no corresponde a la zona de envío elegida.");
   }
 
   const couponCode = optionalString(value, "couponCode", 40);
@@ -152,11 +160,8 @@ export function parseCreateOrderInput(value: unknown): CreateOrderInput {
     idempotencyKey,
     items,
     customer: parseCustomer(value.customer),
-    deliveryMethod: deliveryMethod as DeliveryMethod,
-    deliveryAddress:
-      deliveryMethod === "DELIVERY"
-        ? parseDeliveryAddress(value.deliveryAddress)
-        : undefined,
+    deliveryMethod,
+    deliveryAddress,
     couponCode: couponCode?.toLocaleUpperCase("en-US"),
   };
 }

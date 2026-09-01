@@ -12,6 +12,11 @@ import {
   createAdminOrderAction,
   type AdminCreateOrderState,
 } from "@/app/admin/actions";
+import {
+  defaultDeliveryCity,
+  deliveryCities,
+  type ActiveDeliveryMethod,
+} from "@/lib/checkout/delivery-methods";
 import type { AdminCustomer } from "@/lib/server/admin/types";
 import type {
   QuickOrderProduct,
@@ -76,7 +81,8 @@ export function AdminOrderCreateForm({
     initialActionState,
   );
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? "guest");
-  const [deliveryMethod, setDeliveryMethod] = useState<"PICKUP" | "DELIVERY">("PICKUP");
+  const [deliveryMethod, setDeliveryMethod] = useState<ActiveDeliveryMethod>("DELIVERY_ROSARIO");
+  const [deliveryCity, setDeliveryCity] = useState(defaultDeliveryCity("DELIVERY_ROSARIO"));
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim(), 180);
   const [results, setResults] = useState<QuickOrderProduct[]>([]);
@@ -309,21 +315,35 @@ export function AdminOrderCreateForm({
             <p>El pedido quedará con pago pendiente para coordinar desde Admin.</p>
           </div>
         </div>
-        <div className={styles.deliveryChoice}>
-          <label><input type="radio" name="deliveryMethod" value="PICKUP" checked={deliveryMethod === "PICKUP"} onChange={() => setDeliveryMethod("PICKUP")} /> RETIRO</label>
-          <label><input type="radio" name="deliveryMethod" value="DELIVERY" checked={deliveryMethod === "DELIVERY"} onChange={() => setDeliveryMethod("DELIVERY")} /> ENVÍO</label>
+        <label className={styles.field}>
+          <span>ZONA DE ENTREGA</span>
+          <select
+            name="deliveryMethod"
+            value={deliveryMethod}
+            onChange={(event) => {
+              const method = event.currentTarget.value as ActiveDeliveryMethod;
+              setDeliveryMethod(method);
+              setDeliveryCity(defaultDeliveryCity(method));
+            }}
+          >
+            <option value="DELIVERY_ROSARIO">ROSARIO</option>
+            <option value="DELIVERY_SOUTH">PUEBLO ESTHER, LAGOS O ALVEAR</option>
+          </select>
+        </label>
+        <div className={styles.addressGrid}>
+          <label className={styles.field}><span>CALLE</span><input name="street" required /></label>
+          <label className={styles.field}><span>NÚMERO</span><input name="number" required /></label>
+          <label className={styles.field}><span>PISO / DEPTO.</span><input name="floorApartment" /></label>
+          <label className={styles.field}>
+            <span>CIUDAD</span>
+            <select name="city" value={deliveryCity} onChange={(event) => setDeliveryCity(event.currentTarget.value)}>
+              {deliveryCities(deliveryMethod).map((city) => <option key={city} value={city}>{city}</option>)}
+            </select>
+          </label>
+          <label className={styles.field}><span>PROVINCIA</span><input name="province" defaultValue="Santa Fe" required /></label>
+          <label className={styles.field}><span>CÓDIGO POSTAL</span><input name="postalCode" /></label>
+          <label className={`${styles.field} ${styles.wideField}`}><span>REFERENCIAS</span><input name="references" /></label>
         </div>
-        {deliveryMethod === "DELIVERY" ? (
-          <div className={styles.addressGrid}>
-            <label className={styles.field}><span>CALLE</span><input name="street" required /></label>
-            <label className={styles.field}><span>NÚMERO</span><input name="number" required /></label>
-            <label className={styles.field}><span>PISO / DEPTO.</span><input name="floorApartment" /></label>
-            <label className={styles.field}><span>CIUDAD</span><input name="city" defaultValue="Rosario" required /></label>
-            <label className={styles.field}><span>PROVINCIA</span><input name="province" defaultValue="Santa Fe" required /></label>
-            <label className={styles.field}><span>CÓDIGO POSTAL</span><input name="postalCode" /></label>
-            <label className={`${styles.field} ${styles.wideField}`}><span>REFERENCIAS</span><input name="references" /></label>
-          </div>
-        ) : null}
         <label className={styles.field}>
           <span>CUPÓN (OPCIONAL)</span>
           <input name="couponCode" maxLength={40} />

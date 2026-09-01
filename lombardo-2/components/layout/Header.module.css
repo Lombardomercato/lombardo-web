@@ -75,10 +75,10 @@
 
 .trademark {
   flex: 0 0 auto;
-  font-size: 0.38em;
+  font-size: 0.2em;
   line-height: 1;
   letter-spacing: 0;
-  transform: translateY(-0.75em);
+  transform: translateY(-1.35em);
 }
 
 .desktopNav {

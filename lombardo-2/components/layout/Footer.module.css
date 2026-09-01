@@ -6,57 +6,150 @@
 
 .inner {
   width: min(100%, var(--content-max));
-  min-height: 20rem;
   margin-inline: auto;
-  padding: clamp(3rem, 7vw, 6rem) var(--page-gutter) var(--space-5);
+  padding: clamp(2rem, 3.5vw, 3rem) var(--page-gutter) 1rem;
+}
+
+.mainRow {
   display: grid;
-  grid-template-columns: 1.4fr 0.6fr 1fr;
+  grid-template-columns: minmax(12rem, 1.15fr) auto auto minmax(10rem, 0.75fr);
   align-items: start;
-  gap: var(--space-6);
+  gap: clamp(2rem, 5vw, 5rem);
 }
 
 .brandBlock {
   display: grid;
-  gap: var(--space-3);
-  font-size: var(--step-0);
+  gap: 0.55rem;
+  color: rgba(255, 253, 249, 0.7);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
 }
 
 .brand {
+  position: relative;
+  width: fit-content;
+  color: var(--neutral-paper);
   font-family: var(--font-display);
-  font-size: var(--step-3);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
   font-weight: 700;
   line-height: 0.9;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
 }
 
-.contactBlock {
-  display: grid;
-  gap: var(--space-3);
-  font-size: var(--step-0);
+.trademark {
+  position: absolute;
+  top: -0.22rem;
+  right: -0.48rem;
+  font-family: var(--font-body);
+  font-size: clamp(0.22rem, 0.28vw, 0.3rem);
   font-weight: 700;
+  letter-spacing: 0;
 }
 
-.contactBlock a {
+.siteLinks,
+.socialLinks {
+  display: grid;
+  align-content: start;
+  gap: 0.68rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.siteLinks a,
+.socialLinks a,
+.disabledLink {
   width: fit-content;
-  min-height: 2.75rem;
+  min-height: 1.35rem;
   display: inline-flex;
   align-items: center;
-  border-bottom: 1px solid currentColor;
+  gap: 0.45rem;
+  color: rgba(255, 253, 249, 0.82);
+  transition: color 160ms ease, opacity 160ms ease;
 }
 
-.contactBlock span {
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  color: rgba(255, 253, 249, 0.65);
+.siteLinks a:hover,
+.socialLinks a:hover {
+  color: var(--neutral-paper);
+}
+
+.siteLinks a:focus-visible,
+.socialLinks a:focus-visible,
+.legalRow a:focus-visible,
+.brand:focus-visible {
+  outline: 1px solid var(--lombardo-green);
+  outline-offset: 4px;
+}
+
+.socialLinks svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.socialLinks svg path {
+  fill: currentColor;
+}
+
+.socialLinks svg rect,
+.socialLinks svg circle:not(.iconDot) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+}
+
+.socialLinks svg .iconDot {
+  fill: currentColor;
+  stroke: none;
+}
+
+.disabledLink {
+  color: rgba(255, 253, 249, 0.4);
 }
 
 .note {
   justify-self: end;
-  align-self: end;
-  max-width: 14rem;
-  font-size: var(--step-0);
-  line-height: 1.35;
+  max-width: 12rem;
+  color: rgba(255, 253, 249, 0.72);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.legalRow {
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 253, 249, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.55rem;
+  line-height: 1.4;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.legalRow a {
+  color: rgba(255, 253, 249, 0.78);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 253, 249, 0.35);
+  text-underline-offset: 0.2rem;
+}
+
+@media (max-width: 63.99rem) {
+  .mainRow {
+    grid-template-columns: minmax(11rem, 1fr) auto auto;
+    gap: 2.5rem;
+  }
+
+  .note {
+    grid-column: 1 / -1;
+    justify-self: start;
+    max-width: none;
+    font-size: 0.62rem;
+  }
 }
 
 @media (max-width: 47.99rem) {
@@ -65,18 +158,35 @@
   }
 
   .inner {
-    min-height: 26rem;
-    grid-template-columns: 1fr;
-    gap: var(--space-5);
+    padding-block: 1.75rem 0.9rem;
   }
 
-  .contactBlock {
-    padding-top: var(--space-4);
-    border-top: 1px solid rgba(255, 253, 249, 0.32);
+  .mainRow {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.6rem 1rem;
   }
 
-  .note {
-    justify-self: start;
-    align-self: end;
+  .brandBlock {
+    grid-column: 1 / -1;
+  }
+
+  .siteLinks,
+  .socialLinks {
+    gap: 0.58rem;
+  }
+
+  .legalRow {
+    margin-top: 1.5rem;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .siteLinks a,
+  .socialLinks a {
+    transition: none;
   }
 }

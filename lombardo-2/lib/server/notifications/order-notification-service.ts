@@ -10,6 +10,7 @@ import type {
   WhatsAppOrderProvider,
 } from "./types.ts";
 import { OrderNotificationProviderError } from "./provider-error.ts";
+import { deliveryMethodLabel } from "../../checkout/delivery-methods.ts";
 
 interface OrderNotificationServiceOptions {
   store: OrderNotificationStore;
@@ -27,7 +28,7 @@ function customerName(order: OrderDraft) {
 }
 
 function deliveryLabel(order: OrderDraft) {
-  return order.deliveryMethod === "PICKUP" ? "Retiro en Lombardo" : "Envío";
+  return deliveryMethodLabel(order.deliveryMethod);
 }
 
 function paymentLabel(order: OrderDraft) {

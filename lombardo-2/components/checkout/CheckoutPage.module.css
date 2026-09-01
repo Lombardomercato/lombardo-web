@@ -154,7 +154,8 @@
   font-size: 0.56rem;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-height: 3.6rem;
   padding: 0.6rem 0;
@@ -170,16 +171,31 @@
   letter-spacing: -0.025em;
 }
 
+.field select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentcolor 50%),
+    linear-gradient(135deg, currentcolor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) 52%,
+    calc(100% - 0.7rem) 52%;
+  background-repeat: no-repeat;
+  background-size: 0.3rem 0.3rem, 0.3rem 0.3rem;
+  padding-right: 2rem;
+}
+
 .field input::placeholder {
   color: rgba(0, 58, 112, 0.3);
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   border-bottom-width: 2px;
   border-color: var(--lombardo-red);
 }
 
-.field input[aria-invalid="true"] {
+.field input[aria-invalid="true"],
+.field select[aria-invalid="true"] {
   border-color: var(--lombardo-red);
 }
 
@@ -245,37 +261,14 @@
   line-height: 0.9;
 }
 
-.pickupDetails {
-  padding: 1.5rem;
-  background: var(--lombardo-blue);
-  color: var(--neutral-paper);
-}
-
-.pickupDetails > div {
-  min-height: 3.5rem;
-  display: grid;
-  grid-template-columns: 7rem 1fr;
-  align-items: center;
-  gap: 1rem;
-  border-bottom: 1px solid rgba(255, 253, 249, 0.28);
-}
-
-.pickupDetails span {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.pickupDetails strong {
-  text-align: right;
-  font-size: 0.82rem;
-}
-
-.pickupDetails > p {
+.deliveryCoordinationNotice {
   margin-top: 1.25rem;
-  font-family: var(--font-display);
-  font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+  padding: 1rem 1.25rem;
+  background: var(--lombardo-pink);
+  color: var(--lombardo-blue);
+  font-size: 0.8rem;
   font-weight: 700;
+  line-height: 1.35;
 }
 
 .addressFields {

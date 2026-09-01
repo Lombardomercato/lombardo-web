@@ -1,10 +1,12 @@
+import type { DeliveryMethod } from "@/types/checkout";
+
 export type CommerceEvent =
   | { name: "view_item"; productId: string }
   | { name: "add_to_cart"; productId: string; quantity: number }
   | { name: "remove_from_cart"; productId: string; quantity: number }
   | { name: "view_cart"; itemCount: number; subtotal: number }
   | { name: "begin_checkout"; itemCount: number; subtotal: number }
-  | { name: "add_shipping_info"; method: "PICKUP" | "DELIVERY" }
+  | { name: "add_shipping_info"; method: DeliveryMethod }
   | { name: "purchase"; orderId: string; total: number; currency: "ARS" }
   | { name: "opportunity_view"; productId: string; surface: "home" | "opportunities" | "product" }
   | { name: "opportunity_product_click"; productId: string; surface: "home" | "opportunities" }

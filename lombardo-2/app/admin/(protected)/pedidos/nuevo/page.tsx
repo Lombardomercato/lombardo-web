@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 
 import { AdminOrderCreateForm } from "@/components/admin/AdminOrderCreateForm";
+import { requireAdminRole } from "@/lib/server/admin/admin-auth";
 import { loadAdminCustomers } from "@/lib/server/admin/admin-data";
 
 import styles from "../../../admin.module.css";
@@ -9,9 +10,11 @@ import styles from "../../../admin.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function NewAdminOrderPage() {
-  const customers = (await loadAdminCustomers()).filter(
-    (customer) => customer.status === "active",
-  );
+  const [, customers] = await Promise.all([
+    requireAdminRole("admin"),
+    loadAdminCustomers(),
+  ]);
+  const activeCustomers = customers.filter((customer) => customer.status === "active");
 
   return (
     <>
@@ -24,7 +27,7 @@ export default async function NewAdminOrderPage() {
       </header>
 
       <AdminOrderCreateForm
-        customers={customers.map((customer) => ({
+        customers={activeCustomers.map((customer) => ({
           id: customer.id,
           name: customer.name,
           email: customer.email,

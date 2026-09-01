@@ -11,6 +11,7 @@ import {
   PAYMENT_METHOD_LABELS,
 } from "@/lib/admin/presentation";
 import { loadAdminOrder } from "@/lib/server/admin/admin-data";
+import { requireAdminSession } from "@/lib/server/admin/admin-auth";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import styles from "../../../admin.module.css";
 import { retryOrderNotificationAction } from "@/app/admin/actions";
@@ -92,7 +93,10 @@ export default async function AdminOrderDetailPage({
 }) {
   const [{ publicId }, query] = await Promise.all([params, searchParams]);
   if (!/^[0-9a-f-]{36}$/i.test(publicId)) notFound();
-  const order = await loadAdminOrder(publicId);
+  const [order, session] = await Promise.all([
+    loadAdminOrder(publicId),
+    requireAdminSession(),
+  ]);
   if (!order) notFound();
   const success = message(query, "success");
   const error = message(query, "error");
@@ -104,7 +108,10 @@ export default async function AdminOrderDetailPage({
           <p className={styles.eyebrow}>PEDIDO REAL</p>
           <h1>#{order.displayId}</h1>
         </div>
-        <Link className={styles.secondaryButton} href="/admin/pedidos">VOLVER A PEDIDOS</Link>
+        <div className={styles.headerActions}>
+          {session.role === "admin" ? <Link className={styles.primaryLink} href={`/admin/pedidos/${publicId}/editar`}>EDITAR PEDIDO</Link> : null}
+          <Link className={styles.secondaryButton} href="/admin/pedidos">VOLVER A PEDIDOS</Link>
+        </div>
       </header>
 
       {success ? <p className={styles.notice}>{success}</p> : null}
@@ -127,6 +134,7 @@ export default async function AdminOrderDetailPage({
               {order.baseSubtotal !== undefined ? <div className={styles.lineItem}><span>Precio base</span><span>{formatCurrency(order.baseSubtotal)}</span></div> : null}
               {order.pricingDiscountAmount ? <div className={styles.lineItem}><span>Descuento comercial</span><span>−{formatCurrency(order.pricingDiscountAmount)}</span></div> : null}
               {order.couponCode ? <div className={styles.lineItem}><span>Cupón · {order.couponCode}</span><span>−{formatCurrency(order.couponDiscountAmount ?? 0)}</span></div> : null}
+              {order.manualDiscountAmount ? <div className={styles.lineItem}><span>Descuento manual · {order.manualDiscountReason}</span><span>−{formatCurrency(order.manualDiscountAmount)}</span></div> : null}
               <div className={styles.lineItem}><span>Subtotal final</span><span>{formatCurrency(order.subtotal)}</span></div>
               <div className={styles.lineItem}><span>Entrega</span><span>{formatCurrency(order.deliveryCost)}</span></div>
               <div className={styles.totalLine}><strong>TOTAL</strong><strong>{formatCurrency(order.total)}</strong></div>
@@ -165,10 +173,13 @@ export default async function AdminOrderDetailPage({
             <div className={styles.detailField}><span className={styles.fieldLabel}>OPERATIVO</span><p><FulfillmentBadge status={order.fulfillmentStatus} /></p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>PAGO</span><p><PaymentBadge status={order.paymentStatus} /></p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>ORDER STATUS</span><p>{ORDER_STATUS_LABELS[order.orderStatus]}</p></div>
-            <div className={styles.detailField}><span className={styles.fieldLabel}>FORMA DE PAGO</span><p>{PAYMENT_METHOD_LABELS[order.paymentMethod]}</p></div>
+              <div className={styles.detailField}><span className={styles.fieldLabel}>FORMA DE PAGO</span><p>{PAYMENT_METHOD_LABELS[order.paymentMethod]}</p></div>
+              <div className={styles.detailField}><span className={styles.fieldLabel}>ORIGEN</span><p>{order.orderSource === "admin_manual" ? "PEDIDO MANUAL" : "TIENDA ONLINE"}</p></div>
+              {order.hasManagementOverride ? <div className={styles.detailField}><span className={styles.fieldLabel}>GESTIÓN</span><p>EDITADO · REV. {order.managementRevision}</p></div> : null}
             <div className={styles.detailField}><span className={styles.fieldLabel}>CREADO</span><p>{formatAdminDate(order.createdAt)}</p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>ACTUALIZADO</span><p>{formatAdminDate(order.fulfillmentUpdatedAt)}</p></div>
             {order.paymentProviderId ? <div className={styles.detailField}><span className={styles.fieldLabel}>PROVIDER PAYMENT ID</span><p>{order.paymentProviderId}</p></div> : null}
+            {order.hasManagementOverride && Math.abs(order.commerceTotal - order.total) >= 0.01 ? <div className={styles.detailField}><span className={styles.fieldLabel}>SNAPSHOT COMERCIAL</span><p>{formatCurrency(order.commerceTotal)} · INTACTO</p></div> : null}
             <NotificationStatus
               kind="new_order"
               label={`AVISO ${order.newOrderNotification
@@ -184,7 +195,8 @@ export default async function AdminOrderDetailPage({
               publicId={order.publicId}
             />
           </div>
-          <a className={styles.whatsappButton} href={customerWhatsAppUrl(order)} target="_blank" rel="noreferrer">CONTACTAR POR WHATSAPP</a>
+          {order.customer.whatsapp ? <a className={styles.whatsappButton} href={customerWhatsAppUrl(order)} target="_blank" rel="noreferrer">CONTACTAR POR WHATSAPP</a> : null}
+          {order.managementNotes ? <div className={styles.managementNote}><span className={styles.fieldLabel}>NOTAS INTERNAS</span><p>{order.managementNotes}</p></div> : null}
           <OrderActions order={order} />
         </aside>
       </div>
