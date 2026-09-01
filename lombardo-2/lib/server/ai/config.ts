@@ -8,6 +8,7 @@ interface EnvironmentSource {
 
 export interface AiSalesConfiguration {
   model: string;
+  openAiApiKey: string;
   rateLimitSecret: string;
   runia: ReturnType<typeof readRuniaConfiguration>;
 }
@@ -29,9 +30,14 @@ export function readAiSalesConfiguration(
   }
 
   const model = env.AI_SALES_MODEL?.trim() || DEFAULT_MODEL;
-  if (!/^[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9.-]*$/i.test(model)) {
+  if (!/^openai\/[a-z0-9][a-z0-9.-]*$/i.test(model)) {
     throw new Error("AI_SALES_MODEL_INVALID");
   }
 
-  return { model, rateLimitSecret, runia };
+  const openAiApiKey = env.OPENAI_API_KEY?.trim();
+  if (!openAiApiKey || openAiApiKey.length < 20 || /\s/.test(openAiApiKey)) {
+    throw new Error("OPENAI_API_KEY_INVALID");
+  }
+
+  return { model, openAiApiKey, rateLimitSecret, runia };
 }

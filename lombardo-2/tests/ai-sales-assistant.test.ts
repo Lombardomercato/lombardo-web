@@ -14,6 +14,7 @@ const validEnvironment = {
   RUNIA_SUPABASE_SECRET_KEY: "sb_secret_abcdefghijklmnopqrstuvwxyz123456",
   AI_RATE_LIMIT_SECRET: "rate_abcdefghijklmnopqrstuvwxyz1234567890",
   AI_SALES_MODEL: "openai/gpt-5-mini",
+  OPENAI_API_KEY: "sk-test-abcdefghijklmnopqrstuvwxyz1234567890",
 };
 
 test("clasifica regalos, presupuesto, oportunidades y producto conocido sin guardar el texto", () => {
@@ -28,6 +29,7 @@ test("la configuración usa Runia server-side, modelo económico y ningún MCP",
   assert.equal(configuration.runia.tenantSlug, "lombardo");
   assert.equal(configuration.runia.environment, "production");
   assert.equal(configuration.model, "openai/gpt-5-mini");
+  assert.equal(configuration.openAiApiKey, validEnvironment.OPENAI_API_KEY);
   assert.equal("mcpUrl" in configuration, false);
   assert.throws(
     () => readAiSalesConfiguration({ ...validEnvironment, AI_RATE_LIMIT_SECRET: "short" }),
@@ -36,6 +38,10 @@ test("la configuración usa Runia server-side, modelo económico y ningún MCP",
   assert.throws(
     () => readAiSalesConfiguration({ ...validEnvironment, RUNIA_TENANT_SLUG: "otro" }),
     /AI_SALES_TENANT_INVALID/,
+  );
+  assert.throws(
+    () => readAiSalesConfiguration({ ...validEnvironment, OPENAI_API_KEY: "" }),
+    /OPENAI_API_KEY_INVALID/,
   );
   const fallback = readAiSalesConfiguration({ ...validEnvironment, AI_RATE_LIMIT_SECRET: undefined });
   assert.equal(fallback.rateLimitSecret, validEnvironment.RUNIA_SUPABASE_SECRET_KEY);

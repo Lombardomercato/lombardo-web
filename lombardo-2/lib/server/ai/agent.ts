@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createOpenAI } from "@ai-sdk/openai";
 import { ToolLoopAgent, stepCountIs } from "ai";
 import type { AiAuditStore } from "./audit-store";
 import type { AiSalesConfiguration } from "./config";
@@ -12,9 +13,10 @@ export function createLombardoSalesAgent(input: {
   audit: AiAuditStore;
   chatId: string;
 }) {
+  const openai = createOpenAI({ apiKey: input.configuration.openAiApiKey });
   return new ToolLoopAgent({
     id: "lombardo-web-v1",
-    model: input.configuration.model,
+    model: openai(input.configuration.model.replace(/^openai\//, "")),
     instructions: SALES_INSTRUCTIONS,
     tools: createSalesTools(input),
     toolChoice: "auto",
