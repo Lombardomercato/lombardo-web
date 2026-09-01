@@ -46,7 +46,7 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
       Promise.all(
         categorySlugs.map((categorySlug) =>
           commerceProvider.getProductPage(
-            { categorySlug, limit: 2 },
+            { categorySlug, limit: 2, requireImage: true },
             pricingContext,
           ),
         ),
@@ -59,7 +59,9 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
       categories: daily?.categories ?? categories,
       products:
         daily?.products ??
-        pages.flatMap((page) => page.products.slice(0, 2)).slice(0, 6),
+        pages
+          .flatMap((page) => page.products.filter((product) => product.images.length > 0).slice(0, 2))
+          .slice(0, 6),
       catalogTotal: catalog.total,
     };
   } catch {

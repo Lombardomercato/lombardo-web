@@ -313,9 +313,13 @@ export class RuniaCommerceProvider
       CATALOG_MAX_PAGE_SIZE,
     ) || CATALOG_PAGE_SIZE;
     const search = this.productSearch(supplier.id, pricingContext);
-    search.set("order", "normalized_name.asc,id.asc");
+    search.set("order", "has_public_media.desc,normalized_name.asc,id.asc");
     search.set("offset", String(offset));
     search.set("limit", String(limit));
+
+    if (query.requireImage) {
+      search.set("has_public_media", "is.true");
+    }
 
     const term = sanitizedSearch(query.search);
     if (term) {

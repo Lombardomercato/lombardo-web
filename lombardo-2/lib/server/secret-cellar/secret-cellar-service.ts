@@ -88,7 +88,10 @@ export class SecretCellarService {
 
   private async loadEligibleProducts(date: string) {
     const context = retailPricingContext(this.tenantSlug);
-    const first = await commerceProvider.getProductPage({ offset: 0, limit: 48 }, context);
+    const first = await commerceProvider.getProductPage(
+      { offset: 0, limit: 48, requireImage: true },
+      context,
+    );
     const pageCount = Math.max(1, Math.ceil(first.total / 48));
     const start = Number.parseInt(
       createHash("sha256").update(`${this.tenantSlug}:${date}:catalog-window`).digest("hex").slice(0, 8),
@@ -98,7 +101,7 @@ export class SecretCellarService {
     const pages = await Promise.all(
       offsets.slice(1).map((offset) =>
         commerceProvider.getProductPage(
-          { offset, limit: 48 },
+          { offset, limit: 48, requireImage: true },
           context,
         ),
       ),

@@ -39,10 +39,12 @@ function selectDiverseProducts(input: {
   }
   const pinnedIds = new Set(input.pinned.map((pin) => pin.product.id));
   const pool = ranked(
-    input.candidates.filter((product) => !pinnedIds.has(product.id)),
+    input.candidates.filter(
+      (product) => product.images.length > 0 && !pinnedIds.has(product.id),
+    ),
     `${input.date}:home-featured`,
     (product) => product.id,
-  ).sort((left, right) => Number(right.images.length > 0) - Number(left.images.length > 0));
+  );
   const usedBrands = new Set(selected.flatMap((product) => product ? [product.brand.name] : []));
   const usedCategories = new Set(selected.flatMap((product) => product ? [product.category.slug] : []));
   const passes = [
@@ -65,13 +67,21 @@ function selectDiverseProducts(input: {
 
 async function loadFeaturedCandidates(date: string, tenantSlug: string) {
   const context = retailPricingContext(tenantSlug);
-  const first = await commerceProvider.getProductPage({ limit: 48 }, context);
+  const first = await commerceProvider.getProductPage(
+    { limit: 48, requireImage: true },
+    context,
+  );
   const pageCount = Math.max(1, Math.ceil(first.total / 48));
   const start = Number.parseInt(score(`${tenantSlug}:${date}`, "featured-window").slice(0, 8), 16) % pageCount;
   const pages = await Promise.all(
     Array.from({ length: 5 }, (_, index) => ((start + index * 7) % pageCount) * 48)
       .filter((offset) => offset !== 0)
-      .map((offset) => commerceProvider.getProductPage({ offset, limit: 48 }, context)),
+      .map((offset) =>
+        commerceProvider.getProductPage(
+          { offset, limit: 48, requireImage: true },
+          context,
+        ),
+      ),
   );
   return { products: uniqueProducts([first, ...pages].flatMap((page) => page.products)), total: first.total };
 }
@@ -88,6 +98,7 @@ async function productsForContent(entry: {
   const page = await commerceProvider.getProductPage({
     categorySlug: entry.liveRules.categorySlug,
     limit: 48,
+    requireImage: true,
   }, retailPricingContext(tenantSlug));
   return page.products.filter((product) => {
     const minimum = numericRule(entry.liveRules.minimumPrice);
@@ -149,7 +160,7 @@ export function createAutomationTasks(input: {
     const pinnedById = new Map(pinnedProducts.map((product) => [product.id, product]));
     const validPins = pins.flatMap((pin) => {
       const product = pinnedById.get(pin.productId);
-      return product ? [{ product, position: pin.position }] : [];
+      return product?.images.length ? [{ product, position: pin.position }] : [];
     });
     const selected = selectDiverseProducts({
       candidates: catalog.products,

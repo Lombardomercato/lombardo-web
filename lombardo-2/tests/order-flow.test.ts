@@ -1167,6 +1167,10 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
   assert.match(requestedUrls[1] ?? "", /\/rest\/v1\/supplier_products\?/);
   assert.match(requestedUrls[1] ?? "", /eligibility_status=eq\.safe/);
   assert.match(requestedUrls[1] ?? "", /retail_prices\.price_type=eq\.retail/);
+  assert.equal(
+    new URL(requestedUrls[1] ?? "https://invalid").searchParams.get("order"),
+    "has_public_media.desc,normalized_name.asc,id.asc",
+  );
   assert.match(requestedUrls[2] ?? "", /supplier_product_public_media/);
   assert.doesNotMatch(requestedUrls.join("\n"), /commerce_lombardo_dev_product_adapter/);
   assert.equal(page.total, 3265);
@@ -1201,6 +1205,33 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
     new URL(requestedUrls[5] ?? "https://invalid").searchParams.get("id"),
     "in.(11111111-1111-4111-8111-111111111111)",
   );
+});
+
+test("RuniaCommerceProvider puede exigir foto pública para superficies destacadas", async () => {
+  const requestedUrls: string[] = [];
+  const provider = new RuniaCommerceProvider({
+    url: runiaDevEnvironment.RUNIA_SUPABASE_URL,
+    secretKey: runiaDevEnvironment.RUNIA_SUPABASE_SECRET_KEY,
+    tenantSlug: runiaDevEnvironment.RUNIA_TENANT_SLUG,
+    fetcher: async (url) => {
+      requestedUrls.push(String(url));
+      if (String(url).includes("/rest/v1/suppliers?")) {
+        return Response.json([
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            name: "VINROS",
+            active: true,
+            tenants: { slug: "lombardo-dev", status: "active" },
+          },
+        ]);
+      }
+      return Response.json([], { headers: { "Content-Range": "*/0" } });
+    },
+  });
+
+  await provider.getProductPage({ requireImage: true });
+  const productRequest = new URL(requestedUrls[1] ?? "https://invalid");
+  assert.equal(productRequest.searchParams.get("has_public_media"), "is.true");
 });
 
 test("RuniaCommerceProvider rechaza filas no SAFE aunque el backend las entregue", async () => {

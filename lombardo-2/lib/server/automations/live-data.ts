@@ -22,7 +22,7 @@ export async function loadDailyHomeData(
   const products = orderProducts(
     await commerceProvider.getProductsByIds(state.productIds, pricingContext),
     state.productIds,
-  );
+  ).filter((product) => product.images.length > 0);
   if (products.length !== state.productIds.length) return null;
   const categoryOrder = new Map(state.categorySlugs.map((slug, index) => [slug, index]));
   return {
@@ -41,5 +41,10 @@ export async function loadLiveGuideProducts(
 ) {
   const ids = await createAutomationServices().store.contentProductIds(slug);
   if (!ids.length) return [];
-  return orderProducts(await commerceProvider.getProductsByIds(ids, pricingContext), ids);
+  const products = orderProducts(
+    await commerceProvider.getProductsByIds(ids, pricingContext),
+    ids,
+  )
+    .filter((product) => product.images.length > 0);
+  return products.length === ids.length ? products : [];
 }
