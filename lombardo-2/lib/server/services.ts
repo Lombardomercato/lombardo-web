@@ -6,9 +6,11 @@ import {
   readCustomerStatusWhatsAppNotificationConfiguration,
   readEmailOrderNotificationConfiguration,
   readMercadoPagoConfiguration,
+  readRuniaOrderStatusNotificationConfiguration,
   readRuniaConfiguration,
   readWhatsAppOrderNotificationConfiguration,
   whatsAppOrderNotificationsEnabled,
+  runiaOrderStatusNotificationsEnabled,
 } from "./environment";
 import {
   CustomerOrderUpdateEmailService,
@@ -21,6 +23,7 @@ import { OrderNotificationService } from "./notifications/order-notification-ser
 import { SupabaseOrderNotificationStore } from "./notifications/supabase-order-notification-store";
 import { ResendEmailApi } from "./notifications/resend-email-api";
 import { WhatsAppCloudApi } from "./notifications/whatsapp-cloud-api";
+import { RuniaCustomerOrderUpdateService } from "./notifications/runia-order-status-whatsapp";
 import { RuniaOrderRepository } from "./orders/runia-order-repository";
 import { EnvironmentDeliveryPricing } from "./orders/server-delivery-pricing";
 import { ServerOrderError } from "./orders/server-order-error";
@@ -130,7 +133,17 @@ export function createCustomerOrderUpdateNotifiers(
       },
     }));
   }
-  if (customerStatusWhatsAppNotificationsEnabled()) {
+  if (runiaOrderStatusNotificationsEnabled()) {
+    notifiers.push(new RuniaCustomerOrderUpdateService({
+      store: new SupabaseOrderNotificationStore({
+        url: runia.url,
+        secretKey: runia.secretKey,
+        channel: "whatsapp_cloud_api",
+        kind,
+      }),
+      configurationFactory: () => readRuniaOrderStatusNotificationConfiguration(),
+    }));
+  } else if (customerStatusWhatsAppNotificationsEnabled()) {
     notifiers.push(new CustomerOrderUpdateWhatsAppService({
       store: new SupabaseOrderNotificationStore({
         url: runia.url,

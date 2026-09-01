@@ -56,6 +56,13 @@ export interface EmailOrderNotificationConfiguration {
   adminUrl: string;
 }
 
+export interface RuniaOrderStatusNotificationConfiguration {
+  webhookUrl: string;
+  webhookSecret: string;
+  callbackSecret: string;
+  appUrl: string;
+}
+
 function configurationError(message: string): never {
   throw new ServerOrderError("SERVER_NOT_CONFIGURED", message, { status: 503 });
 }
@@ -202,6 +209,45 @@ export function customerStatusWhatsAppNotificationsEnabled(
       ?.trim()
       .toLocaleLowerCase("en-US") === "true"
   );
+}
+
+export function runiaOrderStatusNotificationsEnabled(
+  env: EnvironmentSource = process.env,
+) {
+  return (
+    env.RUNIA_ORDER_STATUS_NOTIFICATIONS_ENABLED
+      ?.trim()
+      .toLocaleLowerCase("en-US") === "true"
+  );
+}
+
+export function readRuniaOrderStatusNotificationConfiguration(
+  env: EnvironmentSource = process.env,
+): RuniaOrderStatusNotificationConfiguration {
+  if (!runiaOrderStatusNotificationsEnabled(env)) {
+    configurationError(
+      "RUNIA_ORDER_STATUS_NOTIFICATIONS_ENABLED debe ser true para enviar avisos.",
+    );
+  }
+  const webhookUrl = requiredEnvironment(env, "RUNIA_ORDER_STATUS_WEBHOOK_URL");
+  if (!isHttpsUrl(webhookUrl)) {
+    configurationError("RUNIA_ORDER_STATUS_WEBHOOK_URL debe ser HTTPS.");
+  }
+  const webhookSecret = requiredEnvironment(
+    env,
+    "RUNIA_ORDER_STATUS_WEBHOOK_SECRET",
+  );
+  const callbackSecret = requiredEnvironment(
+    env,
+    "RUNIA_ORDER_STATUS_CALLBACK_SECRET",
+  );
+  if (webhookSecret.length < 32 || callbackSecret.length < 32) {
+    configurationError("Los secretos de avisos de estado deben tener al menos 32 caracteres.");
+  }
+  const appUrl = requiredEnvironment(env, "APP_URL");
+  const appOrigin = normalizedHttpsOrigin(appUrl);
+  if (!appOrigin) configurationError("APP_URL debe ser un origen HTTPS público.");
+  return { webhookUrl, webhookSecret, callbackSecret, appUrl: appOrigin };
 }
 
 function normalizedHttpsOrigin(value: string) {

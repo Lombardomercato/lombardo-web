@@ -11,6 +11,7 @@ type DevCommerceEvent =
   | "order_notification.sent"
   | "order_notification.failed"
   | "order_notification.persistence_failed"
+  | "order_update_notification.accepted"
   | "payment.preference_created"
   | "payment.preference_reused"
   | "payment.preference_failed"
