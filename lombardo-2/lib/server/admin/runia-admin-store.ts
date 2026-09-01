@@ -577,6 +577,23 @@ function validImageBytes(bytes: Uint8Array, mimeType: string) {
   return mimeType === "image/avif" && (ascii.slice(4, 12) === "ftypavif" || ascii.slice(4, 12) === "ftypavis");
 }
 
+function htmlImageCandidate(html: string, baseUrl: URL) {
+  const encoded = html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1]
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i)?.[1]
+    || html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)?.[1];
+  if (!encoded) return null;
+  const decoded = encoded
+    .replaceAll("&amp;", "&")
+    .replaceAll("&#39;", "'")
+    .replaceAll("&quot;", '"');
+  try {
+    return new URL(decoded, baseUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
 export class AdminStoreError extends Error {
   constructor(
     message: string,
@@ -1035,7 +1052,7 @@ export class RuniaAdminStore {
     contentSha256: string;
     backgroundConfidence: "high" | "medium";
     edgeCoverage: number;
-    operatorUserId: string;
+    operatorUserId: string | null;
   }) {
     if (!UUID_PATTERN.test(input.sourceMediaId) || !UUID_PATTERN.test(input.productId)) {
       throw new AdminStoreError("La imagen de origen no es válida.", 422);
@@ -1759,7 +1776,22 @@ export class RuniaAdminStore {
       imageUrl = await assertPublicHttpsUrl(new URL(location, imageUrl).toString());
     }
     if (!imageResponse?.ok) throw new AdminStoreError("No pudimos descargar la imagen aprobada.", 502);
-    const mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
+    let mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
+    if (mimeType === "text/html" || mimeType === "application/xhtml+xml") {
+      const declaredHtmlBytes = Number(imageResponse.headers.get("content-length") || 0);
+      if (declaredHtmlBytes > 1_000_000) throw new AdminStoreError("La página de origen es demasiado grande.", 422);
+      const html = (await imageResponse.text()).slice(0, 1_000_000);
+      const resolved = htmlImageCandidate(html, imageUrl);
+      if (!resolved) throw new AdminStoreError("La página de origen no publica una imagen utilizable.", 422);
+      imageUrl = await assertPublicHttpsUrl(resolved);
+      imageResponse = await this.fetcher(imageUrl, {
+        method: "GET",
+        headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
+        cache: "no-store",
+      });
+      if (!imageResponse.ok) throw new AdminStoreError("No pudimos descargar la imagen indicada por la fuente.", 502);
+      mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
+    }
     const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/avif": "avif" };
     const extension = extensions[mimeType];
     const declaredBytes = Number(imageResponse.headers.get("content-length") || 0);

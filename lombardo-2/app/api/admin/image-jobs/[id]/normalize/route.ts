@@ -3,7 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { createAdminStore, requireAdminRole } from "@/lib/server/admin/admin-auth";
+import { createAdminStore } from "@/lib/server/admin/admin-auth";
 import { createNormalizedProductRender } from "@/lib/server/images/normalized-product-render";
 
 export const runtime = "nodejs";
@@ -12,32 +12,34 @@ export const maxDuration = 60;
 
 const MAX_BATCH_SIZE = 12;
 const NORMALIZATION_CONCURRENCY = 3;
-
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  const fetchSite = request.headers.get("sec-fetch-site");
-  return fetchSite === "same-origin" && origin === new URL(request.url).origin;
+async function authorizedStore(request: Request, jobId: string) {
+  if (!UUID_PATTERN.test(jobId)) return null;
+  const authorization = request.headers.get("authorization") || "";
+  const match = /^Bearer ([A-Za-z0-9_-]{43,128})$/.exec(authorization);
+  if (!match) return null;
+  const tokenHash = createHash("sha256").update(match[1]).digest("hex");
+  const store = createAdminStore();
+  return await store.authorizeImageJob(jobId, tokenHash) ? store : null;
 }
 
-export async function POST(request: Request) {
-  if (!sameOrigin(request)) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  const session = await requireAdminRole("admin");
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const { id: jobId } = await context.params;
+  const store = await authorizedStore(request, jobId);
+  if (!store) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+
   let body: { cursor?: unknown; limit?: unknown };
   try {
     body = await request.json() as { cursor?: unknown; limit?: unknown };
   } catch {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
-  const cursor = typeof body.cursor === "string" && UUID_PATTERN.test(body.cursor)
-    ? body.cursor
-    : undefined;
+  const cursor = typeof body.cursor === "string" && UUID_PATTERN.test(body.cursor) ? body.cursor : undefined;
   const requestedLimit = Number(body.limit);
   const limit = Number.isFinite(requestedLimit)
     ? Math.min(Math.max(Math.trunc(requestedLimit), 1), MAX_BATCH_SIZE)
     : MAX_BATCH_SIZE;
-  const store = createAdminStore();
   const media = await store.listPrimaryProductMediaForNormalization({ cursor, limit });
   const results: Array<{ mediaId: string; status: "published" | "needs_review" | "failed" }> = [];
 
@@ -55,9 +57,7 @@ export async function POST(request: Request) {
         const source = new Uint8Array(await response.arrayBuffer());
         if (source.byteLength < 20 || source.byteLength > 5 * 1024 * 1024) throw new Error("invalid_source_size");
         const render = await createNormalizedProductRender(source);
-        if (render.status === "needs_review") {
-          return { mediaId: item.id, status: "needs_review" as const };
-        }
+        if (render.status === "needs_review") return { mediaId: item.id, status: "needs_review" as const };
         await store.uploadNormalizedProductRender({
           sourceMediaId: item.id,
           productId: item.productId,
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
           contentSha256: createHash("sha256").update(render.bytes).digest("hex"),
           backgroundConfidence: render.confidence,
           edgeCoverage: render.edgeCoverage,
-          operatorUserId: session.authUserId,
+          operatorUserId: null,
         });
         return { mediaId: item.id, status: "published" as const };
       } catch {
@@ -75,9 +75,7 @@ export async function POST(request: Request) {
     results.push(...groupResults);
   }
 
-  if (results.some((result) => result.status === "published")) {
-    revalidateTag("runia-real-catalog", "max");
-  }
+  if (results.some((result) => result.status === "published")) revalidateTag("runia-real-catalog", "max");
   return NextResponse.json({
     processed: results.length,
     published: results.filter((result) => result.status === "published").length,

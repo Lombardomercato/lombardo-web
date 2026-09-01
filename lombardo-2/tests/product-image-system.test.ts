@@ -7,6 +7,7 @@ const files = {
   migration: fileURLToPath(new URL("../supabase/migrations/20260829052000_lombardo_product_image_system.sql", import.meta.url)),
   normalizationMigration: fileURLToPath(new URL("../supabase/migrations/20260830193000_product_image_transparent_renders.sql", import.meta.url)),
   normalizationRoute: fileURLToPath(new URL("../app/admin/api/product-images/normalize/route.ts", import.meta.url)),
+  normalizationRenderer: fileURLToPath(new URL("../lib/server/images/normalized-product-render.ts", import.meta.url)),
   render: fileURLToPath(new URL("../components/product/LombardoProductRender.tsx", import.meta.url)),
   renderStyles: fileURLToPath(new URL("../components/product/LombardoProductRender.module.css", import.meta.url)),
   publicVisualStyles: fileURLToPath(new URL("../components/product/ProductVisual.module.css", import.meta.url)),
@@ -32,9 +33,10 @@ test("product image system separates source masters from versioned renders", asy
 });
 
 test("normalized renders preserve the master and publish only for SAFE products", async () => {
-  const [migration, route] = await Promise.all([
+  const [migration, route, renderer] = await Promise.all([
     readFile(files.normalizationMigration, "utf8"),
     readFile(files.normalizationRoute, "utf8"),
+    readFile(files.normalizationRenderer, "utf8"),
   ]);
   assert.match(migration, /supplier_publish_normalized_product_render/);
   assert.match(migration, /source_media_id = excluded\.source_media_id/);
@@ -44,15 +46,15 @@ test("normalized renders preserve the master and publish only for SAFE products"
   assert.match(migration, /revoke all on function[\s\S]*from public, anon, authenticated/);
   assert.match(route, /requireAdminRole\("admin"\)/);
   assert.match(route, /sameOrigin\(request\)/);
-  assert.match(route, /removed\.confidence === "low"/);
+  assert.match(renderer, /removed\.confidence === "low"/);
 });
 
-test("public product imagery uses one transparent 80-percent canvas", async () => {
+test("public product imagery uses one white 80-percent canvas", async () => {
   const [styles, visual] = await Promise.all([
     readFile(files.publicVisualStyles, "utf8"),
     readFile(files.publicVisual, "utf8"),
   ]);
-  assert.match(styles, /\.photo\s*\{[\s\S]*background: transparent/);
+  assert.match(styles, /\.photo\s*\{[\s\S]*background: #fff/);
   assert.match(styles, /\.photo img[\s\S]*object-fit: contain/);
   assert.match(styles, /\.photo img[\s\S]*padding: 10%/);
   assert.match(styles, /\.photo img[\s\S]*object-position: center bottom/);

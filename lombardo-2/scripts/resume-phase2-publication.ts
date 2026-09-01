@@ -1,12 +1,21 @@
 export {};
 
+import { readFileSync } from "node:fs";
+
 const baseUrl = (process.env.IMAGE_JOB_BASE_URL || "https://www.lombardomercato.com").replace(/\/$/, "");
 const jobId = process.env.IMAGE_JOB_ID || "";
-const token = process.env.IMAGE_JOB_TOKEN || "";
+const tokenFile = process.env.IMAGE_JOB_TOKEN_FILE || "";
+const token = tokenFile ? readFileSync(tokenFile, "utf8").trim() : process.env.IMAGE_JOB_TOKEN || "";
 const confirmation = process.env.MASS_IMAGE_RESUME_CONFIRM || "";
-const runId = "mass-image-coverage-phase2-2026-08-29";
+const runId = process.env.IMAGE_JOB_RUN_ID || "mass-image-coverage-phase2-2026-08-29";
+const markComplete = process.env.IMAGE_JOB_MARK_COMPLETE !== "false";
 
-if (!jobId || token.length < 43 || confirmation !== "RESUME_SAME_PHASE2_JOB") {
+if (
+  !jobId ||
+  token.length < 43 ||
+  !/^mass-image-coverage-phase2-[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(runId) ||
+  confirmation !== "RESUME_SAME_PHASE2_JOB"
+) {
   throw new Error("Missing protected Phase 2 same-job resume confirmation.");
 }
 
@@ -82,12 +91,13 @@ for (let pass = 0; pass < 2; pass += 1) {
 }
 
 const remaining = await loadPendingCandidateIds();
-await request("", "PATCH", { complete: true });
+if (markComplete) await request("", "PATCH", { complete: true });
 console.log(JSON.stringify({
   runId,
   mode: "same-job-publication-resume",
   initialPending: initialPending.length,
   published,
   remaining: remaining.length,
+  markedComplete: markComplete,
   finishedAt: new Date().toISOString(),
 }));
