@@ -54,6 +54,14 @@ export function isDeliveryCityAllowed(
   );
 }
 
+export function deliveryMethodForCity(
+  city: string,
+): ActiveDeliveryMethod | null {
+  return ACTIVE_DELIVERY_METHODS.find((method) =>
+    isDeliveryCityAllowed(method, city),
+  ) ?? null;
+}
+
 export function requiresDeliveryAddress(method: DeliveryMethod) {
   return method !== "PICKUP";
 }

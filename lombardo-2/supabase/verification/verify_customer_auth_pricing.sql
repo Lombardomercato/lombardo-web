@@ -201,13 +201,13 @@ begin
       raise exception 'authenticated SELECT grant missing on public.%', v_table;
     end if;
 
-    if has_table_privilege(
+    if v_table <> 'account_addresses' and (has_table_privilege(
       'authenticated', format('public.%I', v_table), 'INSERT'
     ) or has_table_privilege(
       'authenticated', format('public.%I', v_table), 'UPDATE'
     ) or has_table_privilege(
       'authenticated', format('public.%I', v_table), 'DELETE'
-    ) then
+    )) then
       raise exception 'authenticated write grant found on public.%', v_table;
     end if;
 

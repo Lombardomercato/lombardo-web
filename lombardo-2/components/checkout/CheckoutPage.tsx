@@ -27,6 +27,7 @@ import {
   DELIVERY_COORDINATION_NOTICE,
   defaultDeliveryCity,
   deliveryCities,
+  deliveryMethodForCity,
   deliveryMethodLabel,
   isActiveDeliveryMethod,
   requiresDeliveryAddress,
@@ -37,6 +38,7 @@ import { formatCurrency } from "@/lib/utils/format-currency";
 import type {
   CreateOrderInput,
   CreateOrderResult,
+  DeliveryAddress,
   OrderDraft,
 } from "@/types/checkout";
 import styles from "./CheckoutPage.module.css";
@@ -48,6 +50,7 @@ export interface CheckoutCustomerDefaults {
   name: string;
   email: string;
   whatsapp: string;
+  defaultAddress?: DeliveryAddress;
 }
 
 interface StoredCheckoutSession {
@@ -125,18 +128,25 @@ function splitCustomerName(name: string) {
 
 const cloneEmptyForm = (
   customerDefaults?: CheckoutCustomerDefaults,
-): CheckoutFormValues => ({
-  customer: customerDefaults
-    ? {
-        ...emptyCheckoutForm.customer,
-        ...splitCustomerName(customerDefaults.name),
-        email: customerDefaults.email,
-        whatsapp: customerDefaults.whatsapp,
-      }
-    : { ...emptyCheckoutForm.customer },
-  deliveryMethod: emptyCheckoutForm.deliveryMethod,
-  deliveryAddress: { ...emptyCheckoutForm.deliveryAddress },
-});
+): CheckoutFormValues => {
+  const defaultAddress = customerDefaults?.defaultAddress;
+  return {
+    customer: customerDefaults
+      ? {
+          ...emptyCheckoutForm.customer,
+          ...splitCustomerName(customerDefaults.name),
+          email: customerDefaults.email,
+          whatsapp: customerDefaults.whatsapp,
+        }
+      : { ...emptyCheckoutForm.customer },
+    deliveryMethod:
+      (defaultAddress && deliveryMethodForCity(defaultAddress.city)) ||
+      emptyCheckoutForm.deliveryMethod,
+    deliveryAddress: defaultAddress
+      ? { ...emptyCheckoutForm.deliveryAddress, ...defaultAddress }
+      : { ...emptyCheckoutForm.deliveryAddress },
+  };
+};
 
 function clearFieldError(errors: CheckoutErrors, field: CheckoutFieldName) {
   if (!errors[field]) return errors;

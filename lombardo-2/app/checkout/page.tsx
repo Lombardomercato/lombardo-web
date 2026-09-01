@@ -4,6 +4,8 @@ import {
   getCurrentCustomerAccount,
   getCurrentCustomerPricingContext,
 } from "@/lib/server/customers/customer-auth";
+import { loadCustomerDefaultAddress } from "@/lib/server/customers/default-address";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,9 @@ export default async function CheckoutRoute() {
     getCurrentCustomerAccount(),
     getCurrentCustomerPricingContext(),
   ]);
+  const defaultAddress = account
+    ? await loadCustomerDefaultAddress(await createSupabaseServerClient(), account)
+    : null;
   return (
     <CheckoutPage
       pricingContextKey={pricingContext.contextKey}
@@ -27,6 +32,7 @@ export default async function CheckoutRoute() {
               name: account.name,
               email: account.email,
               whatsapp: account.whatsapp,
+              defaultAddress: defaultAddress ?? undefined,
             }
           : undefined
       }

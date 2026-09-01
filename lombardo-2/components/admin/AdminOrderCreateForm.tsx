@@ -15,6 +15,7 @@ import {
 import {
   defaultDeliveryCity,
   deliveryCities,
+  deliveryMethodForCity,
   type ActiveDeliveryMethod,
 } from "@/lib/checkout/delivery-methods";
 import type { AdminCustomer } from "@/lib/server/admin/types";
@@ -23,6 +24,7 @@ import type {
   QuickOrderSearchResult,
 } from "@/lib/quick-order/types";
 import { formatCurrency } from "@/lib/utils/format-currency";
+import type { DeliveryAddress } from "@/types/checkout";
 
 import adminStyles from "@/app/admin/admin.module.css";
 import styles from "./AdminOrderCreateForm.module.css";
@@ -30,7 +32,7 @@ import styles from "./AdminOrderCreateForm.module.css";
 interface AdminOrderCreateFormProps {
   customers: Array<Pick<
     AdminCustomer,
-    "id" | "name" | "email" | "whatsapp" | "pricingPolicy" | "discountPercent"
+    "id" | "name" | "email" | "whatsapp" | "pricingPolicy" | "discountPercent" | "defaultAddress"
   >>;
   checkoutSessionId: string;
   idempotencyKey: string;
@@ -42,6 +44,19 @@ interface SelectedItem extends QuickOrderProduct {
 }
 
 type SearchStatus = "idle" | "searching" | "ready" | "error";
+type AddressFormValues = Required<DeliveryAddress>;
+
+function addressFormValues(address?: DeliveryAddress): AddressFormValues {
+  return {
+    street: address?.street ?? "",
+    number: address?.number ?? "",
+    floorApartment: address?.floorApartment ?? "",
+    city: address?.city ?? defaultDeliveryCity("DELIVERY_ROSARIO"),
+    province: address?.province ?? "Santa Fe",
+    postalCode: address?.postalCode ?? "",
+    references: address?.references ?? "",
+  };
+}
 
 const initialActionState: AdminCreateOrderState = {
   status: "idle",
@@ -89,8 +104,11 @@ export function AdminOrderCreateForm({
     initialActionState,
   );
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? "guest");
-  const [deliveryMethod, setDeliveryMethod] = useState<ActiveDeliveryMethod>("DELIVERY_ROSARIO");
-  const [deliveryCity, setDeliveryCity] = useState(defaultDeliveryCity("DELIVERY_ROSARIO"));
+  const initialAddress = addressFormValues(customers[0]?.defaultAddress);
+  const [deliveryMethod, setDeliveryMethod] = useState<ActiveDeliveryMethod>(
+    deliveryMethodForCity(initialAddress.city) ?? "DELIVERY_ROSARIO",
+  );
+  const [deliveryAddress, setDeliveryAddress] = useState(initialAddress);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim(), 180);
   const [results, setResults] = useState<QuickOrderProduct[]>([]);
@@ -158,13 +176,26 @@ export function AdminOrderCreateForm({
   })));
 
   const changeCustomer = (nextCustomerId: string) => {
+    const nextCustomer = customers.find((customer) => customer.id === nextCustomerId);
+    const nextAddress = addressFormValues(nextCustomer?.defaultAddress);
     setCustomerId(nextCustomerId);
+    setDeliveryAddress(nextAddress);
+    setDeliveryMethod(
+      deliveryMethodForCity(nextAddress.city) ?? "DELIVERY_ROSARIO",
+    );
     setQuery("");
     setResults([]);
     setTruncated(false);
     setSearchStatus("idle");
     setItems([]);
     setManualPriceReason("");
+  };
+
+  const updateDeliveryAddress = (
+    field: keyof AddressFormValues,
+    value: string,
+  ) => {
+    setDeliveryAddress((current) => ({ ...current, [field]: value }));
   };
 
   const addProduct = (entry: QuickOrderProduct) => {
@@ -379,7 +410,10 @@ export function AdminOrderCreateForm({
             onChange={(event) => {
               const method = event.currentTarget.value as ActiveDeliveryMethod;
               setDeliveryMethod(method);
-              setDeliveryCity(defaultDeliveryCity(method));
+              setDeliveryAddress((current) => ({
+                ...current,
+                city: defaultDeliveryCity(method),
+              }));
             }}
           >
             <option value="DELIVERY_ROSARIO">ROSARIO</option>
@@ -387,18 +421,18 @@ export function AdminOrderCreateForm({
           </select>
         </label>
         <div className={styles.addressGrid}>
-          <label className={styles.field}><span>CALLE</span><input name="street" required /></label>
-          <label className={styles.field}><span>NÚMERO</span><input name="number" required /></label>
-          <label className={styles.field}><span>PISO / DEPTO.</span><input name="floorApartment" /></label>
+          <label className={styles.field}><span>CALLE</span><input name="street" required value={deliveryAddress.street} onChange={(event) => updateDeliveryAddress("street", event.currentTarget.value)} /></label>
+          <label className={styles.field}><span>NÚMERO</span><input name="number" required value={deliveryAddress.number} onChange={(event) => updateDeliveryAddress("number", event.currentTarget.value)} /></label>
+          <label className={styles.field}><span>PISO / DEPTO.</span><input name="floorApartment" value={deliveryAddress.floorApartment} onChange={(event) => updateDeliveryAddress("floorApartment", event.currentTarget.value)} /></label>
           <label className={styles.field}>
             <span>CIUDAD</span>
-            <select name="city" value={deliveryCity} onChange={(event) => setDeliveryCity(event.currentTarget.value)}>
+            <select name="city" value={deliveryAddress.city} onChange={(event) => updateDeliveryAddress("city", event.currentTarget.value)}>
               {deliveryCities(deliveryMethod).map((city) => <option key={city} value={city}>{city}</option>)}
             </select>
           </label>
-          <label className={styles.field}><span>PROVINCIA</span><input name="province" defaultValue="Santa Fe" required /></label>
-          <label className={styles.field}><span>CÓDIGO POSTAL</span><input name="postalCode" /></label>
-          <label className={`${styles.field} ${styles.wideField}`}><span>REFERENCIAS</span><input name="references" /></label>
+          <label className={styles.field}><span>PROVINCIA</span><input name="province" required value={deliveryAddress.province} onChange={(event) => updateDeliveryAddress("province", event.currentTarget.value)} /></label>
+          <label className={styles.field}><span>CÓDIGO POSTAL</span><input name="postalCode" value={deliveryAddress.postalCode} onChange={(event) => updateDeliveryAddress("postalCode", event.currentTarget.value)} /></label>
+          <label className={`${styles.field} ${styles.wideField}`}><span>REFERENCIAS</span><input name="references" value={deliveryAddress.references} onChange={(event) => updateDeliveryAddress("references", event.currentTarget.value)} /></label>
         </div>
         <label className={styles.field}>
           <span>CUPÓN (OPCIONAL)</span>

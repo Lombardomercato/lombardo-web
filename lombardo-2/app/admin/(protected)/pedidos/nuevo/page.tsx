@@ -34,6 +34,7 @@ export default async function NewAdminOrderPage() {
           whatsapp: customer.whatsapp,
           pricingPolicy: customer.pricingPolicy,
           discountPercent: customer.discountPercent,
+          defaultAddress: customer.defaultAddress,
         }))}
         checkoutSessionId={`admin_${randomUUID()}`}
         idempotencyKey={`admin_order_${randomUUID()}`}

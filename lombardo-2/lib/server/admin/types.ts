@@ -303,6 +303,7 @@ export interface AdminCustomer {
   historicalTotal: number;
   createdAt: string;
   updatedAt: string;
+  defaultAddress?: DeliveryAddress;
 }
 
 export interface AdminCustomerDetail extends AdminCustomer {

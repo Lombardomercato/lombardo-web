@@ -139,6 +139,16 @@ interface CustomerAccountRow {
   updated_at: string;
 }
 
+interface AccountAddressRow {
+  id: string;
+  account_id: string;
+  address_line: string;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+  metadata_json: unknown;
+}
+
 interface PromotionRow {
   id: string;
   code: string;
@@ -1889,6 +1899,7 @@ export class RuniaAdminStore {
   private mapCustomer(
     row: CustomerAccountRow,
     orders: AdminOrder[] = [],
+    defaultAddress?: DeliveryAddress,
   ): AdminCustomer {
     return {
       id: row.id,
@@ -1905,7 +1916,48 @@ export class RuniaAdminStore {
       historicalTotal: orders.reduce((sum, order) => sum + order.total, 0),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      defaultAddress,
     };
+  }
+
+  private mapDefaultAddress(row: AccountAddressRow): DeliveryAddress | undefined {
+    const metadata = row.metadata_json && typeof row.metadata_json === "object" &&
+        !Array.isArray(row.metadata_json)
+      ? row.metadata_json as Record<string, unknown>
+      : {};
+    const metadataText = (key: string) =>
+      typeof metadata[key] === "string" ? metadata[key].trim() : "";
+    const street = metadataText("street") || row.address_line.trim();
+    const number = metadataText("number");
+    const city = row.city?.trim() ?? "";
+    const province = row.province?.trim() ?? "";
+    if (!street || !number || !city || !province) return undefined;
+    return {
+      street,
+      number,
+      floorApartment: metadataText("floorApartment") || undefined,
+      city,
+      province,
+      postalCode: row.postal_code?.trim() || undefined,
+      references: metadataText("references") || undefined,
+    };
+  }
+
+  private async defaultAddressRows(customerId?: string) {
+    const tenantRecordId = await this.tenantRecordId();
+    const search = new URLSearchParams({
+      select: "id,account_id,address_line,city,province,postal_code,metadata_json",
+      tenant_id: `eq.${tenantRecordId}`,
+      is_primary: "is.true",
+      is_active: "is.true",
+      order: "updated_at.desc,id.asc",
+      limit: customerId ? "1" : "1000",
+    });
+    if (customerId) search.set("account_id", `eq.${customerId}`);
+    return this.rows<AccountAddressRow>(
+      `account_addresses?${search}`,
+      "No pudimos cargar las direcciones de clientes.",
+    );
   }
 
   private async customerRows(customerId?: string) {
@@ -1940,16 +1992,32 @@ export class RuniaAdminStore {
   }
 
   async listCustomers(): Promise<AdminCustomer[]> {
-    const { rows } = await this.customerRows();
-    const orders = await this.listOrders({}, 1000);
+    const [{ rows }, { rows: addressRows }, orders] = await Promise.all([
+      this.customerRows(),
+      this.defaultAddressRows(),
+      this.listOrders({}, 1000),
+    ]);
     const byCustomer = new Map<string, AdminOrder[]>();
+    const addressByCustomer = new Map<string, DeliveryAddress | undefined>();
+    for (const address of addressRows) {
+      if (!addressByCustomer.has(address.account_id)) {
+        addressByCustomer.set(
+          address.account_id,
+          this.mapDefaultAddress(address),
+        );
+      }
+    }
     for (const order of orders) {
       if (!order.customerAccountId) continue;
       const current = byCustomer.get(order.customerAccountId) ?? [];
       current.push(order);
       byCustomer.set(order.customerAccountId, current);
     }
-    return rows.map((row) => this.mapCustomer(row, byCustomer.get(row.id) ?? []));
+    return rows.map((row) => this.mapCustomer(
+      row,
+      byCustomer.get(row.id) ?? [],
+      addressByCustomer.get(row.id),
+    ));
   }
 
   async getCustomer(customerId: string): Promise<AdminCustomerDetail | null> {
@@ -1957,8 +2025,16 @@ export class RuniaAdminStore {
     const { rows } = await this.customerRows(customerId);
     const row = rows[0];
     if (!row) return null;
-    const orders = await this.customerOrders(row.id);
-    return { ...this.mapCustomer(row, orders), orders };
+    const [orders, { rows: addressRows }] = await Promise.all([
+      this.customerOrders(row.id),
+      this.defaultAddressRows(row.id),
+    ]);
+    return {
+      ...this.mapCustomer(row, orders, addressRows[0]
+        ? this.mapDefaultAddress(addressRows[0])
+        : undefined),
+      orders,
+    };
   }
 
   async getCustomerOrderContext(customerId: string): Promise<{
@@ -1966,7 +2042,10 @@ export class RuniaAdminStore {
     pricingContext: CustomerPricingContext;
   } | null> {
     if (!UUID_PATTERN.test(customerId)) return null;
-    const { rows } = await this.customerRows(customerId);
+    const [{ rows }, { rows: addressRows }] = await Promise.all([
+      this.customerRows(customerId),
+      this.defaultAddressRows(customerId),
+    ]);
     const row = rows[0];
     if (!row || row.status !== "active") return null;
 
@@ -1988,7 +2067,11 @@ export class RuniaAdminStore {
         : "retail";
 
     return {
-      customer: this.mapCustomer(row),
+      customer: this.mapCustomer(
+        row,
+        [],
+        addressRows[0] ? this.mapDefaultAddress(addressRows[0]) : undefined,
+      ),
       pricingContext: {
         tenantRecordId: row.tenant_id,
         tenantSlug: this.tenantId,

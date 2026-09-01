@@ -13,6 +13,7 @@ import {
   getActiveCustomerAccountForClient,
   getClaimsSubjectForClient,
 } from "./customer-auth";
+import { loadCustomerDefaultAddress } from "./default-address";
 import type { CustomerAccountSummary } from "./types";
 
 interface CustomerOrderRow {
@@ -40,6 +41,7 @@ export interface CustomerOrderSummary {
 
 export interface CustomerAccountData {
   account: CustomerAccountSummary;
+  defaultAddress: Awaited<ReturnType<typeof loadCustomerDefaultAddress>>;
   orders: CustomerOrderSummary[];
 }
 
@@ -85,25 +87,29 @@ export async function getCurrentCustomerAccountData(
   );
   if (!account || account.id !== expectedAccount.id) return null;
 
-  const { data, error } = await supabase
-    .from("commerce_orders")
-    .select(
-      "public_id,items,management_items,total,management_total,currency,order_status,payment_status,created_at",
-    )
-    .eq("tenant_record_id", account.tenantId)
-    .eq("customer_account_id", account.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [ordersResult, defaultAddress] = await Promise.all([
+    supabase
+      .from("commerce_orders")
+      .select(
+        "public_id,items,management_items,total,management_total,currency,order_status,payment_status,created_at",
+      )
+      .eq("tenant_record_id", account.tenantId)
+      .eq("customer_account_id", account.id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    loadCustomerDefaultAddress(supabase, account),
+  ]);
 
-  if (error) {
+  if (ordersResult.error) {
     throw new Error("No se pudieron cargar los pedidos de la cuenta.", {
-      cause: error,
+      cause: ordersResult.error,
     });
   }
 
   return {
     account,
-    orders: ((data ?? []) as CustomerOrderRow[]).map(mapOrder),
+    defaultAddress,
+    orders: ((ordersResult.data ?? []) as CustomerOrderRow[]).map(mapOrder),
   };
 }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { CustomerDefaultAddressForm } from "@/components/customer/CustomerDefaultAddressForm";
 import { CustomerLogoutForm } from "@/components/customer/CustomerLogoutForm";
 import styles from "@/components/customer/CustomerAccount.module.css";
 import { requireCurrentCustomerAccount } from "@/lib/server/customers/customer-auth";
@@ -69,7 +70,7 @@ export default async function MyAccountPage() {
   const data = await getCurrentCustomerAccountData(authorizedAccount);
   if (!data) redirect("/login?next=%2Fmi-cuenta");
 
-  const { account, orders } = data;
+  const { account, defaultAddress, orders } = data;
 
   return (
     <main className={styles.page}>
@@ -106,6 +107,19 @@ export default async function MyAccountPage() {
             <dd>Activa</dd>
           </div>
         </dl>
+
+        <section className={styles.addressSection} aria-labelledby="address-title">
+          <div className={styles.addressHeading}>
+            <div>
+              <p className={styles.sectionEyebrow}>Entrega</p>
+              <h2 id="address-title">DIRECCIÓN PREDETERMINADA.</h2>
+            </div>
+            <p>
+              Cargala una vez. La próxima compra ya empieza con estos datos completos.
+            </p>
+          </div>
+          <CustomerDefaultAddressForm address={defaultAddress} />
+        </section>
 
         {account.accountType === "WHOLESALE" || account.accountType === "BUSINESS" ? (
           <section className={styles.quickOrderAccess} aria-labelledby="quick-order-title">
