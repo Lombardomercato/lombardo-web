@@ -6,8 +6,9 @@ const component = readFileSync("components/layout/Footer.tsx", "utf8");
 const stylesheet = readFileSync("components/layout/Footer.module.css", "utf8");
 
 test("el zócalo reutiliza la marca Lombardo con trademark y elimina las flechas", () => {
-  assert.match(component, /LOMBARDO[\s\S]*styles\.trademark[\s\S]*™/);
-  assert.match(stylesheet, /font-size:\s*clamp\(0\.22rem, 0\.28vw, 0\.3rem\)/);
+  assert.match(component, /LOMBARDO[\s\S]*styles\.trademark[\s\S]*TM/);
+  assert.match(stylesheet, /font-size:\s*0\.29em/);
+  assert.match(stylesheet, /transform:\s*translateY\(-1\.08em\)/);
   assert.doesNotMatch(component, /↗/);
   assert.match(component, /function WhatsAppIcon/);
   assert.match(component, /function InstagramIcon/);

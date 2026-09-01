@@ -157,6 +157,6 @@ test("Admin expone alta, edición, precios manuales, descuento y acceso /pedidos
 });
 
 test("los logos principales incorporan un trademark de escala secundaria", () => {
-  assert.match(header, /styles\.trademark[\s\S]*™/);
+  assert.match(header, /styles\.trademark[\s\S]*TM/);
   assert.match(adminShell, /styles\.adminTrademark[\s\S]*™/);
 });

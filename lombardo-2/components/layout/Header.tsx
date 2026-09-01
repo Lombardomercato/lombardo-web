@@ -62,7 +62,7 @@ export function Header() {
       <div className={styles.inner}>
         <Link href="/" className={styles.brand} aria-label="Lombardo, inicio">
           LOMBARDO
-          <span className={styles.trademark} aria-hidden="true">™</span>
+          <span className={styles.trademark} aria-hidden="true">TM</span>
         </Link>
 
         <nav className={styles.desktopNav} aria-label="Navegación principal">

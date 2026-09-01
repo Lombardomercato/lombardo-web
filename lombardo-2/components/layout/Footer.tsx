@@ -30,7 +30,7 @@ export function Footer() {
           <div className={styles.brandBlock}>
             <Link className={styles.brand} href="/" aria-label="Lombardo, inicio">
               LOMBARDO
-              <span className={styles.trademark} aria-hidden="true">™</span>
+              <span className={styles.trademark} aria-hidden="true">TM</span>
             </Link>
             <p>Rosario, Santa Fe.</p>
           </div>

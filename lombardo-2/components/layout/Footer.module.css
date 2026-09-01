@@ -26,8 +26,10 @@
 }
 
 .brand {
-  position: relative;
   width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.075em;
   color: var(--neutral-paper);
   font-family: var(--font-display);
   font-size: clamp(1.35rem, 2vw, 1.8rem);
@@ -37,13 +39,13 @@
 }
 
 .trademark {
-  position: absolute;
-  top: -0.22rem;
-  right: -0.48rem;
+  flex: 0 0 auto;
   font-family: var(--font-body);
-  font-size: clamp(0.22rem, 0.28vw, 0.3rem);
+  font-size: 0.29em;
   font-weight: 700;
-  letter-spacing: 0;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  transform: translateY(-1.08em);
 }
 
 .siteLinks,
