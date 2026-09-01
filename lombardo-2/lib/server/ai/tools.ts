@@ -166,7 +166,7 @@ export function createSalesTools(context: SalesToolsContext) {
         const total = products.reduce((sum, product) => sum + product.price, 0);
         return {
           kind: "selection" as const,
-          reason: `Selección calculada con precios vigentes para ${input.quantity} unidades y un tope total de ${formatArs(input.totalBudget)}. ${pricingNotice(context.pricing)}`,
+          reason: `Selección calculada con precios vigentes para ${input.quantity} unidades y un tope total de ${formatArs(input.totalBudget)}. Total: ${formatArs(total)}. ${pricingNotice(context.pricing)}`,
           products: products.map(toSalesProduct),
           quantity: products.length,
           total,
@@ -284,9 +284,9 @@ function diverseProducts(products: Product[]) {
 }
 
 function cheapestDiverseSelection(products: Product[], quantity: number) {
-  return diverseProducts(products)
-    .sort((left, right) => left.price - right.price || left.name.localeCompare(right.name, "es-AR"))
-    .slice(0, quantity);
+  const sorted = [...products]
+    .sort((left, right) => left.price - right.price || left.name.localeCompare(right.name, "es-AR"));
+  return diverseProducts(sorted).slice(0, quantity);
 }
 
 function searchGuides(query: string, limit: number) {

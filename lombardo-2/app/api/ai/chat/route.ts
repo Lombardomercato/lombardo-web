@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { createAgentUIStreamResponse } from "ai";
+import { createAgentUIStreamResponse, createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { z } from "zod";
 import { createLombardoSalesAgent } from "@/lib/server/ai/agent";
 import { AiAuditStore } from "@/lib/server/ai/audit-store";
@@ -7,6 +7,8 @@ import { readAiSalesConfiguration } from "@/lib/server/ai/config";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { readJsonBody } from "@/lib/server/request-body";
 import { classifyTopic } from "@/lib/server/ai/topic";
+import { buildProductComparison, priorProductIds } from "@/lib/server/ai/comparison";
+import { commerceProvider } from "@/lib/commerce";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -73,6 +75,13 @@ export async function POST(request: Request) {
       metadata: { lengthBucket: lengthBucket(latestUserText.length) },
     }).catch(() => undefined);
 
+    const comparisonIds = priorProductIds(body.messages, latestUserText);
+    if (comparisonIds.length >= 2) {
+      const products = await commerceProvider.getProductsByIds(comparisonIds, pricing);
+      const comparison = buildProductComparison(products, latestUserText);
+      if (comparison) return textStreamResponse(comparison);
+    }
+
     const agent = createLombardoSalesAgent({ configuration, pricing, audit, chatId });
     return createAgentUIStreamResponse({
       agent,
@@ -96,6 +105,24 @@ export async function POST(request: Request) {
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
+}
+
+function textStreamResponse(value: string) {
+  const stream = createUIMessageStream({
+    execute: ({ writer }) => {
+      writer.write({ type: "start" });
+      writer.write({ type: "start-step" });
+      writer.write({ type: "text-start", id: "comparison" });
+      writer.write({ type: "text-delta", id: "comparison", delta: value });
+      writer.write({ type: "text-end", id: "comparison" });
+      writer.write({ type: "finish-step" });
+      writer.write({ type: "finish" });
+    },
+  });
+  return createUIMessageStreamResponse({
+    stream,
+    headers: { "Cache-Control": "no-store, max-age=0", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
 function lastUserText(messages: unknown[]) {

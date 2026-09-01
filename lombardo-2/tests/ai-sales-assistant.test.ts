@@ -78,6 +78,15 @@ test("agregar desde el bot revalida producto y precio server-side sin crear órd
   assert.match(assistant, /AGREGAR/);
 });
 
+test("comparar revalida IDs mostrados y no confía en precios enviados por el navegador", () => {
+  const route = source("app/api/ai/chat/route.ts");
+  const comparison = source("lib/server/ai/comparison.ts");
+  assert.match(route, /priorProductIds/);
+  assert.match(route, /commerceProvider\.getProductsByIds/);
+  assert.match(route, /buildProductComparison/);
+  assert.doesNotMatch(comparison, /Reflect\.get\(product, "price"\)/);
+});
+
 test("la UI expone el contrato público exacto y funciona en mobile", () => {
   const assistant = source("components/ai/SalesAssistant.tsx");
   const css = source("components/ai/SalesAssistant.module.css");
