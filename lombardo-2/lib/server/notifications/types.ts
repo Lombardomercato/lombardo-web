@@ -13,13 +13,17 @@ export type OrderNotificationChannel =
 
 export type OrderNotificationKind =
   | "new_order"
-  | "customer_order_confirmation";
+  | "customer_order_confirmation"
+  | "customer_fulfillment_status"
+  | "customer_payment_status"
+  | "customer_delivery_update";
 
 export interface OrderNotification {
   id: string;
   orderId: string;
   kind: OrderNotificationKind;
   channel: OrderNotificationChannel;
+  eventKey?: string;
   status: OrderNotificationStatus;
   attemptCount: number;
   providerMessageId?: string;
@@ -40,6 +44,7 @@ export interface OrderNotificationStore {
     tenantId: string,
     orderId: string,
     allowRetry: boolean,
+    eventKey?: string,
   ): Promise<ClaimedOrderNotification>;
   markSent(
     tenantId: string,

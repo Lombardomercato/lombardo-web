@@ -40,6 +40,18 @@ const NOTIFICATION_CHANNEL_LABELS = {
   email_resend: "EMAIL",
 } as const;
 
+const CUSTOMER_UPDATE_LABELS = {
+  customer_fulfillment_status: "ESTADO DEL PEDIDO",
+  customer_payment_status: "ESTADO DEL PAGO",
+  customer_delivery_update: "COSTO DE ENVÍO",
+} as const;
+
+const DELIVERY_COST_SOURCE_LABELS = {
+  checkout: "CHECKOUT",
+  manual: "MANUAL",
+  automation: "AUTOMÁTICO",
+} as const;
+
 function NotificationStatus({
   label,
   notification,
@@ -149,6 +161,7 @@ export default async function AdminOrderDetailPage({
               <div className={styles.detailField}><span className={styles.fieldLabel}>EMAIL</span><p>{order.customer.email}</p></div>
               {order.customer.dni ? <div className={styles.detailField}><span className={styles.fieldLabel}>DNI</span><p>{order.customer.dni}</p></div> : null}
               <div className={styles.detailField}><span className={styles.fieldLabel}>MODALIDAD</span><p>{DELIVERY_LABELS[order.deliveryMethod]}</p></div>
+              <div className={styles.detailField}><span className={styles.fieldLabel}>COSTO DE ENVÍO</span><p>{formatCurrency(order.deliveryCost)} · {DELIVERY_COST_SOURCE_LABELS[order.deliveryCostSource]}</p></div>
             </div>
             {order.deliveryAddress ? (
               <>
@@ -194,6 +207,19 @@ export default async function AdminOrderDetailPage({
               notification={order.customerOrderConfirmation}
               publicId={order.publicId}
             />
+            {order.customerStatusNotifications?.length ? (
+              <div className={styles.statusNotificationList}>
+                <span className={styles.fieldLabel}>ÚLTIMAS NOTIFICACIONES AL CLIENTE</span>
+                {order.customerStatusNotifications.slice(0, 6).map((notification) => (
+                  <p key={notification.id}>
+                    <strong>{CUSTOMER_UPDATE_LABELS[notification.kind as keyof typeof CUSTOMER_UPDATE_LABELS]}</strong>
+                    <small className={styles.muted}>
+                      {NOTIFICATION_CHANNEL_LABELS[notification.channel]} · {NOTIFICATION_LABELS[notification.status]} · {formatAdminDate(notification.updatedAt)}
+                    </small>
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
           {order.customer.whatsapp ? <a className={styles.whatsappButton} href={customerWhatsAppUrl(order)} target="_blank" rel="noreferrer">CONTACTAR POR WHATSAPP</a> : null}
           {order.managementNotes ? <div className={styles.managementNote}><span className={styles.fieldLabel}>NOTAS INTERNAS</span><p>{order.managementNotes}</p></div> : null}

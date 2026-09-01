@@ -153,12 +153,9 @@ begin
     raise exception 'order status changed' using errcode = '40001';
   end if;
 
-  if not (
-    (p_expected_status = 'new' and p_target_status in ('confirmed', 'cancelled'))
-    or (p_expected_status = 'confirmed' and p_target_status in ('preparing', 'cancelled'))
-    or (p_expected_status = 'preparing' and p_target_status in ('ready', 'cancelled'))
-    or (p_expected_status = 'ready' and p_target_status in ('delivered', 'cancelled'))
-  ) then
+  if p_target_status not in (
+    'new', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'
+  ) or v_current_status = 'cancelled' then
     raise exception 'invalid fulfillment transition' using errcode = '22023';
   end if;
 
@@ -171,11 +168,29 @@ begin
     fulfillment_status = p_target_status,
     fulfillment_updated_at = v_now,
     fulfillment_updated_by = p_operator_user_id,
-    confirmed_at = case when p_target_status = 'confirmed' then v_now else confirmed_at end,
-    preparing_at = case when p_target_status = 'preparing' then v_now else preparing_at end,
-    ready_at = case when p_target_status = 'ready' then v_now else ready_at end,
-    delivered_at = case when p_target_status = 'delivered' then v_now else delivered_at end,
-    cancelled_at = case when p_target_status = 'cancelled' then v_now else cancelled_at end,
+    confirmed_at = case
+      when p_target_status = 'new' then null
+      when p_target_status = 'confirmed' then v_now
+      else confirmed_at
+    end,
+    preparing_at = case
+      when p_target_status in ('new', 'confirmed') then null
+      when p_target_status = 'preparing' then v_now
+      else preparing_at
+    end,
+    ready_at = case
+      when p_target_status in ('new', 'confirmed', 'preparing') then null
+      when p_target_status = 'ready' then v_now
+      else ready_at
+    end,
+    delivered_at = case
+      when p_target_status = 'delivered' then v_now
+      else null
+    end,
+    cancelled_at = case
+      when p_target_status = 'cancelled' then v_now
+      else null
+    end,
     order_status = case
       when p_target_status = 'cancelled' then 'cancelled'
       else order_status

@@ -27,6 +27,7 @@ import type {
   AdminDashboard,
   AdminImageCandidate,
   AdminImageCandidatePage,
+  AdminOrderUpdateResult,
   ImageQualityStatus,
   AdminUnmatchedImageProductPage,
   MatchConfidenceBand,
@@ -113,6 +114,7 @@ interface OrderRow {
   payment_method: PaymentMethod;
   payment_provider_id: string | null;
   payment_preference_id: string | null;
+  payment_manually_updated_at?: string | null;
   fulfillment_status: FulfillmentStatus | null;
   fulfillment_updated_at: string | null;
   confirmed_at: string | null;
@@ -330,6 +332,7 @@ interface SupplierRow {
 
 interface TransitionRow {
   changed: boolean;
+  event_id?: string | number | null;
   order_record: OrderRow;
 }
 
@@ -341,6 +344,7 @@ interface NotificationRow {
   order_id: string | number;
   kind: OrderNotification["kind"];
   channel: OrderNotification["channel"];
+  event_key?: string;
   status: OrderNotificationStatus;
   attempt_count: number;
   provider_message_id: string | null;
@@ -357,6 +361,7 @@ function mapNotification(row: NotificationRow): OrderNotification {
     orderId: String(row.order_id),
     kind: row.kind,
     channel: row.channel,
+    eventKey: row.event_key ?? "initial",
     status: row.status,
     attemptCount: Number(row.attempt_count),
     providerMessageId: row.provider_message_id ?? undefined,
@@ -404,6 +409,7 @@ const ORDER_SELECT = [
   "payment_method",
   "payment_provider_id",
   "payment_preference_id",
+  "payment_manually_updated_at",
   "fulfillment_status",
   "fulfillment_updated_at",
   "confirmed_at",
@@ -449,6 +455,8 @@ function mapOrder(row: OrderRow): AdminOrder {
       ? undefined
       : row.coupon_discount_amount === undefined ? undefined : Number(row.coupon_discount_amount),
     deliveryCost: hasManagementOverride ? Number(row.management_delivery_cost) : Number(row.delivery_cost),
+    deliveryCostSource: hasManagementOverride ? "manual" : "checkout",
+    deliveryCostUpdatedAt: row.management_updated_at ?? undefined,
     total: hasManagementOverride ? Number(row.management_total) : Number(row.total),
     commerceTotal: Number(row.total),
     currency: row.currency,
@@ -461,6 +469,7 @@ function mapOrder(row: OrderRow): AdminOrder {
     paymentMethod: row.payment_method,
     paymentProviderId: row.payment_provider_id ?? undefined,
     paymentPreferenceId: row.payment_preference_id ?? undefined,
+    paymentManuallyUpdatedAt: row.payment_manually_updated_at ?? undefined,
     fulfillmentStatus,
     orderSource: row.order_source ?? "storefront",
     hasManagementOverride,
@@ -860,12 +869,12 @@ export class RuniaAdminStore {
     const order = mapOrder(rows[0]);
     const notificationSearch = new URLSearchParams({
       select:
-        "id,order_id,kind,channel,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
+        "id,order_id,kind,channel,event_key,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
       tenant_id: `eq.${this.tenantId}`,
       order_id: `eq.${order.id}`,
-      kind: "in.(new_order,customer_order_confirmation)",
+      kind: "in.(new_order,customer_order_confirmation,customer_fulfillment_status,customer_payment_status,customer_delivery_update)",
       order: "created_at.desc",
-      limit: "2",
+      limit: "20",
     });
     const notificationResult = await this.rows<NotificationRow>(
       `commerce_order_notifications?${notificationSearch}`,
@@ -877,6 +886,10 @@ export class RuniaAdminStore {
     const customerOrderConfirmation = notificationResult.rows.find(
       (notification) => notification.kind === "customer_order_confirmation",
     );
+    const customerStatusNotifications = notificationResult.rows
+      .filter((notification) => notification.kind.startsWith("customer_")
+        && notification.kind !== "customer_order_confirmation")
+      .map(mapNotification);
     return {
       ...order,
       newOrderNotification: newOrderNotification
@@ -885,6 +898,7 @@ export class RuniaAdminStore {
       customerOrderConfirmation: customerOrderConfirmation
         ? mapNotification(customerOrderConfirmation)
         : undefined,
+      customerStatusNotifications,
     };
   }
 
@@ -1056,6 +1070,61 @@ export class RuniaAdminStore {
       throw new AdminStoreError("Runia no devolvió el pedido actualizado.", 502);
     }
     return { changed: rows[0].changed, order: mapOrder(rows[0].order_record) };
+  }
+
+  async updatePayment(
+    orderId: string,
+    expectedStatus: PaymentStatus,
+    expectedMethod: PaymentMethod,
+    targetStatus: PaymentStatus,
+    targetMethod: PaymentMethod,
+    operatorUserId: string,
+  ): Promise<AdminOrderUpdateResult> {
+    if (!/^\d{1,18}$/.test(orderId)) {
+      throw new AdminStoreError("El pedido no es válido.", 400);
+    }
+    const response = await this.request("rpc/lombardo_admin_update_payment", {
+      method: "POST",
+      body: JSON.stringify({
+        p_tenant_id: this.tenantId,
+        p_order_id: Number(orderId),
+        p_expected_status: expectedStatus,
+        p_expected_method: expectedMethod,
+        p_target_status: targetStatus,
+        p_target_method: targetMethod,
+        p_operator_user_id: operatorUserId,
+      }),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        code?: string;
+        message?: string;
+      };
+      if (payload.code === "40001") {
+        throw new AdminStoreError(
+          "El pago cambió en otra pantalla. Actualizá y volvé a intentar.",
+          409,
+        );
+      }
+      if (payload.code === "22023") {
+        throw new AdminStoreError(
+          payload.message === "cancelled order cannot be approved"
+            ? "Un pedido cancelado no puede marcarse como pagado."
+            : "El estado o la forma de pago no son válidos.",
+          422,
+        );
+      }
+      throw new AdminStoreError("No pudimos actualizar el pago.", 502);
+    }
+    const rows = (await response.json()) as TransitionRow[];
+    if (!rows[0]?.order_record) {
+      throw new AdminStoreError("Runia no devolvió el pago actualizado.", 502);
+    }
+    return {
+      changed: rows[0].changed,
+      eventId: rows[0].event_id == null ? undefined : String(rows[0].event_id),
+      order: mapOrder(rows[0].order_record),
+    };
   }
 
   private async supplierId() {

@@ -39,6 +39,15 @@ export interface WhatsAppOrderNotificationConfiguration {
   adminUrl: string;
 }
 
+export interface CustomerStatusWhatsAppNotificationConfiguration {
+  accessToken: string;
+  phoneNumberId: string;
+  templateName: string;
+  languageCode: string;
+  graphApiVersion: string;
+  appUrl: string;
+}
+
 export interface EmailOrderNotificationConfiguration {
   apiKey: string;
   recipient: string;
@@ -180,6 +189,16 @@ export function emailOrderNotificationsEnabled(
 ) {
   return (
     env.EMAIL_ORDER_NOTIFICATIONS_ENABLED
+      ?.trim()
+      .toLocaleLowerCase("en-US") === "true"
+  );
+}
+
+export function customerStatusWhatsAppNotificationsEnabled(
+  env: EnvironmentSource = process.env,
+) {
+  return (
+    env.WHATSAPP_CUSTOMER_STATUS_NOTIFICATIONS_ENABLED
       ?.trim()
       .toLocaleLowerCase("en-US") === "true"
   );
@@ -329,6 +348,67 @@ export function readWhatsAppOrderNotificationConfiguration(
     languageCode,
     graphApiVersion,
     adminUrl: `${appOrigin}/admin`,
+  };
+}
+
+export function readCustomerStatusWhatsAppNotificationConfiguration(
+  env: EnvironmentSource = process.env,
+): CustomerStatusWhatsAppNotificationConfiguration {
+  if (!customerStatusWhatsAppNotificationsEnabled(env)) {
+    configurationError(
+      "WHATSAPP_CUSTOMER_STATUS_NOTIFICATIONS_ENABLED debe ser true para enviar estados.",
+    );
+  }
+
+  const appUrl = requiredEnvironment(env, "APP_URL");
+  const appOrigin = normalizedHttpsOrigin(appUrl);
+  if (appOrigin !== "https://www.lombardomercato.com") {
+    configurationError(
+      "Las notificaciones de estado exigen APP_URL=https://www.lombardomercato.com.",
+    );
+  }
+
+  const phoneNumberId = requiredEnvironment(
+    env,
+    "WHATSAPP_CLOUD_API_PHONE_NUMBER_ID",
+  );
+  if (!/^\d{5,30}$/.test(phoneNumberId)) {
+    configurationError("WHATSAPP_CLOUD_API_PHONE_NUMBER_ID no es válido.");
+  }
+
+  const templateName = requiredEnvironment(
+    env,
+    "WHATSAPP_CUSTOMER_STATUS_TEMPLATE_NAME",
+  );
+  if (!/^[a-z0-9_]{3,128}$/.test(templateName)) {
+    configurationError("WHATSAPP_CUSTOMER_STATUS_TEMPLATE_NAME no es válido.");
+  }
+
+  const languageCode = requiredEnvironment(
+    env,
+    "WHATSAPP_CUSTOMER_STATUS_TEMPLATE_LANGUAGE",
+  );
+  if (!/^[a-z]{2}(?:_[A-Z]{2})?$/.test(languageCode)) {
+    configurationError("WHATSAPP_CUSTOMER_STATUS_TEMPLATE_LANGUAGE no es válido.");
+  }
+
+  const graphApiVersion = requiredEnvironment(env, "WHATSAPP_CLOUD_API_VERSION");
+  if (!/^v\d{1,2}\.\d$/.test(graphApiVersion)) {
+    configurationError("WHATSAPP_CLOUD_API_VERSION no es válida.");
+  }
+
+  const accessToken = requiredEnvironment(env, "WHATSAPP_CLOUD_API_ACCESS_TOKEN");
+  if (accessToken.length < 40 || /\s/.test(accessToken)) {
+    configurationError("WHATSAPP_CLOUD_API_ACCESS_TOKEN no es válido.");
+  }
+
+  return {
+    accessToken,
+    phoneNumberId,
+    templateName,
+    languageCode,
+    graphApiVersion,
+    appUrl: appOrigin,
   };
 }
 

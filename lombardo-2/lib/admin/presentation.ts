@@ -36,6 +36,8 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   mercado_pago: "MERCADO PAGO",
   whatsapp_coordination: "COORDINAR POR WHATSAPP",
+  bank_transfer: "TRANSFERENCIA",
+  cash: "EFECTIVO",
 };
 
 export const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
@@ -83,27 +85,3 @@ export function customerWhatsAppUrl(order: AdminOrder) {
   ].join(" ");
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
-
-export const NEXT_FULFILLMENT_ACTIONS: Record<
-  FulfillmentStatus,
-  Array<{ target: FulfillmentStatus; label: string; dangerous?: boolean }>
-> = {
-  new: [
-    { target: "confirmed", label: "CONFIRMAR" },
-    { target: "cancelled", label: "CANCELAR", dangerous: true },
-  ],
-  confirmed: [
-    { target: "preparing", label: "PREPARAR" },
-    { target: "cancelled", label: "CANCELAR", dangerous: true },
-  ],
-  preparing: [
-    { target: "ready", label: "MARCAR LISTO" },
-    { target: "cancelled", label: "CANCELAR", dangerous: true },
-  ],
-  ready: [
-    { target: "delivered", label: "MARCAR ENTREGADO" },
-    { target: "cancelled", label: "CANCELAR", dangerous: true },
-  ],
-  delivered: [],
-  cancelled: [],
-};

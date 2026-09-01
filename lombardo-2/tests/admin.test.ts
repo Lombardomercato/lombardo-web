@@ -4,7 +4,6 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   customerWhatsAppUrl,
-  NEXT_FULFILLMENT_ACTIONS,
 } from "../lib/admin/presentation.ts";
 import type { AdminOrder } from "../lib/server/admin/types.ts";
 import { parseAdminCustomerInput } from "../lib/server/customers/customer-admin-validation.ts";
@@ -42,11 +41,8 @@ test("transiciones operativas son validadas, auditadas e idempotentes", () => {
   assert.match(schema, /if v_current_status <> p_expected_status then/);
   assert.match(schema, /invalid fulfillment transition/);
   assert.match(schema, /insert into public\.commerce_order_fulfillment_events/);
-  assert.deepEqual(
-    NEXT_FULFILLMENT_ACTIONS.preparing.map((action) => action.target),
-    ["ready", "cancelled"],
-  );
-  assert.deepEqual(NEXT_FULFILLMENT_ACTIONS.delivered, []);
+  assert.match(schema, /p_target_status not in/);
+  assert.match(schema, /v_current_status = 'cancelled'/);
 });
 
 test("tablas Admin no dan acceso al navegador ni exponen service_role", () => {

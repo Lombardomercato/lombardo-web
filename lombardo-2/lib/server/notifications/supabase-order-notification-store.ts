@@ -23,6 +23,7 @@ interface NotificationRow {
   order_id: string | number;
   kind: OrderNotificationKind;
   channel: OrderNotificationChannel;
+  event_key?: string;
   status: OrderNotificationStatus;
   attempt_count: number;
   provider_message_id: string | null;
@@ -44,6 +45,7 @@ function mapNotification(row: NotificationRow): OrderNotification {
     orderId: String(row.order_id),
     kind: row.kind,
     channel: row.channel,
+    eventKey: row.event_key ?? "initial",
     status: row.status,
     attemptCount: Number(row.attempt_count),
     providerMessageId: row.provider_message_id ?? undefined,
@@ -98,8 +100,9 @@ export class SupabaseOrderNotificationStore implements OrderNotificationStore {
     tenantId: string,
     orderId: string,
     allowRetry: boolean,
+    eventKey = "initial",
   ): Promise<ClaimedOrderNotification> {
-    const response = await this.request("rpc/lombardo_claim_order_notification_v3", {
+    const response = await this.request("rpc/lombardo_claim_order_notification_v4", {
       method: "POST",
       body: JSON.stringify({
         p_tenant_id: tenantId,
@@ -107,6 +110,7 @@ export class SupabaseOrderNotificationStore implements OrderNotificationStore {
         p_allow_retry: allowRetry,
         p_channel: this.channel,
         p_kind: this.kind,
+        p_event_key: eventKey,
       }),
     });
     if (!response.ok) this.failure("No pudimos reservar la notificación operativa.");

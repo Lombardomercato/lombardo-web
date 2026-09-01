@@ -27,6 +27,7 @@ export function OrderStatusPage({
     order.paymentMethod === "whatsapp_coordination" &&
     order.orderStatus === "pending_payment" &&
     order.paymentStatus === "pending";
+  const manualPayment = order.paymentMethod === "bank_transfer" || order.paymentMethod === "cash";
 
   return (
     <main className={styles.page} data-tone={presentation.tone}>
@@ -49,7 +50,9 @@ export function OrderStatusPage({
           <p>
             {coordinatingByWhatsApp
               ? "Recibir el pedido no confirma el pago. Lombardo te indicará por WhatsApp cómo continuar."
-              : "La página de regreso no cambia el estado del pedido. La confirmación proviene únicamente de la verificación segura con Mercado Pago."}
+              : manualPayment
+                ? "La confirmación se actualiza cuando Lombardo registra manualmente la acreditación."
+                : "La página de regreso no cambia el estado del pedido. La confirmación proviene únicamente de la verificación segura con Mercado Pago."}
           </p>
           <div className={styles.actions}>
             {paymentCanRetry ? (
@@ -84,7 +87,11 @@ export function OrderStatusPage({
               <dd>
                 {order.paymentMethod === "whatsapp_coordination"
                   ? "A coordinar"
-                  : "Mercado Pago"}
+                  : order.paymentMethod === "bank_transfer"
+                    ? "Transferencia"
+                    : order.paymentMethod === "cash"
+                      ? "Efectivo"
+                      : "Mercado Pago"}
               </dd>
             </div>
             <div>

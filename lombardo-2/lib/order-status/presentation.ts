@@ -46,6 +46,17 @@ export function getOrderStatusPresentation(
       tone: "pending",
     };
   }
+  if (order.paymentMethod === "bank_transfer" || order.paymentMethod === "cash") {
+    return {
+      kicker: "PEDIDO RECIBIDO.",
+      heading: "PAGO PENDIENTE.",
+      message:
+        order.paymentMethod === "bank_transfer"
+          ? "Registramos que vas a pagar por transferencia. Te avisaremos cuando quede acreditada."
+          : "Registramos que vas a pagar en efectivo. Te avisaremos cuando quede confirmado.",
+      tone: "pending",
+    };
+  }
   return {
     kicker: returnHint === "success" ? "VOLVISTE DE MERCADO PAGO." : "EN PROCESO.",
     heading: "PAGO PENDIENTE.",
