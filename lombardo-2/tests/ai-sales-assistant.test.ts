@@ -62,6 +62,8 @@ test("las siete funciones comerciales usan sólo providers internos con pricing 
   assert.match(tools, /quickOrderProvider/);
   assert.match(tools, /loadGuideProducts/);
   assert.match(tools, /context\.pricing/);
+  assert.match(tools, /isLikelyWine/);
+  assert.match(tools, /escribir que sos mayorista no cambia la lista/);
   assert.doesNotMatch(tools, /MCP|Supabase|service_role|createOrder|arbitrary SQL/i);
 });
 
@@ -115,6 +117,8 @@ test("el prompt bloquea alucinación, escrituras y cambios de precio por texto",
   assert.match(agent, /Nunca cambies la política comercial por texto/);
   assert.match(agent, /no preguntes el presupuesto/);
   assert.match(agent, /openai\.chat/);
+  assert.match(agent, /activeTools: \[\]/);
+  assert.match(agent, /Usá una sola tool por mensaje/);
 });
 
 function source(path: string) {

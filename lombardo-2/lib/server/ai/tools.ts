@@ -51,8 +51,8 @@ export function createSalesTools(context: SalesToolsContext) {
         return {
           kind: "products" as const,
           reason: input.query
-            ? `Resultados reales para “${input.query}”, con el precio vigente de tu sesión.`
-            : "Productos reales dentro de los filtros y con el precio vigente de tu sesión.",
+            ? `Resultados reales para “${input.query}”. ${pricingNotice(context.pricing)}`
+            : `Productos reales dentro de los filtros. ${pricingNotice(context.pricing)}`,
           products: products.map(toSalesProduct),
           count: products.length,
         };
@@ -90,7 +90,7 @@ export function createSalesTools(context: SalesToolsContext) {
         const products = await recommendations({ ...input, pricing: context.pricing });
         return {
           kind: "products" as const,
-          reason: recommendationReason(input.occasion, input.maxPrice),
+          reason: `${recommendationReason(input.occasion, input.maxPrice)} ${pricingNotice(context.pricing)}`,
           products: products.map(toSalesProduct),
           count: products.length,
         };
@@ -129,7 +129,7 @@ export function createSalesTools(context: SalesToolsContext) {
           .slice(0, input.limit);
         return {
           kind: "products" as const,
-          reason: "Son oportunidades reales y vigentes verificadas por Lombardo.",
+          reason: `Son oportunidades reales y vigentes verificadas por Lombardo. ${pricingNotice(context.pricing)}`,
           products: products.map(toSalesProduct),
           count: products.length,
         };
@@ -166,7 +166,7 @@ export function createSalesTools(context: SalesToolsContext) {
         const total = products.reduce((sum, product) => sum + product.price, 0);
         return {
           kind: "selection" as const,
-          reason: `Selección calculada con precios vigentes para ${input.quantity} unidades y un tope total de ${formatArs(input.totalBudget)}.`,
+          reason: `Selección calculada con precios vigentes para ${input.quantity} unidades y un tope total de ${formatArs(input.totalBudget)}. ${pricingNotice(context.pricing)}`,
           products: products.map(toSalesProduct),
           quantity: products.length,
           total,
@@ -260,7 +260,15 @@ function matchesFilters(product: Product, categorySlug?: string, maxPrice?: numb
     && product.availability !== "UNAVAILABLE"
     && product.price > 0
     && (!categorySlug || product.category.slug === categorySlug)
+    && (categorySlug !== "vinos" || isLikelyWine(product))
     && (!maxPrice || product.price <= maxPrice);
+}
+
+function isLikelyWine(product: Product) {
+  const value = normalize(`${product.name} ${product.presentation}`);
+  if (/\b(sidra|garrapinada|turron|chips|mani|gallet|chocolate|aceituna|ajo|salsa)\b/.test(value)) return false;
+  if (/\b\d+\s*(g|gr|grs|kg)\b/.test(value)) return false;
+  return /\b(vino|malbec|cabernet|bonarda|syrah|merlot|pinot|chardonnay|sauvignon|torrontes|tempranillo|tannat|riesling|viognier|semillon|chenin|brut|espumante|moscato|rosado|blancas?|blend|corte)\b/.test(value);
 }
 
 function diverseProducts(products: Product[]) {
@@ -332,6 +340,12 @@ function toSalesProduct(product: Product): SalesProduct {
 function recommendationReason(occasion: string, maxPrice?: number) {
   const budget = maxPrice ? ` con un tope de ${formatArs(maxPrice)}` : "";
   return `Los elegí para ${occasion === "general" ? "una compra versátil" : occasion}${budget}, usando catálogo y precios vigentes.`;
+}
+
+function pricingNotice(pricing: CustomerPricingContext) {
+  return pricing.policy === "RETAIL"
+    ? "Los precios corresponden a tu sesión minorista; escribir que sos mayorista no cambia la lista."
+    : "Los precios corresponden a la identidad comercial verificada de tu sesión.";
 }
 
 function formatArs(value: number) {
