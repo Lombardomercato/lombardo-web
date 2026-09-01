@@ -17,6 +17,7 @@ import { ServerOrderError } from "../server/orders/server-order-error.ts";
 import {
   categoryFilterForPostgrest,
   categoryForSupplierSku,
+  categorySearchScope,
   mapRuniaSupplierProduct,
   runiaProductIdFromProductSlug,
   RUNIA_CATALOG_CATEGORIES,
@@ -65,9 +66,10 @@ interface QuickOrderSupplierProductRow extends RuniaSupplierProductRow {
     | null;
 }
 
-interface QuickOrderBrandRow {
-  supplier_product_id: string;
-  brand_name: string | null;
+interface SearchProductIdRow {
+  product_id: string;
+  search_rank: number | string;
+  total_count: number | string;
 }
 
 function providerError(message: string): never {
@@ -105,19 +107,6 @@ function quickOrderPublicPrice(row: QuickOrderSupplierProductRow) {
   );
   const price = Number(lombardoRetail?.current_price ?? retail?.current_price);
   return Number.isFinite(price) && price > 0 ? price : undefined;
-}
-
-function quickOrderRank(product: QuickOrderProduct, term: string) {
-  const normalizedSku = product.product.sku.toLocaleLowerCase("es-AR");
-  const normalizedName = product.product.name.toLocaleLowerCase("es-AR");
-  const normalizedBrand = product.product.brand.name.toLocaleLowerCase("es-AR");
-  if (normalizedSku === term) return 0;
-  if (normalizedSku.startsWith(term)) return 1;
-  if (normalizedName.startsWith(term)) return 2;
-  if (normalizedBrand.startsWith(term)) return 3;
-  if (normalizedName.includes(term)) return 4;
-  if (normalizedBrand.includes(term)) return 5;
-  return 6;
 }
 
 function contentRangeTotal(response: Response, fallback: number) {
@@ -177,6 +166,62 @@ export class RuniaCommerceProvider
       response,
       queryTimeMs,
     };
+  }
+
+  private async fetchRpcRows<T>(
+    functionName: string,
+    body: Record<string, unknown>,
+  ) {
+    const startedAt = performance.now();
+    const response = await this.fetcher(
+      `${this.url}/rest/v1/rpc/${functionName}`,
+      {
+        method: "POST",
+        headers: {
+          ...this.headers(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      },
+    );
+    const queryTimeMs = performance.now() - startedAt;
+    if (!response.ok) {
+      providerError("Runia no pudo buscar productos en el catálogo real.");
+    }
+    return {
+      rows: (await response.json()) as T[],
+      queryTimeMs,
+    };
+  }
+
+  private async searchProductIds(input: {
+    supplierId: string;
+    query: string;
+    offset: number;
+    limit: number;
+    pricingContext: CustomerPricingContext;
+    categorySlug?: string;
+    requireImage?: boolean;
+    prioritizeImages?: boolean;
+  }) {
+    const category = categorySearchScope(input.categorySlug);
+    return this.fetchRpcRows<SearchProductIdRow>(
+      "supplier_search_product_ids",
+      {
+        p_supplier_id: input.supplierId,
+        p_query: input.query,
+        p_offset: input.offset,
+        p_limit: input.limit,
+        p_eligibility: "safe",
+        p_active_only: true,
+        p_price_type: input.pricingContext.basePriceType,
+        p_require_image: Boolean(input.requireImage),
+        p_prioritize_images: Boolean(input.prioritizeImages),
+        p_category_prefixes: category.prefixes ?? null,
+        p_excluded_category_prefixes: category.excludedPrefixes ?? null,
+      },
+    );
   }
 
   private async loadSupplier() {
@@ -314,8 +359,9 @@ export class RuniaCommerceProvider
     ) || CATALOG_PAGE_SIZE;
     const search = this.productSearch(supplier.id, pricingContext);
     search.set("order", "has_public_media.desc,normalized_name.asc,id.asc");
-    search.set("offset", String(offset));
-    search.set("limit", String(limit));
+    let fuzzyQueryTimeMs = 0;
+    let fuzzyTotal: number | undefined;
+    let rankedIds: string[] | undefined;
 
     if (query.requireImage) {
       search.set("has_public_media", "is.true");
@@ -323,10 +369,34 @@ export class RuniaCommerceProvider
 
     const term = sanitizedSearch(query.search);
     if (term) {
-      search.set(
-        "or",
-        `(normalized_name.ilike.*${term}*,supplier_sku.ilike.*${term}*)`,
-      );
+      const fuzzyResult = await this.searchProductIds({
+        supplierId: supplier.id,
+        query: term,
+        offset,
+        limit,
+        pricingContext,
+        categorySlug: query.categorySlug,
+        requireImage: query.requireImage,
+        prioritizeImages: true,
+      });
+      fuzzyQueryTimeMs = fuzzyResult.queryTimeMs;
+      fuzzyTotal = Number(fuzzyResult.rows[0]?.total_count ?? 0);
+      rankedIds = fuzzyResult.rows.map((row) => row.product_id);
+      if (!rankedIds.length) {
+        return {
+          products: [],
+          total: 0,
+          offset,
+          limit,
+          hasMore: false,
+          queryTimeMs: Math.round(fuzzyQueryTimeMs * 10) / 10,
+        };
+      }
+      search.set("id", `in.(${rankedIds.join(",")})`);
+      search.set("limit", String(rankedIds.length));
+    } else {
+      search.set("offset", String(offset));
+      search.set("limit", String(limit));
     }
 
     const categoryFilter = query.categorySlug
@@ -347,8 +417,17 @@ export class RuniaCommerceProvider
         true,
       );
     const mapped = await this.mapRows(rows, pricingContext);
-    const products = mapped.products;
-    const total = contentRangeTotal(response, offset + products.length);
+    const rankById = new Map(
+      (rankedIds ?? []).map((id, index) => [id, index]),
+    );
+    const products = rankedIds
+      ? mapped.products.sort(
+          (left, right) =>
+            (rankById.get(left.sourceProductId ?? "") ?? Number.MAX_SAFE_INTEGER) -
+            (rankById.get(right.sourceProductId ?? "") ?? Number.MAX_SAFE_INTEGER),
+        )
+      : mapped.products;
+    const total = fuzzyTotal ?? contentRangeTotal(response, offset + products.length);
 
     return {
       products,
@@ -356,7 +435,10 @@ export class RuniaCommerceProvider
       offset,
       limit,
       hasMore: offset + products.length < total,
-      queryTimeMs: Math.round((queryTimeMs + mapped.imageQueryTimeMs) * 10) / 10,
+      queryTimeMs:
+        Math.round(
+          (fuzzyQueryTimeMs + queryTimeMs + mapped.imageQueryTimeMs) * 10,
+        ) / 10,
     };
   }
 
@@ -376,107 +458,58 @@ export class RuniaCommerceProvider
       QUICK_ORDER_MAX_SEARCH_LIMIT,
     ) || QUICK_ORDER_SEARCH_LIMIT;
     const candidateLimit = Math.min(limit * 2, 60);
+    const fuzzyResult = await this.searchProductIds({
+      supplierId: supplier.id,
+      query: term,
+      offset: 0,
+      limit: candidateLimit,
+      pricingContext,
+    });
+    const ids = fuzzyResult.rows.map((row) => row.product_id);
+    if (!ids.length) {
+      return {
+        products: [],
+        queryTimeMs: Math.round(fuzzyResult.queryTimeMs * 10) / 10,
+        truncated: false,
+      };
+    }
     const productSearch = this.quickOrderProductSearch(
       supplier.id,
       pricingContext,
     );
-    productSearch.set(
-      "or",
-      `(normalized_name.ilike.*${term}*,supplier_sku.ilike.*${term}*)`,
+    productSearch.set("id", `in.(${ids.join(",")})`);
+    productSearch.set("limit", String(ids.length));
+    const productResult = await this.fetchRows<QuickOrderSupplierProductRow>(
+      "supplier_products",
+      productSearch,
     );
-    productSearch.set("order", "normalized_name.asc,id.asc");
-    productSearch.set("limit", String(candidateLimit));
-
-    const brandSearch = new URLSearchParams({
-      select:
-        "supplier_product_id,brand_name,product:supplier_product_id!inner(supplier_id,active,eligibility_status)",
-      brand_name: `ilike.*${term}*`,
-      "product.supplier_id": `eq.${supplier.id}`,
-      "product.active": "is.true",
-      "product.eligibility_status": "eq.safe",
-      order: "brand_name.asc,supplier_product_id.asc",
-      limit: String(candidateLimit),
-    });
-
-    const [primaryResult, brandResult] = await Promise.all([
-      this.fetchRows<QuickOrderSupplierProductRow>(
-        "supplier_products",
-        productSearch,
-      ),
-      this.fetchRows<QuickOrderBrandRow>(
-        "supplier_product_editorial",
-        brandSearch,
-      ),
-    ]);
-
-    const knownIds = new Set(
-      primaryResult.rows.map((row) => row.runia_product_id),
+    const rowsById = new Map(
+      productResult.rows.map((row) => [row.runia_product_id, row]),
     );
-    const brandIds = Array.from(
-      new Set(
-        brandResult.rows
-          .map((row) => row.supplier_product_id)
-          .filter((id) => UUID_PATTERN.test(id) && !knownIds.has(id)),
-      ),
-    ).slice(0, candidateLimit);
-
-    let brandProductRows: QuickOrderSupplierProductRow[] = [];
-    let brandProductQueryTimeMs = 0;
-    if (brandIds.length) {
-      const relatedSearch = this.quickOrderProductSearch(
-        supplier.id,
-        pricingContext,
-      );
-      relatedSearch.set("id", `in.(${brandIds.join(",")})`);
-      relatedSearch.set("order", "normalized_name.asc,id.asc");
-      relatedSearch.set("limit", String(candidateLimit));
-      const relatedResult = await this.fetchRows<QuickOrderSupplierProductRow>(
-        "supplier_products",
-        relatedSearch,
-      );
-      brandProductRows = relatedResult.rows;
-      brandProductQueryTimeMs = relatedResult.queryTimeMs;
-    }
-
-    const rowsById = new Map<string, QuickOrderSupplierProductRow>();
-    for (const row of [...primaryResult.rows, ...brandProductRows]) {
-      rowsById.set(row.runia_product_id, row);
-    }
 
     let products: QuickOrderProduct[];
     try {
-      products = Array.from(rowsById.values()).map((row) => ({
-        product: mapRuniaSupplierProduct(row, pricingContext),
-        publicUnitPrice: quickOrderPublicPrice(row),
-      }));
+      products = ids.flatMap((id) => {
+        const row = rowsById.get(id);
+        return row
+          ? [{
+              product: mapRuniaSupplierProduct(row, pricingContext),
+              publicUnitPrice: quickOrderPublicPrice(row),
+            }]
+          : [];
+      });
     } catch {
       providerError("Runia devolvió un producto SAFE con datos inválidos.");
     }
-
-    products.sort((left, right) => {
-      const rank = quickOrderRank(left, term) - quickOrderRank(right, term);
-      return (
-        rank ||
-        left.product.name.localeCompare(right.product.name, "es-AR", {
-          sensitivity: "base",
-        }) ||
-        left.product.sku.localeCompare(right.product.sku, "es-AR")
-      );
-    });
 
     return {
       products: products.slice(0, limit),
       queryTimeMs:
         Math.round(
-          (primaryResult.queryTimeMs +
-            brandResult.queryTimeMs +
-            brandProductQueryTimeMs) *
-            10,
+          (fuzzyResult.queryTimeMs + productResult.queryTimeMs) * 10,
         ) / 10,
       truncated:
-        products.length > limit ||
-        primaryResult.rows.length === candidateLimit ||
-        brandResult.rows.length === candidateLimit,
+        Number(fuzzyResult.rows[0]?.total_count ?? products.length) > limit,
     };
   }
 

@@ -7,6 +7,7 @@ import { isIP } from "node:net";
 import {
   categoryFilterForPostgrest,
   categoryForSupplierSku,
+  categorySearchScope,
   inferBrand,
 } from "../../commerce/runia-catalog-mapper";
 import type {
@@ -178,6 +179,12 @@ interface ProductRow {
   media?: ProductMediaRow[] | ProductMediaRow | null;
   all_prices?: ProductPriceRow[] | ProductPriceRow | null;
   anomalies?: ProductAnomalyRow[] | ProductAnomalyRow | null;
+}
+
+interface SearchProductIdRow {
+  product_id: string;
+  search_rank: number | string;
+  total_count: number | string;
 }
 
 interface ProductPriceRow {
@@ -678,6 +685,37 @@ export class RuniaAdminStore {
     return { rows: (await response.json()) as T[], response };
   }
 
+  private async fuzzyProductIds(input: {
+    supplierId: string;
+    query: string;
+    offset: number;
+    limit: number;
+    eligibility?: AdminProduct["eligibilityStatus"];
+    category?: string;
+  }) {
+    const category = categorySearchScope(input.category);
+    const response = await this.request("rpc/supplier_search_product_ids", {
+      method: "POST",
+      body: JSON.stringify({
+        p_supplier_id: input.supplierId,
+        p_query: input.query,
+        p_offset: input.offset,
+        p_limit: input.limit,
+        p_eligibility: input.eligibility ?? null,
+        p_active_only: false,
+        p_price_type: null,
+        p_require_image: false,
+        p_prioritize_images: false,
+        p_category_prefixes: category.prefixes ?? null,
+        p_excluded_category_prefixes: category.excludedPrefixes ?? null,
+      }),
+    });
+    if (!response.ok) {
+      throw new AdminStoreError("No pudimos buscar los productos.", 502);
+    }
+    return (await response.json()) as SearchProductIdRow[];
+  }
+
   private async tenantRecordId() {
     this.tenantRecordIdPromise ??= (async () => {
       const search = new URLSearchParams({
@@ -1176,13 +1214,35 @@ export class RuniaAdminStore {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
     const limit = Math.min(100, Math.max(20, Math.trunc(input.limit ?? 50)));
+    const term = safeSearch(input.search);
+    const fuzzyRows = term
+      ? await this.fuzzyProductIds({
+          supplierId,
+          query: term,
+          offset,
+          limit,
+          eligibility: input.eligibility,
+          category: input.category,
+        })
+      : null;
+    const rankedIds = fuzzyRows?.map((row) => row.product_id);
+    if (rankedIds && !rankedIds.length) {
+      return {
+        products: [],
+        total: 0,
+        offset,
+        limit,
+        hasMore: false,
+      };
+    }
     const search = new URLSearchParams({
       select:
         "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status)",
       supplier_id: `eq.${supplierId}`,
       order: "normalized_name.asc,id.asc",
-      offset: String(offset),
-      limit: String(limit),
+      ...(rankedIds
+        ? { id: `in.(${rankedIds.join(",")})`, limit: String(rankedIds.length) }
+        : { offset: String(offset), limit: String(limit) }),
     });
     if (input.eligibility) {
       search.set("eligibility_status", `eq.${input.eligibility}`);
@@ -1191,20 +1251,25 @@ export class RuniaAdminStore {
       ? categoryFilterForPostgrest(input.category)
       : null;
     if (categoryFilter) search.append(categoryFilter.key, categoryFilter.value);
-    const term = safeSearch(input.search);
-    if (term) {
-      search.append(
-        "or",
-        `(normalized_name.ilike.*${term}*,supplier_sku.ilike.*${term}*)`,
-      );
-    }
     const { rows, response } = await this.rows<ProductRow>(
       `supplier_products?${search}`,
       "No pudimos cargar los productos.",
       "count=exact",
     );
-    const products = rows.map((row) => this.mapProduct(row));
-    const total = contentRangeTotal(response, offset + products.length);
+    const rankById = new Map(
+      (rankedIds ?? []).map((id, index) => [id, index]),
+    );
+    const products = rows
+      .map((row) => this.mapProduct(row))
+      .sort((left, right) =>
+        rankedIds
+          ? (rankById.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+            (rankById.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+          : 0,
+      );
+    const total = fuzzyRows
+      ? Number(fuzzyRows[0]?.total_count ?? 0)
+      : contentRangeTotal(response, offset + products.length);
     return {
       products,
       total,

@@ -75,6 +75,24 @@ export const RUNIA_CATALOG_CATEGORIES = [
 
 const SPECIAL_PREFIXES = CATEGORY_RULES.flatMap((rule) => rule.prefixes);
 
+export interface CategorySearchScope {
+  prefixes?: string[];
+  excludedPrefixes?: string[];
+}
+
+export function categorySearchScope(
+  categorySlug: string | undefined,
+): CategorySearchScope {
+  if (!categorySlug) return {};
+  if (categorySlug === WINE_CATEGORY.slug) {
+    return { excludedPrefixes: [...SPECIAL_PREFIXES] };
+  }
+  const rule = CATEGORY_RULES.find(
+    (candidate) => candidate.category.slug === categorySlug,
+  );
+  return rule ? { prefixes: [...rule.prefixes] } : {};
+}
+
 export interface RuniaSupplierProductRow {
   runia_product_id: string;
   supplier_sku: string;
@@ -160,21 +178,18 @@ export function categoryForSupplierSku(sku: string): Category {
 }
 
 export function categoryFilterForPostgrest(categorySlug: string) {
-  if (categorySlug === WINE_CATEGORY.slug) {
+  const scope = categorySearchScope(categorySlug);
+  if (scope.excludedPrefixes) {
     return {
       key: "not.or",
-      value: `(${SPECIAL_PREFIXES.map((prefix) => `supplier_sku.ilike.${prefix}*`).join(",")})`,
+      value: `(${scope.excludedPrefixes.map((prefix) => `supplier_sku.ilike.${prefix}*`).join(",")})`,
     };
   }
-
-  const rule = CATEGORY_RULES.find(
-    (candidate) => candidate.category.slug === categorySlug,
-  );
-  if (!rule) return null;
+  if (!scope.prefixes) return null;
 
   return {
     key: "or",
-    value: `(${rule.prefixes.map((prefix) => `supplier_sku.ilike.${prefix}*`).join(",")})`,
+    value: `(${scope.prefixes.map((prefix) => `supplier_sku.ilike.${prefix}*`).join(",")})`,
   };
 }
 
