@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       pricing,
       audit,
       chatId: stableChatId(body.sessionId),
-    }, body.operation, body.input);
+    }, body.operation, normalizeCanvasInput(body.input));
     await audit.recordEvent({
       chatId: stableChatId(body.sessionId),
       pricing,
@@ -88,6 +88,16 @@ export async function POST(request: Request) {
     const status = error instanceof z.ZodError ? 400 : 503;
     return json({ error: status === 400 ? "INVALID_REQUEST" : "BRIDGE_UNAVAILABLE", requestId }, status);
   }
+}
+
+function normalizeCanvasInput(input: Record<string, unknown>) {
+  const numericKeys = new Set(["maxPrice", "limit", "quantity", "totalBudget"]);
+  return Object.fromEntries(Object.entries(input).flatMap(([key, value]) => {
+    if (value === "" || value === null || typeof value === "undefined") return [];
+    if (!numericKeys.has(key) || typeof value !== "string") return [[key, value]];
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? [[key, numeric]] : [[key, value]];
+  }));
 }
 
 function stableChatId(sessionId: string) {
