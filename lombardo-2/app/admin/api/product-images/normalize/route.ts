@@ -55,6 +55,9 @@ export async function POST(request: Request) {
         const source = new Uint8Array(await response.arrayBuffer());
         if (source.byteLength < 20 || source.byteLength > 5 * 1024 * 1024) throw new Error("invalid_source_size");
         const render = await createNormalizedProductRender(source);
+        if (render.confidence === "low") {
+          return { mediaId: item.id, status: "needs_review" as const };
+        }
         if (render.status === "needs_review") {
           return { mediaId: item.id, status: "needs_review" as const };
         }

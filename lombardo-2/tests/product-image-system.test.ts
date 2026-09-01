@@ -49,7 +49,10 @@ test("normalized renders preserve the master and publish only for SAFE products"
   assert.match(route, /requireAdminRole\("admin"\)/);
   assert.match(route, /sameOrigin\(request\)/);
   assert.doesNotMatch(renderer, /removed\.confidence === "low"/);
-  assert.match(ownerDirectedMigration, /p_background_confidence not in \('high', 'medium', 'low'\)/);
+  assert.match(ownerDirectedMigration, /supplier_publish_owner_directed_normalized_product_render/);
+  assert.match(ownerDirectedMigration, /job\.metadata->>'mode' = 'owner_directive_bulk_publish'/);
+  assert.match(ownerDirectedMigration, /product\.eligibility_status = 'safe'/);
+  assert.match(ownerDirectedMigration, /p_background_confidence <> 'low'/);
 });
 
 test("public product imagery uses one white 80-percent canvas", async () => {

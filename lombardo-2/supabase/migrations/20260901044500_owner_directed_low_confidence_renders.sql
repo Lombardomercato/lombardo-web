@@ -2,7 +2,8 @@
 -- background extraction when the product still has a valid foreground bound.
 -- The source master remains preserved and the actual confidence is audited.
 
-create or replace function public.supplier_publish_normalized_product_render(
+create or replace function public.supplier_publish_owner_directed_normalized_product_render(
+  p_job_id uuid,
   p_source_media_id uuid,
   p_storage_path text,
   p_byte_size integer,
@@ -24,7 +25,7 @@ begin
   if p_storage_path !~ '^[0-9a-f-]{36}/renders/product-image-system-v1/[0-9a-f-]{36}\.webp$'
     or p_byte_size < 20 or p_byte_size > 5242880
     or p_content_sha256 !~ '^[0-9a-f]{64}$'
-    or p_background_confidence not in ('high', 'medium', 'low')
+    or p_background_confidence <> 'low'
     or p_edge_coverage < 0 or p_edge_coverage > 1 then
     raise exception using errcode = '22023', message = 'INVALID_NORMALIZED_RENDER';
   end if;
@@ -32,12 +33,18 @@ begin
   select media.* into v_source
   from public.supplier_product_media media
   join public.supplier_products product on product.id = media.supplier_product_id
+  join public.suppliers supplier on supplier.id = product.supplier_id
+  join public.supplier_image_jobs job on job.id = p_job_id and job.tenant_id = supplier.tenant_id
   where media.id = p_source_media_id
     and media.is_primary
     and media.approval_status = 'approved'
     and media.rights_status in ('owned', 'licensed', 'approved')
     and product.active
     and product.eligibility_status = 'safe'
+    and job.status in ('ready', 'running')
+    and job.expires_at > now()
+    and job.metadata->>'mode' = 'owner_directive_bulk_publish'
+    and job.metadata->>'normalization' = 'white_4x5_uniform_80pct'
   for update of media;
   if not found then
     raise exception using errcode = '23514', message = 'SOURCE_MASTER_NOT_PUBLICATION_ELIGIBLE';
@@ -98,7 +105,7 @@ begin
 end;
 $$;
 
-revoke all on function public.supplier_publish_normalized_product_render(uuid,text,integer,text,text,numeric,uuid)
+revoke all on function public.supplier_publish_owner_directed_normalized_product_render(uuid,uuid,text,integer,text,text,numeric,uuid)
   from public, anon, authenticated;
-grant execute on function public.supplier_publish_normalized_product_render(uuid,text,integer,text,text,numeric,uuid)
+grant execute on function public.supplier_publish_owner_directed_normalized_product_render(uuid,uuid,text,integer,text,text,numeric,uuid)
   to service_role;

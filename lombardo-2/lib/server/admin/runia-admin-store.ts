@@ -1086,6 +1086,7 @@ export class RuniaAdminStore {
     backgroundConfidence: "high" | "medium" | "low";
     edgeCoverage: number;
     operatorUserId: string | null;
+    jobId?: string;
   }) {
     if (!UUID_PATTERN.test(input.sourceMediaId) || !UUID_PATTERN.test(input.productId)) {
       throw new AdminStoreError("La imagen de origen no es válida.", 422);
@@ -1109,7 +1110,15 @@ export class RuniaAdminStore {
     );
     if (!upload.ok) throw new AdminStoreError("No pudimos subir el render normalizado.", 502);
     try {
-      await this.rpc("supplier_publish_normalized_product_render", {
+      if (input.backgroundConfidence === "low" && (!input.jobId || !UUID_PATTERN.test(input.jobId))) {
+        throw new AdminStoreError("El render de baja confianza requiere un trabajo autorizado.", 409);
+      }
+      await this.rpc(
+        input.backgroundConfidence === "low"
+          ? "supplier_publish_owner_directed_normalized_product_render"
+          : "supplier_publish_normalized_product_render",
+        {
+        ...(input.backgroundConfidence === "low" ? { p_job_id: input.jobId } : {}),
         p_source_media_id: input.sourceMediaId,
         p_storage_path: path,
         p_byte_size: input.bytes.byteLength,
