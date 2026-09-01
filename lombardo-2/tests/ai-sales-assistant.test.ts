@@ -96,6 +96,8 @@ test("analytics pública queda limitada a cinco eventos", () => {
     assert.match(assistant, new RegExp(`"${event}"`));
   }
   assert.doesNotMatch(assistant, /recommendation_shown|recommendation_click|chat_add_to_cart|chat_product_view|chat_checkout_assist/);
+  assert.match(assistant, /crypto\.randomUUID\(\)/);
+  assert.match(assistant, /id: chatSessionId/);
 });
 
 test("el prompt bloquea alucinación, escrituras y cambios de precio por texto", () => {

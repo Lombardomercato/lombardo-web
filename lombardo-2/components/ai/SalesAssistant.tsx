@@ -24,10 +24,12 @@ const transport = new DefaultChatTransport<UIMessage>({ api: "/api/ai/chat" });
 export function SalesAssistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [chatSessionId] = useState(() => crypto.randomUUID());
   const launcherRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { addItem, getItemCount } = useCart();
   const { id: chatId, messages, sendMessage, status, error, clearError, stop } = useChat({
+    id: chatSessionId,
     transport,
     onError: () => undefined,
   });
