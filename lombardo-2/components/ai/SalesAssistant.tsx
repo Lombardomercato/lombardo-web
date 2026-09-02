@@ -105,19 +105,16 @@ export function SalesAssistant() {
         className={styles.launcher}
         type="button"
         onClick={openChat}
+        aria-label="Abrir asistente de compra Lombardo"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="sales-assistant-panel"
       >
-        <span className={styles.launcherMark} aria-hidden="true">
-          <span />
-          <span />
-        </span>
-        <span className={styles.launcherCopy}>
-          <small>ASISTENTE</small>
-          <strong>Te ayudo a elegir</strong>
-        </span>
-        <span className={styles.launcherArrow} aria-hidden="true">↗</span>
+        <svg className={styles.launcherIcon} viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 6.5c-5.25 0-9.5 3.78-9.5 8.45 0 1.82.65 3.51 1.77 4.89L7.2 25l5.23-2.12c1.1.35 2.31.55 3.57.55 5.25 0 9.5-3.79 9.5-8.48S21.25 6.5 16 6.5Z" />
+          <path d="M13 11v7h5" />
+        </svg>
+        <span className="sr-only">Te ayudo a elegir</span>
       </button>
       {open ? <button className={styles.backdrop} type="button" onClick={close} aria-label="Cerrar asistente" /> : null}
       <section
