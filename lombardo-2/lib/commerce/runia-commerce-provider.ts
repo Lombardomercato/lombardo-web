@@ -15,6 +15,10 @@ import {
 import type { ServerProductSource } from "../server/orders/order-dependencies.ts";
 import { ServerOrderError } from "../server/orders/server-order-error.ts";
 import {
+  fetchSupabaseRest,
+  supabaseRestResponseError,
+} from "../server/supabase-rest.ts";
+import {
   categoryFilterForPostgrest,
   categoryForSupplierSku,
   categorySearchScope,
@@ -72,8 +76,11 @@ interface SearchProductIdRow {
   total_count: number | string;
 }
 
-function providerError(message: string): never {
-  throw new ServerOrderError("SERVER_NOT_CONFIGURED", message, { status: 503 });
+function providerError(message: string, cause?: unknown): never {
+  throw new ServerOrderError("SERVER_NOT_CONFIGURED", message, {
+    status: 503,
+    cause,
+  });
 }
 
 function clampInteger(value: number | undefined, fallback: number, maximum: number) {
@@ -153,13 +160,23 @@ export class RuniaCommerceProvider
     preferCount = false,
   ) {
     const startedAt = performance.now();
-    const response = await this.fetcher(
-      `${this.url}/rest/v1/${table}?${search.toString()}`,
-      { headers: this.headers(preferCount), cache: "no-store" },
-    );
+    const operation = `Runia REST GET ${table}`;
+    let response: Response;
+    try {
+      response = await fetchSupabaseRest(
+        `${this.url}/rest/v1/${table}?${search.toString()}`,
+        { headers: this.headers(preferCount), cache: "no-store" },
+        { fetcher: this.fetcher, operation },
+      );
+    } catch (error) {
+      providerError("Runia no pudo conectar con el catálogo real de VINROS.", error);
+    }
     const queryTimeMs = performance.now() - startedAt;
     if (!response.ok) {
-      providerError("Runia no pudo entregar el catálogo real de VINROS.");
+      providerError(
+        "Runia no pudo entregar el catálogo real de VINROS.",
+        await supabaseRestResponseError(response, operation),
+      );
     }
     return {
       rows: (await response.json()) as T[],
@@ -329,8 +346,14 @@ export class RuniaCommerceProvider
     rows: RuniaSupplierProductRow[],
     pricingContext: CustomerPricingContext,
   ) {
+    let media: Awaited<ReturnType<RuniaCommerceProvider["loadImages"]>>;
     try {
-      const media = await this.loadImages(rows.map((row) => row.runia_product_id));
+      media = await this.loadImages(rows.map((row) => row.runia_product_id));
+    } catch (error) {
+      providerError("Runia no pudo cargar las imágenes públicas del catálogo.", error);
+    }
+
+    try {
       return {
         products: rows.map((row) =>
           mapRuniaSupplierProduct(
@@ -341,8 +364,8 @@ export class RuniaCommerceProvider
         ),
         imageQueryTimeMs: media.queryTimeMs,
       };
-    } catch {
-      providerError("Runia devolvió un producto SAFE con datos inválidos.");
+    } catch (error) {
+      providerError("Runia devolvió un producto SAFE con datos inválidos.", error);
     }
   }
 
