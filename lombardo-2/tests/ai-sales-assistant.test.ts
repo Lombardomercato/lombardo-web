@@ -101,7 +101,12 @@ test("la UI expone el contrato público exacto y funciona en mobile", () => {
   ]) assert.match(assistant, new RegExp(starter.replace(/[.$?*+^{}()[\]\\|]/g, "\\$&")));
   assert.match(assistant, /No pude encontrarlo ahora\. Probá buscarlo en el catálogo\./);
   assert.match(assistant, /href="\/productos"/);
+  assert.match(assistant, /EMPEZÁ POR UNA SITUACIÓN/);
+  assert.match(assistant, /document\.body\.classList\.add\("assistant-open"\)/);
+  assert.match(assistant, /querySelectorAll<HTMLElement>/);
+  assert.match(css, /grid-template-rows: auto minmax\(0, 1fr\) auto auto/);
   assert.match(css, /@media \(max-width: 47\.99rem\)/);
+  assert.match(css, /inset: var\(--header-height-mobile\) 0 0/);
   assert.match(css, /width: 100%/);
 });
 

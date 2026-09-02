@@ -26,7 +26,9 @@ export function SalesAssistant() {
   const [input, setInput] = useState("");
   const [chatSessionId] = useState(() => crypto.randomUUID());
   const launcherRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { addItem, getItemCount } = useCart();
   const { id: chatId, messages, sendMessage, status, error, clearError, stop } = useChat({
     id: chatSessionId,
@@ -37,16 +39,47 @@ export function SalesAssistant() {
 
   useEffect(() => {
     if (!open) return;
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 80);
+    document.body.classList.add("assistant-open");
+    const timer = window.setTimeout(() => {
+      if (window.matchMedia("(min-width: 48rem)").matches) inputRef.current?.focus();
+    }, 120);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        window.setTimeout(() => launcherRef.current?.focus(), 0);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
+      document.body.classList.remove("assistant-open");
       window.clearTimeout(timer);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || messages.length === 0) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    messagesEndRef.current?.scrollIntoView({
+      behavior: busy || reducedMotion ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [busy, messages, open]);
 
   const close = () => {
     setOpen(false);
@@ -74,12 +107,22 @@ export function SalesAssistant() {
         onClick={openChat}
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls="sales-assistant-panel"
       >
-        <span>LOMBARDO</span>
-        <small>TE AYUDO A ELEGIR</small>
+        <span className={styles.launcherMark} aria-hidden="true">
+          <span />
+          <span />
+        </span>
+        <span className={styles.launcherCopy}>
+          <small>ASISTENTE</small>
+          <strong>Te ayudo a elegir</strong>
+        </span>
+        <span className={styles.launcherArrow} aria-hidden="true">↗</span>
       </button>
       {open ? <button className={styles.backdrop} type="button" onClick={close} aria-label="Cerrar asistente" /> : null}
       <section
+        ref={panelRef}
+        id="sales-assistant-panel"
         className={`${styles.panel} ${open ? styles.panelOpen : ""}`}
         role="dialog"
         aria-modal="true"
@@ -88,20 +131,30 @@ export function SalesAssistant() {
       >
         <header className={styles.header}>
           <div>
-            <p>LOMBARDO</p>
+            <p>LOMBARDO / ASISTENTE DE COMPRA</p>
             <h2 id="sales-assistant-title">Te ayudo a elegir.</h2>
+            <span>Precios, stock y productos reales.</span>
           </div>
-          <button type="button" onClick={close} aria-label="Cerrar asistente">×</button>
+          <button type="button" onClick={close} aria-label="Cerrar asistente">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
         </header>
 
         <div className={styles.messages} aria-live="polite" aria-busy={busy}>
           {messages.length === 0 ? (
             <div className={styles.welcome}>
+              <span className={styles.eyebrow}>EMPEZÁ POR UNA SITUACIÓN</span>
               <h3>¿QUÉ ESTÁS BUSCANDO?</h3>
               <p>Puedo ayudarte a elegir entre miles de productos.</p>
               <div className={styles.starters}>
-                {STARTERS.map((starter) => (
-                  <button key={starter} type="button" onClick={() => submitText(starter)}>{starter}</button>
+                {STARTERS.map((starter, index) => (
+                  <button key={starter} type="button" onClick={() => submitText(starter)}>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <strong>{starter}</strong>
+                    <span aria-hidden="true">→</span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -123,6 +176,7 @@ export function SalesAssistant() {
               <button type="button" onClick={clearError}>ENTENDIDO</button>
             </div>
           ) : null}
+          <div ref={messagesEndRef} aria-hidden="true" />
         </div>
 
         {getItemCount() > 0 ? (
@@ -141,23 +195,31 @@ export function SalesAssistant() {
             submitText(input);
           }}
         >
-          <label className="sr-only" htmlFor="lombardo-ai-message">Tu consulta</label>
-          <input
-            ref={inputRef}
-            id="lombardo-ai-message"
-            value={input}
-            onChange={(event) => setInput(event.target.value.slice(0, 1_200))}
-            placeholder="Ej.: un regalo hasta $30.000"
-            autoComplete="off"
-            disabled={busy}
-          />
+          <label htmlFor="lombardo-ai-message">
+            <span>TU CONSULTA</span>
+            <input
+              ref={inputRef}
+              id="lombardo-ai-message"
+              value={input}
+              onChange={(event) => setInput(event.target.value.slice(0, 1_200))}
+              placeholder="Ej.: un regalo hasta $30.000"
+              autoComplete="off"
+              disabled={busy}
+            />
+          </label>
           {busy ? (
             <button type="button" onClick={stop}>PARAR</button>
           ) : (
-            <button type="submit" disabled={!input.trim()}>ENVIAR</button>
+            <button type="submit" disabled={!input.trim()}>
+              <span>ENVIAR</span>
+              <span aria-hidden="true">↑</span>
+            </button>
           )}
         </form>
-        <p className={styles.disclaimer}>Las opciones y precios se verifican en Runia. Confirmamos nuevamente al agregar al carrito.</p>
+        <p className={styles.disclaimer}>
+          <span aria-hidden="true" />
+          Productos y precios verificados con Runia.
+        </p>
       </section>
     </>
   );
