@@ -22,6 +22,7 @@ export interface SecretCellarClue {
   id: string;
   text: string;
   source: SecretCellarClueSource;
+  productId?: string;
 }
 
 export interface SecretCellarSettings {
@@ -88,7 +89,9 @@ export interface SecretCellarExclusion {
 export interface SecretCellarAdminDashboard {
   settings: SecretCellarSettings;
   current?: SecretCellarChallenge;
+  yesterday?: SecretCellarChallenge;
   next?: SecretCellarChallenge;
+  history: SecretCellarChallenge[];
   attempts: SecretCellarAttempt[];
   exclusions: SecretCellarExclusion[];
   participants: number;

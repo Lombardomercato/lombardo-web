@@ -135,17 +135,18 @@ export function createAutomationTasks(input: {
   };
 
   const dailyCava: AutomationTask = async ({ date }) => {
-    const result = await createSecretCellarService().ensureChallengeWithFallback(date);
+    const challenge = await createSecretCellarService().ensureDailyChallenge(date);
     return {
-      status: result.fallback ? "warning" : "completed",
+      status: "completed",
       summary: {
-        challengeId: result.challenge.id,
-        challengeDate: result.challenge.date,
-        candidates: result.challenge.candidates.length,
-        fallback: result.fallback,
+        challengeId: challenge.id,
+        challengeDate: challenge.date,
+        secretProductId: challenge.secretProductId,
+        candidates: challenge.candidates.length,
+        fallback: false,
+        noRepeatWindow: 30,
         safeOnly: true,
       },
-      warnings: result.fallback ? ["La Cava usó el último desafío válido como fallback."] : [],
     };
   };
 

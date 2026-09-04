@@ -113,12 +113,68 @@ test("cada pista se deriva del snapshot real de la botella secreta", () => {
   });
   const secret = challenge.candidates.find((candidate) => candidate.id === challenge.secretProductId);
   assert.ok(secret);
+  assert.ok(challenge.clues.every((clue) => clue.productId === secret.id));
   const combined = challenge.clues.map((clue) => clue.text).join(" ");
   assert.match(combined, new RegExp(secret.presentation, "i"));
   assert.match(combined, /precio retail/i);
   assert.match(combined, /familia de vinos/i);
   assert.equal(challenge.rewardPercentage, 15);
   assert.equal(challenge.rewardValidHours, 48);
+});
+
+test("la botella secreta no se repite dentro de una ventana de 30 challenges", () => {
+  const products = Array.from({ length: 40 }, (_, index) => product(index + 1));
+  const first = generateSecretCellarChallenge({
+    tenantId: "17c7fda1-0b07-47bd-8379-f0bd00fac1de",
+    date: "2026-09-04",
+    currentDate: "2026-09-04",
+    products,
+    excludedProductIds: new Set<string>(),
+    blockedSecretProductIds: new Set<string>(),
+    settings,
+    generatedBy: "DAILY_ENGINE",
+  });
+  const second = generateSecretCellarChallenge({
+    tenantId: "17c7fda1-0b07-47bd-8379-f0bd00fac1de",
+    date: "2026-09-05",
+    currentDate: "2026-09-05",
+    products,
+    excludedProductIds: new Set<string>(),
+    blockedSecretProductIds: new Set([first.secretProductId]),
+    settings,
+    generatedBy: "DAILY_ENGINE",
+  });
+  assert.notEqual(second.secretProductId, first.secretProductId);
+  assert.equal(second.status, "ACTIVE");
+  assert.ok(second.clues.every((clue) => clue.productId === second.secretProductId));
+});
+
+test("el historial consulta las 30 botellas secretas previas sin una columna PostgREST inválida", async () => {
+  const store = await readFile(
+    new URL("../lib/server/secret-cellar/secret-cellar-store.ts", import.meta.url),
+    "utf8",
+  );
+  const service = await readFile(
+    new URL("../lib/server/secret-cellar/secret-cellar-service.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(store, /select: "secret_product_id"/);
+  assert.match(store, /search\.set\("challenge_date", `lt\./);
+  assert.doesNotMatch(store, /"challenge_date\.lt"/);
+  assert.match(service, /recentSecretProductIds\(date, 30\)/);
+  assert.doesNotMatch(service, /cloneLatestChallenge/);
+});
+
+test("la base protege timezone, pistas e historial de 30 desafíos", async () => {
+  const migration = await readFile(
+    new URL("../supabase/migrations/20260904042116_secret_cellar_daily_rotation.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /America\/Argentina\/Buenos_Aires/);
+  assert.match(migration, /SECRET_CELLAR_CLUE_PRODUCT_MISMATCH/);
+  assert.match(migration, /SECRET_CELLAR_SECRET_REPEATED_WITHIN_30/);
+  assert.match(migration, /limit 30/i);
+  assert.match(migration, /secret_cellar_challenges_history_idx/);
 });
 
 test("falla cerrado si no hay entre 8 y 12 candidatos elegibles", () => {

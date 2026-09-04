@@ -1,7 +1,9 @@
+import { ARGENTINA_TIME_ZONE } from "../automations/date.ts";
+
 const ARGENTINA_UTC_OFFSET_HOURS = 3;
 
 const argentinaDateParts = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Argentina/Cordoba",
+  timeZone: ARGENTINA_TIME_ZONE,
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
