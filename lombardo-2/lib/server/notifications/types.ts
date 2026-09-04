@@ -85,6 +85,7 @@ export interface EmailOrderProvider {
 }
 
 export interface NewOrderNotifier {
+  isApplicable?(order: OrderDraft): boolean;
   notify(order: OrderDraft): Promise<ClaimedOrderNotification>;
   retry(order: OrderDraft): Promise<ClaimedOrderNotification>;
 }

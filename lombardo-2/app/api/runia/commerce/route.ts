@@ -12,17 +12,25 @@ import {
   executeCommerceOperation,
 } from "@/lib/server/ai/tools";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
+import { resolveVerifiedWhatsAppCustomer } from "@/lib/server/customers/whatsapp-pricing";
 import { readJsonBody } from "@/lib/server/request-body";
+import {
+  executeWhatsAppCommerceOperation,
+  whatsappCommerceOperationSchema,
+} from "@/lib/server/ai/whatsapp-commerce";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const bodySchema = z.object({
-  operation: commerceOperationNameSchema,
+  operation: z.union([commerceOperationNameSchema, whatsappCommerceOperationSchema]),
   input: z.record(z.string(), z.unknown()).default({}),
   pricingAssertion: z.string().min(40).max(2_000).optional(),
   sessionId: z.string().trim().min(8).max(160),
+  channel: z.string().trim().max(40).optional(),
+  senderId: z.string().trim().max(40).optional(),
+  contactId: z.string().trim().max(160).optional(),
 }).strict();
 
 export async function POST(request: Request) {
@@ -37,9 +45,16 @@ export async function POST(request: Request) {
       return json({ error: "FORBIDDEN", requestId }, 403);
     }
     const body = bodySchema.parse(await readJsonBody(request, 16_384, "RUNIA_BRIDGE_BODY_TOO_LARGE"));
+    const isWhatsAppCommerce = whatsappCommerceOperationSchema.safeParse(body.operation).success;
+    if (isWhatsAppCommerce && (body.channel !== "whatsapp" || !body.senderId)) {
+      return json({ error: "INVALID_CHANNEL", requestId }, 403);
+    }
+    const verifiedCustomer = isWhatsAppCommerce && body.senderId
+      ? await resolveVerifiedWhatsAppCustomer(body.senderId).catch(() => null)
+      : null;
     const pricing = body.pricingAssertion
       ? verifyPricingAssertion(body.pricingAssertion, bridge, fallbackPricing)
-      : fallbackPricing;
+      : verifiedCustomer?.pricing ?? fallbackPricing;
     if (!pricing.tenantRecordId || pricing.tenantSlug !== "lombardo") {
       throw new Error("RUNIA_BRIDGE_TENANT_INVALID");
     }
@@ -61,19 +76,33 @@ export async function POST(request: Request) {
       return json({ error: "RATE_LIMITED", requestId }, 429, { "Retry-After": "60" });
     }
 
-    const result = await executeCommerceOperation({
-      configuration,
-      pricing,
-      audit,
-      chatId: stableChatId(body.sessionId),
-    }, body.operation, normalizeCanvasInput(body.input));
+    const normalizedInput = normalizeCanvasInput(body.input);
+    const result = isWhatsAppCommerce
+      ? await executeWhatsAppCommerceOperation({
+          pricing,
+          verifiedCustomer,
+          sessionId: body.sessionId,
+          senderPhone: body.senderId!,
+          contactId: body.contactId,
+        }, whatsappCommerceOperationSchema.parse(body.operation), normalizedInput)
+      : await executeCommerceOperation({
+          configuration,
+          pricing,
+          audit,
+          chatId: stableChatId(body.sessionId),
+        }, commerceOperationNameSchema.parse(body.operation), normalizedInput);
     await audit.recordEvent({
       chatId: stableChatId(body.sessionId),
       pricing,
       eventName: "tool_call",
       source: "server",
       toolName: body.operation,
-      metadata: { transport: "runia_canvas_bridge", requestId },
+      metadata: {
+        transport: "runia_canvas_bridge",
+        requestId,
+        channel: body.channel ?? "unspecified",
+        verifiedCustomer: Boolean(verifiedCustomer),
+      },
     }).catch(() => undefined);
 
     return json({
@@ -92,8 +121,13 @@ export async function POST(request: Request) {
 
 function normalizeCanvasInput(input: Record<string, unknown>) {
   const numericKeys = new Set(["maxPrice", "limit", "quantity", "totalBudget"]);
+  const booleanKeys = new Set(["invoiceRequested", "confirmed"]);
   return Object.fromEntries(Object.entries(input).flatMap(([key, value]) => {
     if (value === "" || value === null || typeof value === "undefined") return [];
+    if (booleanKeys.has(key) && typeof value === "string") {
+      if (["true", "1", "si", "sí"].includes(value.toLocaleLowerCase("es-AR"))) return [[key, true]];
+      if (["false", "0", "no"].includes(value.toLocaleLowerCase("es-AR"))) return [[key, false]];
+    }
     if (!numericKeys.has(key) || typeof value !== "string") return [[key, value]];
     const numeric = Number(value);
     return Number.isFinite(numeric) ? [[key, numeric]] : [[key, value]];

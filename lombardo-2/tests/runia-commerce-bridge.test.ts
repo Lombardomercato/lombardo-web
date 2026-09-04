@@ -68,7 +68,7 @@ test("la identidad comercial viaja en una assertion corta, firmada y tenant-fixe
   }, now), /CROSS_TENANT/);
 });
 
-test("la superficie server-to-server queda limitada a las siete operaciones y no crea órdenes", () => {
+test("las siete operaciones commerce:read siguen separadas de las acciones de pedido del Canvas", () => {
   const route = source("app/api/runia/commerce/route.ts");
   const tools = source("lib/server/ai/tools.ts");
   const contextRoute = source("app/api/ai/runia-context/route.ts");
@@ -76,8 +76,10 @@ test("la superficie server-to-server queda limitada a las siete operaciones y no
   assert.match(route, /consumeRateLimit/);
   assert.match(route, /eventName: "tool_call"/);
   assert.match(route, /executeCommerceOperation/);
+  assert.match(route, /executeWhatsAppCommerceOperation/);
+  assert.match(route, /body\.channel !== "whatsapp"/);
   assert.match(route, /tenantSlug !== "lombardo"/);
-  assert.doesNotMatch(route, /createOrder|service_role|from\(/i);
+  assert.doesNotMatch(route, /service_role|from\(/i);
   assert.match(contextRoute, /createPricingAssertion/);
   for (const operation of [
     "search_products",
@@ -88,6 +90,7 @@ test("la superficie server-to-server queda limitada a las siete operaciones y no
     "search_guides",
     "build_selection",
   ]) assert.match(tools, new RegExp(`"${operation}"`));
+  assert.doesNotMatch(tools, /confirm_whatsapp_order|manage_whatsapp_cart/);
 });
 
 test("la credencial nunca aparece en código cliente", () => {

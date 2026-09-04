@@ -289,6 +289,9 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       checkoutSessionId: input.checkoutSessionId,
       idempotencyKey: input.idempotencyKey,
       orderSource: input.orderSource ?? "storefront",
+      channelContext: input.channelContext,
+      invoiceDetails: input.invoiceDetails,
+      customerNotes: input.customerNotes,
       items,
       customer: input.customer,
       deliveryMethod: input.deliveryMethod,
@@ -312,7 +315,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       currency: "ARS",
       orderStatus: "pending_payment",
       paymentStatus: "pending",
-      paymentMethod: "mercado_pago",
+      paymentMethod: input.paymentMethod ?? "mercado_pago",
     });
     if (result.reused) this.assertPricingIdentity(result.order, input.couponCode);
     return result;

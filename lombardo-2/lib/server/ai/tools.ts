@@ -3,8 +3,10 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import { commerceProvider, quickOrderProvider } from "@/lib/commerce";
+import { runiaProductIdFromProductSlug } from "@/lib/commerce/runia-catalog-mapper";
 import { getGuide, PUBLISHED_GUIDES } from "@/lib/seo/guides";
 import { loadGuideProducts } from "@/lib/seo/guide-products";
+import { tolerantQueries } from "@/lib/search/tolerant-product-query";
 import type { CustomerPricingContext } from "@/lib/server/customers/types";
 import type { Product } from "@/types/commerce";
 import type { AiAuditStore } from "./audit-store";
@@ -35,7 +37,7 @@ export type CommerceOperationName = z.infer<typeof commerceOperationNameSchema>;
 
 export const commerceOperationInputSchemas = {
   search_products: z.object({
-    query: z.string().trim().max(80).default(""),
+    query: z.string().trim().max(500).default(""),
     categorySlug: categorySchema,
     maxPrice: priceSchema,
     limit: z.number().int().min(1).max(8).default(5),
@@ -226,7 +228,7 @@ export async function executeCommerceOperation(
   };
 }
 
-async function searchCatalog(input: {
+export async function searchCatalog(input: {
   query: string;
   categorySlug?: string;
   maxPrice?: number;
@@ -235,17 +237,42 @@ async function searchCatalog(input: {
 }) {
   if (!input.query) return (await scanCatalog(input)).slice(0, input.limit);
 
-  const quick = await quickOrderProvider.searchProducts(
-    { search: input.query, limit: Math.min(Math.max(input.limit * 3, 12), 30) },
-    input.pricing,
-  );
-  const hydrated = await commerceProvider.getProductsByIds(
-    quick.products.map((entry) => entry.product.id),
-    input.pricing,
-  );
-  return hydrated
-    .filter((product) => matchesFilters(product, input.categorySlug, input.maxPrice))
-    .slice(0, input.limit);
+  const productId = productIdFromQuery(input.query);
+  if (productId) {
+    return (await commerceProvider.getProductsByIds([productId], input.pricing))
+      .filter((product) => matchesFilters(product, input.categorySlug, input.maxPrice))
+      .slice(0, input.limit);
+  }
+
+  const matches: Product[] = [];
+  for (const query of tolerantQueries(input.query)) {
+    const quick = await quickOrderProvider.searchProducts(
+      { search: query, limit: Math.min(Math.max(input.limit * 3, 12), 30) },
+      input.pricing,
+    );
+    const hydrated = await commerceProvider.getProductsByIds(
+      quick.products.map((entry) => entry.product.id),
+      input.pricing,
+    );
+    matches.push(...hydrated.filter((product) => matchesFilters(product, input.categorySlug, input.maxPrice)));
+    if (matches.length >= input.limit) break;
+  }
+  return [...new Map(matches.map((product) => [product.id, product])).values()].slice(0, input.limit);
+}
+
+function productIdFromQuery(value: string) {
+  const trimmed = value.trim();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed)) {
+    return trimmed.toLocaleLowerCase("en-US");
+  }
+  try {
+    const url = new URL(trimmed);
+    if (!["lombardomercato.com", "www.lombardomercato.com"].includes(url.hostname.toLocaleLowerCase("en-US"))) return null;
+    const match = url.pathname.match(/^\/productos\/([^/]+)\/?$/i);
+    return match ? runiaProductIdFromProductSlug(decodeURIComponent(match[1])) : null;
+  } catch {
+    return null;
+  }
 }
 
 async function recommendations(input: {
@@ -367,6 +394,7 @@ function toSalesProduct(product: Product): SalesProduct {
     id: product.id,
     sku: product.sku,
     slug: product.slug,
+    href: `https://www.lombardomercato.com/productos/${product.slug}`,
     name: product.name,
     brand: product.brand.name,
     category: product.category.name,

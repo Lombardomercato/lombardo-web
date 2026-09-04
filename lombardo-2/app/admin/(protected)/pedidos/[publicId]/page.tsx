@@ -187,7 +187,8 @@ export default async function AdminOrderDetailPage({
             <div className={styles.detailField}><span className={styles.fieldLabel}>PAGO</span><p><PaymentBadge status={order.paymentStatus} /></p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>ORDER STATUS</span><p>{ORDER_STATUS_LABELS[order.orderStatus]}</p></div>
               <div className={styles.detailField}><span className={styles.fieldLabel}>FORMA DE PAGO</span><p>{PAYMENT_METHOD_LABELS[order.paymentMethod]}</p></div>
-              <div className={styles.detailField}><span className={styles.fieldLabel}>ORIGEN</span><p>{order.orderSource === "admin_manual" ? "PEDIDO MANUAL" : "TIENDA ONLINE"}</p></div>
+              <div className={styles.detailField}><span className={styles.fieldLabel}>ORIGEN</span><p>{order.orderSource === "admin_manual" ? "PEDIDO MANUAL" : order.orderSource === "whatsapp" ? "WHATSAPP" : "TIENDA ONLINE"}</p></div>
+              {order.channelContext?.conversationSessionId ? <div className={styles.detailField}><span className={styles.fieldLabel}>SESIÓN RUNIA</span><p>{order.channelContext.conversationSessionId}</p></div> : null}
               {order.hasManagementOverride ? <div className={styles.detailField}><span className={styles.fieldLabel}>GESTIÓN</span><p>EDITADO · REV. {order.managementRevision}</p></div> : null}
             <div className={styles.detailField}><span className={styles.fieldLabel}>CREADO</span><p>{formatAdminDate(order.createdAt)}</p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>ACTUALIZADO</span><p>{formatAdminDate(order.fulfillmentUpdatedAt)}</p></div>
@@ -223,6 +224,8 @@ export default async function AdminOrderDetailPage({
           </div>
           {order.customer.whatsapp ? <a className={styles.whatsappButton} href={customerWhatsAppUrl(order)} target="_blank" rel="noreferrer">CONTACTAR POR WHATSAPP</a> : null}
           {order.managementNotes ? <div className={styles.managementNote}><span className={styles.fieldLabel}>NOTAS INTERNAS</span><p>{order.managementNotes}</p></div> : null}
+          {order.customerNotes ? <div className={styles.managementNote}><span className={styles.fieldLabel}>OBSERVACIONES DEL CLIENTE</span><p>{order.customerNotes}</p></div> : null}
+          {order.invoiceDetails ? <div className={styles.managementNote}><span className={styles.fieldLabel}>FACTURA A</span><p>{order.invoiceDetails.businessName} · CUIT {order.invoiceDetails.cuit}{order.invoiceDetails.taxCondition ? ` · ${order.invoiceDetails.taxCondition}` : ""}</p></div> : null}
           <OrderActions order={order} />
         </aside>
       </div>

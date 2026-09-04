@@ -23,6 +23,20 @@ export type PaymentMethod =
   | "bank_transfer"
   | "cash";
 export type OrderCurrency = "ARS";
+export type OrderSource = "storefront" | "admin_manual" | "whatsapp";
+
+export interface OrderChannelContext {
+  channel: "whatsapp";
+  conversationSessionId: string;
+  contactId?: string;
+}
+
+export interface InvoiceDetails {
+  type: "A";
+  businessName: string;
+  cuit: string;
+  taxCondition?: string;
+}
 
 export interface CheckoutCustomer {
   firstName: string;
@@ -62,7 +76,11 @@ export interface CreateOrderInput {
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: DeliveryAddress;
   couponCode?: string;
-  orderSource?: "storefront" | "admin_manual";
+  paymentMethod?: PaymentMethod;
+  orderSource?: OrderSource;
+  channelContext?: OrderChannelContext;
+  invoiceDetails?: InvoiceDetails;
+  customerNotes?: string;
 }
 
 export interface OrderItemSnapshot {
@@ -107,7 +125,10 @@ export interface CheckoutDraft {
   discountPercent: number;
   checkoutSessionId: string;
   idempotencyKey: string;
-  orderSource?: "storefront" | "admin_manual";
+  orderSource?: OrderSource;
+  channelContext?: OrderChannelContext;
+  invoiceDetails?: InvoiceDetails;
+  customerNotes?: string;
   items: OrderItemSnapshot[];
   customer: CheckoutCustomer;
   deliveryMethod: DeliveryMethod;

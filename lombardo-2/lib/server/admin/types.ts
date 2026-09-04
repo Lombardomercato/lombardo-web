@@ -7,6 +7,9 @@ import type {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  OrderSource,
+  OrderChannelContext,
+  InvoiceDetails,
 } from "../../../types/checkout";
 import type { OrderNotification } from "../notifications/types";
 import type {
@@ -66,7 +69,10 @@ export interface AdminOrder {
   paymentPreferenceId?: string;
   paymentManuallyUpdatedAt?: string;
   fulfillmentStatus: FulfillmentStatus;
-  orderSource: "storefront" | "admin_manual";
+  orderSource: OrderSource;
+  channelContext?: OrderChannelContext;
+  invoiceDetails?: InvoiceDetails;
+  customerNotes?: string;
   hasManagementOverride: boolean;
   manualDiscountAmount?: number;
   manualDiscountReason?: string;

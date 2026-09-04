@@ -11,6 +11,7 @@ export const salesProductSchema = z.object({
   id: z.string().uuid(),
   sku: z.string().min(1),
   slug: z.string().min(1),
+  href: z.string().startsWith("https://www.lombardomercato.com/productos/"),
   name: z.string().min(1),
   brand: z.string(),
   category: z.string(),

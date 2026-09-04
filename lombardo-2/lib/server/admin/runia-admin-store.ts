@@ -19,6 +19,9 @@ import type {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  OrderSource,
+  OrderChannelContext,
+  InvoiceDetails,
 } from "../../../types/checkout";
 import type {
   AdminCustomer,
@@ -92,7 +95,10 @@ interface OrderRow {
   coupon_discount_amount?: number | string;
   delivery_cost: number | string;
   total: number | string;
-  order_source?: "storefront" | "admin_manual";
+  order_source?: OrderSource;
+  channel_context?: OrderChannelContext | null;
+  invoice_details?: InvoiceDetails | null;
+  customer_notes?: string | null;
   management_customer?: CheckoutCustomer | null;
   management_items?: OrderItemSnapshot[] | null;
   management_delivery_method?: DeliveryMethod | null;
@@ -398,6 +404,9 @@ const ORDER_SELECT = [
   "delivery_cost",
   "total",
   "order_source",
+  "channel_context",
+  "invoice_details",
+  "customer_notes",
   "management_customer",
   "management_items",
   "management_delivery_method",
@@ -482,6 +491,9 @@ function mapOrder(row: OrderRow): AdminOrder {
     paymentManuallyUpdatedAt: row.payment_manually_updated_at ?? undefined,
     fulfillmentStatus,
     orderSource: row.order_source ?? "storefront",
+    channelContext: row.channel_context ?? undefined,
+    invoiceDetails: row.invoice_details ?? undefined,
+    customerNotes: row.customer_notes ?? undefined,
     hasManagementOverride,
     manualDiscountAmount: managementDiscount > 0 ? managementDiscount : undefined,
     manualDiscountReason: row.management_discount_reason ?? undefined,

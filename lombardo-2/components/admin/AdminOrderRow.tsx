@@ -16,7 +16,7 @@ export function AdminOrderRow({ order }: { order: AdminOrder }) {
       <span>
         <strong>{customerName(order)}</strong>
         <small className={styles.muted}>
-          {itemCount} {itemCount === 1 ? "producto" : "productos"} · {PAYMENT_METHOD_LABELS[order.paymentMethod]}
+          {itemCount} {itemCount === 1 ? "producto" : "productos"} · {PAYMENT_METHOD_LABELS[order.paymentMethod]}{order.orderSource === "whatsapp" ? " · WHATSAPP" : ""}
         </small>
       </span>
       <strong>{formatCurrency(order.total)}</strong>

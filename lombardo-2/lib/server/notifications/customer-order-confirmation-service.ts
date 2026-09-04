@@ -95,6 +95,10 @@ export class CustomerOrderConfirmationService implements NewOrderNotifier {
     return this.deliver(order, false);
   }
 
+  isApplicable(order: OrderDraft) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(order.customer.email);
+  }
+
   retry(order: OrderDraft) {
     return this.deliver(order, true);
   }

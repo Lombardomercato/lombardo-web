@@ -47,7 +47,9 @@ export class OrderPaymentCoordinator {
     });
     if (!result.reused && this.newOrderNotifiers.length) {
       const notificationResults = await Promise.allSettled(
-        this.newOrderNotifiers.map((notifier) => notifier.notify(result.order)),
+        this.newOrderNotifiers
+          .filter((notifier) => notifier.isApplicable?.(result.order) ?? true)
+          .map((notifier) => notifier.notify(result.order)),
       );
       notificationResults.forEach((notificationResult, index) => {
         if (notificationResult.status === "rejected") {
@@ -59,7 +61,7 @@ export class OrderPaymentCoordinator {
         }
       });
     }
-    if (result.order.paymentMethod === "whatsapp_coordination") {
+    if (result.order.paymentMethod !== "mercado_pago") {
       return { ...result, payment: null };
     }
     const existingPayment = this.existingPayment(result.order);

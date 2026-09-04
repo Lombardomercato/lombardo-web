@@ -3,12 +3,15 @@ import type {
   DeliveryAddress,
   DeliveryCostMode,
   DeliveryMethod,
+  InvoiceDetails,
+  OrderChannelContext,
   OrderCurrency,
   OrderDraft,
   OrderItemSnapshot,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  OrderSource,
 } from "../../../types/checkout.ts";
 import type { CustomerPricingPolicy } from "../customers/types.ts";
 import type {
@@ -58,7 +61,10 @@ interface OrderRow {
   payment_method: PaymentMethod;
   checkout_session_id: string;
   idempotency_key: string;
-  order_source?: "storefront" | "admin_manual";
+  order_source?: OrderSource;
+  channel_context?: OrderChannelContext | null;
+  invoice_details?: InvoiceDetails | null;
+  customer_notes?: string | null;
   management_customer?: CheckoutCustomer | null;
   management_items?: OrderItemSnapshot[] | null;
   management_delivery_method?: DeliveryMethod | null;
@@ -132,6 +138,9 @@ function mapOrder(row: OrderRow): OrderDraft {
     checkoutSessionId: row.checkout_session_id,
     idempotencyKey: row.idempotency_key,
     orderSource: row.order_source ?? "storefront",
+    channelContext: row.channel_context ?? undefined,
+    invoiceDetails: row.invoice_details ?? undefined,
+    customerNotes: row.customer_notes ?? undefined,
     paymentPreferenceId: row.payment_preference_id ?? undefined,
     paymentCheckoutUrl: row.payment_checkout_url ?? undefined,
     paymentProviderId: row.payment_provider_id ?? undefined,
@@ -268,6 +277,9 @@ export class SupabaseOrderStore implements RuniaOrderStore {
       checkout_session_id: record.checkoutSessionId,
       idempotency_key: record.idempotencyKey,
       order_source: record.orderSource ?? "storefront",
+      channel_context: record.channelContext ?? null,
+      invoice_details: record.invoiceDetails ?? null,
+      customer_notes: record.customerNotes ?? null,
     };
     const response = await this.request(record.promotionId
       ? "rpc/lombardo_create_order_with_promotion"
