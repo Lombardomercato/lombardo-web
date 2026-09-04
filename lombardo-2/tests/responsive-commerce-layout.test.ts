@@ -6,6 +6,7 @@ const headerCss = readFileSync("components/layout/Header.module.css", "utf8");
 const catalogCss = readFileSync("components/catalog/CatalogExplorer.module.css", "utf8");
 const opportunitiesCss = readFileSync("components/opportunities/OpportunityGrid.module.css", "utf8");
 const homeOpportunitiesCss = readFileSync("components/home/HomeOpportunities.module.css", "utf8");
+const productVisualCss = readFileSync("components/product/ProductVisual.module.css", "utf8");
 const baseCss = readFileSync("styles/base.css", "utf8");
 
 test("el menú mobile tiene una superficie propia a pantalla completa", () => {
@@ -19,6 +20,8 @@ test("el menú mobile tiene una superficie propia a pantalla completa", () => {
 test("el precio editorial pertenece al flujo de la tarjeta", () => {
   assert.match(catalogCss, /\.editorialGrid \.productInfo\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(catalogCss, /\.editorialGrid \.priceBlock\s*\{[\s\S]*justify-items:\s*start/);
+  assert.match(productVisualCss, /@media \(max-width: 47\.99rem\)[\s\S]*\.editorial\s*\{[\s\S]*aspect-ratio:\s*4 \/ 5/);
+  assert.doesNotMatch(productVisualCss, /aspect-ratio:\s*4 \/ 5\.25/);
 });
 
 test("Oportunidades evita cinco columnas frágiles y colapsa a una en mobile", () => {
