@@ -6,6 +6,7 @@ test("normaliza nombres sólo para la presentación pública", () => {
   assert.equal(displayProductName("TRUMPETER MALBEC X 750CC X12B"), "Trumpeter Malbec");
   assert.equal(displayProductName("ACORDEON MALBEC X 750 C.C."), "Acordeon Malbec");
   assert.equal(displayProductName("AIME MALBEC X 750 C.C.."), "Aime Malbec");
+  assert.equal(displayProductName("ABSOLUT VODKA ELYX X 1000 CC 750 C"), "Absolut Vodka Elyx");
   assert.equal(displayProductName("CHIVAS REGAL 12 AÑOS - CAJA X 6 BOTELLAS"), "Chivas Regal 12 Años");
   assert.equal(displayProductName("ESPUMANTE MAGNUM 1 5 L"), "Espumante Magnum 1,5 L");
   assert.equal(displayProductName("Rutini Cabernet Malbec"), "Rutini Cabernet Malbec");

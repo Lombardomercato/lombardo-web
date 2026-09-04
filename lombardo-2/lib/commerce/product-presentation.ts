@@ -48,6 +48,7 @@ export function displayProductName(rawName: string) {
     .replace(/\b(\d+)\s+(\d)\s*(?:LT|LTS|L)\b/gi, "$1,$2 L")
     .replace(/\s*[-–—|/]\s*(?:CAJA|PACK)?\s*[Xx]?\s*\d+\s*(?:B|BOT(?:ELLAS?)?|U|UN(?:IDADES?)?)\.?$/i, "")
     .replace(/\s+[Xx]\s*\d+\s*(?:B|BOT(?:ELLAS?)?|U|UN(?:IDADES?)?)\.?$/i, "")
+    .replace(/\s+[Xx]\s*\d+(?:[.,]\d+)?\s*(?:C\.?\s*C\.?|ML|LT|LTS|L)(?=\s|$|[),–—-]).*$/i, "")
     .replace(/\s+[Xx]\s*\d+(?:[.,]\d+)?\s*(?:C\.?\s*C\.?|ML|LT|LTS|L)\.?\s*$/i, "")
     .replace(/\b(\d+(?:[.,]\d+)?)\s*(C\.?\s*C\.?|ML)\.?(?=\s|$|[),–—-])/gi, (_, amount: string, unit: string) => `${amount} ${unit.toLocaleUpperCase("es-AR").startsWith("C") ? "cc" : "ml"}`)
     .replace(/\b(\d+(?:[.,]\d+)?)\s*(LT|LTS)\b/gi, (_, amount: string) => `${amount} L`)
