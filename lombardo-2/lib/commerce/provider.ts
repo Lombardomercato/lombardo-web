@@ -9,6 +9,7 @@ export interface ProductPageQuery {
   limit?: number;
   search?: string;
   categorySlug?: string;
+  requireImage?: boolean;
 }
 
 export interface ProductPage {

@@ -146,6 +146,7 @@ export function generateSecretCellarChallenge(input: {
     (product) =>
       product.active &&
       product.basePrice > 0 &&
+      product.images.length > 0 &&
       BOTTLE_CATEGORIES.has(product.category.slug) &&
       !input.excludedProductIds.has(product.id),
   );
@@ -154,11 +155,7 @@ export function generateSecretCellarChallenge(input: {
   }
 
   const seed = `${input.tenantId}:${input.date}`;
-  const imaged = ranked(
-    eligible.filter((product) => product.images.length > 0),
-    `${seed}:image`,
-  );
-  const secretProduct = imaged[0] ?? ranked(eligible, `${seed}:secret`)[0];
+  const secretProduct = ranked(eligible, `${seed}:secret`)[0];
   const coherentPool = eligible.filter(
     (product) =>
       product.id !== secretProduct.id &&
@@ -169,14 +166,8 @@ export function generateSecretCellarChallenge(input: {
       product.id !== secretProduct.id &&
       product.category.slug !== secretProduct.category.slug,
   );
-  const coherent = [
-    ...ranked(coherentPool.filter((product) => product.images.length > 0), `${seed}:coherent:image`),
-    ...ranked(coherentPool.filter((product) => product.images.length === 0), `${seed}:coherent:fallback`),
-  ];
-  const remainder = [
-    ...ranked(remainderPool.filter((product) => product.images.length > 0), `${seed}:remainder:image`),
-    ...ranked(remainderPool.filter((product) => product.images.length === 0), `${seed}:remainder:fallback`),
-  ];
+  const coherent = ranked(coherentPool, `${seed}:coherent`);
+  const remainder = ranked(remainderPool, `${seed}:remainder`);
   const selected = [
     secretProduct,
     ...coherent,

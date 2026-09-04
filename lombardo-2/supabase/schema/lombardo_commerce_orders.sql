@@ -52,7 +52,7 @@ create table if not exists public.commerce_orders (
     payment_status in ('pending', 'approved', 'rejected', 'cancelled', 'refunded')
   ),
   constraint commerce_orders_payment_method_check check (
-    payment_method in ('mercado_pago', 'whatsapp_coordination')
+    payment_method in ('mercado_pago', 'whatsapp_coordination', 'bank_transfer', 'cash')
   ),
   constraint commerce_orders_items_check check (
     jsonb_typeof(items) = 'array' and jsonb_array_length(items) between 1 and 50
@@ -79,7 +79,7 @@ begin
   ) then
     alter table public.commerce_orders
       add constraint commerce_orders_payment_method_check check (
-        payment_method in ('mercado_pago', 'whatsapp_coordination')
+        payment_method in ('mercado_pago', 'whatsapp_coordination', 'bank_transfer', 'cash')
       );
   end if;
 end;

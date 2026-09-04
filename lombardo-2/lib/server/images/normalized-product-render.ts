@@ -23,7 +23,7 @@ export async function createNormalizedProductRender(source: Uint8Array) {
     channels: 4,
   });
   const bounds = alphaBounds(removed);
-  if (!bounds || removed.confidence === "low") {
+  if (!bounds) {
     return { status: "needs_review" as const, confidence: removed.confidence, edgeCoverage: removed.edgeCoverage };
   }
   const placement = fitInsideLombardoCanvas(bounds.width, bounds.height);

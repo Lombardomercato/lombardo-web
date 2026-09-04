@@ -6,6 +6,7 @@ import test from "node:test";
 const files = {
   migration: fileURLToPath(new URL("../supabase/migrations/20260829052000_lombardo_product_image_system.sql", import.meta.url)),
   normalizationMigration: fileURLToPath(new URL("../supabase/migrations/20260830193000_product_image_transparent_renders.sql", import.meta.url)),
+  ownerDirectedNormalizationMigration: fileURLToPath(new URL("../supabase/migrations/20260901044500_owner_directed_low_confidence_renders.sql", import.meta.url)),
   normalizationRoute: fileURLToPath(new URL("../app/admin/api/product-images/normalize/route.ts", import.meta.url)),
   normalizationRenderer: fileURLToPath(new URL("../lib/server/images/normalized-product-render.ts", import.meta.url)),
   render: fileURLToPath(new URL("../components/product/LombardoProductRender.tsx", import.meta.url)),
@@ -33,8 +34,9 @@ test("product image system separates source masters from versioned renders", asy
 });
 
 test("normalized renders preserve the master and publish only for SAFE products", async () => {
-  const [migration, route, renderer] = await Promise.all([
+  const [migration, ownerDirectedMigration, route, renderer] = await Promise.all([
     readFile(files.normalizationMigration, "utf8"),
+    readFile(files.ownerDirectedNormalizationMigration, "utf8"),
     readFile(files.normalizationRoute, "utf8"),
     readFile(files.normalizationRenderer, "utf8"),
   ]);
@@ -46,7 +48,11 @@ test("normalized renders preserve the master and publish only for SAFE products"
   assert.match(migration, /revoke all on function[\s\S]*from public, anon, authenticated/);
   assert.match(route, /requireAdminRole\("admin"\)/);
   assert.match(route, /sameOrigin\(request\)/);
-  assert.match(renderer, /removed\.confidence === "low"/);
+  assert.doesNotMatch(renderer, /removed\.confidence === "low"/);
+  assert.match(ownerDirectedMigration, /supplier_publish_owner_directed_normalized_product_render/);
+  assert.match(ownerDirectedMigration, /job\.metadata->>'mode' = 'owner_directive_bulk_publish'/);
+  assert.match(ownerDirectedMigration, /product\.eligibility_status = 'safe'/);
+  assert.match(ownerDirectedMigration, /p_background_confidence <> 'low'/);
 });
 
 test("public product imagery uses one white 80-percent canvas", async () => {

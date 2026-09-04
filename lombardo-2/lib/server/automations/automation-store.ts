@@ -10,6 +10,10 @@ import type {
   HomeDailyState,
   HomeFeaturePin,
 } from "@/lib/automations/types";
+import {
+  fetchSupabaseRest,
+  supabaseRestResponseError,
+} from "@/lib/server/supabase-rest";
 
 interface StoreOptions {
   url: string;
@@ -56,8 +60,8 @@ interface PinRow {
 export class AutomationStoreError extends Error {
   readonly status: number;
 
-  constructor(message: string, status = 502) {
-    super(message);
+  constructor(message: string, status = 502, cause?: unknown) {
+    super(message, cause === undefined ? undefined : { cause });
     this.status = status;
   }
 }
@@ -111,16 +115,29 @@ export class AutomationStore {
   }
 
   private request(path: string, init: RequestInit = {}, prefer?: string) {
-    return this.fetcher(`${this.url}/rest/v1/${path}`, {
-      ...init,
-      headers: { ...this.headers(prefer), ...init.headers },
-      cache: "no-store",
-    });
+    return fetchSupabaseRest(
+      `${this.url}/rest/v1/${path}`,
+      {
+        ...init,
+        headers: { ...this.headers(prefer), ...init.headers },
+        cache: "no-store",
+      },
+      {
+        fetcher: this.fetcher,
+        operation: `Automation REST ${(init.method ?? "GET").toUpperCase()} ${path.split("?")[0]}`,
+      },
+    );
   }
 
   private async rows<T>(path: string, message: string) {
     const response = await this.request(path);
-    if (!response.ok) throw new AutomationStoreError(message, response.status);
+    if (!response.ok) {
+      throw new AutomationStoreError(
+        message,
+        response.status,
+        await supabaseRestResponseError(response, `Automation REST GET ${path.split("?")[0]}`),
+      );
+    }
     return (await response.json()) as T[];
   }
 
@@ -352,7 +369,7 @@ export class AutomationStore {
     const search = new URLSearchParams({
       select: "selection_date,slot_type,position,supplier_product_id,category_slug",
       tenant_id: `eq.${tenantId}`,
-      "selection_date.lte": date,
+      selection_date: `lte.${date}`,
       order: "selection_date.desc,slot_type.asc,position.asc",
       limit: "100",
     });

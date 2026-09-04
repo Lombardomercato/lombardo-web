@@ -29,7 +29,8 @@ body {
 }
 
 body.menu-open,
-body.cart-open {
+body.cart-open,
+body.assistant-open {
   overflow: hidden;
 }
 
@@ -39,6 +40,10 @@ select,
 textarea {
   font-family: var(--font-functional);
   font-size: inherit;
+}
+
+button {
+  color: inherit;
 }
 
 button,
@@ -70,6 +75,11 @@ p {
 :focus-visible {
   outline: var(--focus-ring);
   outline-offset: 4px;
+}
+
+::selection {
+  background: var(--lombardo-green);
+  color: var(--lombardo-blue);
 }
 
 .site-content {

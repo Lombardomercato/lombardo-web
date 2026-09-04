@@ -11,7 +11,7 @@ import type { AiAuditStore } from "./audit-store";
 import type { AiSalesConfiguration } from "./config";
 import type { SalesProduct } from "./types";
 
-interface SalesToolsContext {
+export interface SalesToolsContext {
   configuration: AiSalesConfiguration;
   pricing: CustomerPricingContext;
   audit: AiAuditStore;
@@ -21,6 +21,53 @@ interface SalesToolsContext {
 const occasionSchema = z.enum(["asado", "cena", "regalo", "brindis", "general"]);
 const categorySchema = z.string().trim().min(1).max(40).optional();
 const priceSchema = z.number().positive().max(100_000_000).optional();
+export const commerceOperationNameSchema = z.enum([
+  "search_products",
+  "get_product",
+  "recommend_products",
+  "get_effective_price",
+  "get_opportunities",
+  "search_guides",
+  "build_selection",
+]);
+
+export type CommerceOperationName = z.infer<typeof commerceOperationNameSchema>;
+
+export const commerceOperationInputSchemas = {
+  search_products: z.object({
+    query: z.string().trim().max(80).default(""),
+    categorySlug: categorySchema,
+    maxPrice: priceSchema,
+    limit: z.number().int().min(1).max(8).default(5),
+  }).strict(),
+  get_product: z.object({
+    productId: z.string().uuid().optional(),
+    sku: z.string().trim().min(2).max(80).optional(),
+  }).strict().refine((input) => Boolean(input.productId || input.sku), "Indicá productId o sku"),
+  recommend_products: z.object({
+    occasion: occasionSchema,
+    preferences: z.string().trim().max(80).optional(),
+    categorySlug: categorySchema,
+    maxPrice: priceSchema,
+    limit: z.number().int().min(1).max(6).default(4),
+  }).strict(),
+  get_effective_price: z.object({ productId: z.string().uuid() }).strict(),
+  get_opportunities: z.object({
+    categorySlug: categorySchema,
+    maxPrice: priceSchema,
+    limit: z.number().int().min(1).max(8).default(5),
+  }).strict(),
+  search_guides: z.object({
+    query: z.string().trim().min(2).max(120),
+    limit: z.number().int().min(1).max(3).default(2),
+  }).strict(),
+  build_selection: z.object({
+    quantity: z.number().int().min(2).max(24),
+    totalBudget: z.number().positive().max(100_000_000),
+    occasion: occasionSchema.default("general"),
+    categorySlug: categorySchema,
+  }).strict(),
+} as const;
 const CATALOG_PAGE_SIZE = 48;
 const MAX_SCAN_PAGES = 16;
 
@@ -40,141 +87,142 @@ export function createSalesTools(context: SalesToolsContext) {
   return {
     search_products: tool({
       description: "Busca productos SAFE reales por nombre, marca o SKU. También permite filtrar categoría y precio efectivo.",
-      inputSchema: z.object({
-        query: z.string().trim().max(80).default(""),
-        categorySlug: categorySchema,
-        maxPrice: priceSchema,
-        limit: z.number().int().min(1).max(8).default(5),
-      }).strict(),
-      execute: (input) => execute("search_products", async () => {
-        const products = await searchCatalog({ ...input, pricing: context.pricing });
-        return {
-          kind: "products" as const,
-          reason: input.query
-            ? `Resultados reales para “${input.query}”. ${pricingNotice(context.pricing)}`
-            : `Productos reales dentro de los filtros. ${pricingNotice(context.pricing)}`,
-          products: products.map(toSalesProduct),
-          count: products.length,
-        };
-      }),
+      inputSchema: commerceOperationInputSchemas.search_products,
+      execute: (input) => execute("search_products", () => executeCommerceOperation(context, "search_products", input)),
     }),
 
     get_product: tool({
       description: "Obtiene un producto SAFE real por UUID o SKU y devuelve sus datos vigentes.",
-      inputSchema: z.object({
-        productId: z.string().uuid().optional(),
-        sku: z.string().trim().min(2).max(80).optional(),
-      }).strict().refine((input) => Boolean(input.productId || input.sku), "Indicá productId o sku"),
-      execute: (input) => execute("get_product", async () => {
-        let product: Product | undefined;
-        if (input.productId) {
-          product = (await commerceProvider.getProductsByIds([input.productId], context.pricing))[0];
-        } else if (input.sku) {
-          const matches = await searchCatalog({ query: input.sku, limit: 8, pricing: context.pricing });
-          product = matches.find((candidate) => candidate.sku.toLocaleLowerCase("es-AR") === input.sku!.toLocaleLowerCase("es-AR")) ?? matches[0];
-        }
-        return { kind: "product" as const, product: product ? toSalesProduct(product) : null };
-      }),
+      inputSchema: commerceOperationInputSchemas.get_product,
+      execute: (input) => execute("get_product", () => executeCommerceOperation(context, "get_product", input)),
     }),
 
     recommend_products: tool({
       description: "Elige productos SAFE reales para una ocasión o presupuesto. Usala para asados, regalos y búsquedas generales por precio.",
-      inputSchema: z.object({
-        occasion: occasionSchema,
-        preferences: z.string().trim().max(80).optional(),
-        categorySlug: categorySchema,
-        maxPrice: priceSchema,
-        limit: z.number().int().min(1).max(6).default(4),
-      }).strict(),
-      execute: (input) => execute("recommend_products", async () => {
-        const products = await recommendations({ ...input, pricing: context.pricing });
-        return {
-          kind: "products" as const,
-          reason: `${recommendationReason(input.occasion, input.maxPrice)} ${pricingNotice(context.pricing)}`,
-          products: products.map(toSalesProduct),
-          count: products.length,
-        };
-      }),
+      inputSchema: commerceOperationInputSchemas.recommend_products,
+      execute: (input) => execute("recommend_products", () => executeCommerceOperation(context, "recommend_products", input)),
     }),
 
     get_effective_price: tool({
       description: "Revalida el precio efectivo de un producto para la identidad autenticada de esta sesión.",
-      inputSchema: z.object({ productId: z.string().uuid() }).strict(),
-      execute: (input) => execute("get_effective_price", async () => {
-        const product = (await commerceProvider.getProductsByIds([input.productId], context.pricing))[0];
-        return {
-          kind: "price" as const,
-          price: product ? {
-            productId: product.id,
-            price: product.price,
-            basePrice: product.basePrice,
-            currency: "ARS" as const,
-            pricingPolicy: product.pricingPolicy,
-            discountPercent: product.discountPercent,
-          } : null,
-        };
-      }),
+      inputSchema: commerceOperationInputSchemas.get_effective_price,
+      execute: (input) => execute("get_effective_price", () => executeCommerceOperation(context, "get_effective_price", input)),
     }),
 
     get_opportunities: tool({
       description: "Obtiene oportunidades SAFE reales y vigentes del catálogo Lombardo.",
-      inputSchema: z.object({
-        categorySlug: categorySchema,
-        maxPrice: priceSchema,
-        limit: z.number().int().min(1).max(8).default(5),
-      }).strict(),
-      execute: (input) => execute("get_opportunities", async () => {
-        const products = (await commerceProvider.getActiveOpportunities(48, context.pricing))
-          .filter((product) => matchesFilters(product, input.categorySlug, input.maxPrice))
-          .slice(0, input.limit);
-        return {
-          kind: "products" as const,
-          reason: `Son oportunidades reales y vigentes verificadas por Lombardo. ${pricingNotice(context.pricing)}`,
-          products: products.map(toSalesProduct),
-          count: products.length,
-        };
-      }),
+      inputSchema: commerceOperationInputSchemas.get_opportunities,
+      execute: (input) => execute("get_opportunities", () => executeCommerceOperation(context, "get_opportunities", input)),
     }),
 
     search_guides: tool({
       description: "Busca guías editoriales publicadas por Lombardo para aportar criterio de elección.",
-      inputSchema: z.object({
-        query: z.string().trim().min(2).max(120),
-        limit: z.number().int().min(1).max(3).default(2),
-      }).strict(),
-      execute: (input) => execute("search_guides", async () => ({
-        kind: "guides" as const,
-        guides: searchGuides(input.query, input.limit),
-      })),
+      inputSchema: commerceOperationInputSchemas.search_guides,
+      execute: (input) => execute("search_guides", () => executeCommerceOperation(context, "search_guides", input)),
     }),
 
     build_selection: tool({
       description: "Arma una selección de varias botellas SAFE sin superar un presupuesto total real.",
-      inputSchema: z.object({
-        quantity: z.number().int().min(2).max(24),
-        totalBudget: z.number().positive().max(100_000_000),
-        occasion: occasionSchema.default("general"),
-        categorySlug: categorySchema,
-      }).strict(),
-      execute: (input) => execute("build_selection", async () => {
-        const candidates = await scanCatalog({
-          categorySlug: input.categorySlug ?? "vinos",
-          maxPrice: input.totalBudget,
-          pricing: context.pricing,
-        });
-        const products = cheapestDiverseSelection(candidates, input.quantity);
-        const total = products.reduce((sum, product) => sum + product.price, 0);
-        return {
-          kind: "selection" as const,
-          reason: `Selección calculada con precios vigentes para ${input.quantity} unidades y un tope total de ${formatArs(input.totalBudget)}. Total: ${formatArs(total)}. ${pricingNotice(context.pricing)}`,
-          products: products.map(toSalesProduct),
-          quantity: products.length,
-          total,
-          budget: input.totalBudget,
-          withinBudget: products.length === input.quantity && total <= input.totalBudget,
-        };
-      }),
+      inputSchema: commerceOperationInputSchemas.build_selection,
+      execute: (input) => execute("build_selection", () => executeCommerceOperation(context, "build_selection", input)),
     }),
+  };
+}
+
+export async function executeCommerceOperation(
+  context: SalesToolsContext,
+  operation: CommerceOperationName,
+  rawInput: unknown,
+): Promise<unknown> {
+  if (operation === "search_products") {
+    const input = commerceOperationInputSchemas.search_products.parse(rawInput);
+    const products = await searchCatalog({ ...input, pricing: context.pricing });
+    return {
+      kind: "products" as const,
+      reason: input.query
+        ? `Resultados reales para “${input.query}”. ${pricingNotice(context.pricing)}`
+        : `Productos reales dentro de los filtros. ${pricingNotice(context.pricing)}`,
+      products: products.map(toSalesProduct),
+      count: products.length,
+    };
+  }
+
+  if (operation === "get_product") {
+    const input = commerceOperationInputSchemas.get_product.parse(rawInput);
+    let product: Product | undefined;
+    if (input.productId) {
+      product = (await commerceProvider.getProductsByIds([input.productId], context.pricing))[0];
+    } else if (input.sku) {
+      const matches = await searchCatalog({ query: input.sku, limit: 8, pricing: context.pricing });
+      product = matches.find((candidate) => candidate.sku.toLocaleLowerCase("es-AR") === input.sku!.toLocaleLowerCase("es-AR")) ?? matches[0];
+    }
+    return { kind: "product" as const, product: product ? toSalesProduct(product) : null };
+  }
+
+  if (operation === "recommend_products") {
+    const input = commerceOperationInputSchemas.recommend_products.parse(rawInput);
+    const products = await recommendations({ ...input, pricing: context.pricing });
+    return {
+      kind: "products" as const,
+      reason: `${recommendationReason(input.occasion, input.maxPrice)} ${pricingNotice(context.pricing)}`,
+      products: products.map(toSalesProduct),
+      count: products.length,
+    };
+  }
+
+  if (operation === "get_effective_price") {
+    const input = commerceOperationInputSchemas.get_effective_price.parse(rawInput);
+    const product = (await commerceProvider.getProductsByIds([input.productId], context.pricing))[0];
+    return {
+      kind: "price" as const,
+      price: product ? {
+        productId: product.id,
+        price: product.price,
+        basePrice: product.basePrice,
+        currency: "ARS" as const,
+        pricingPolicy: product.pricingPolicy,
+        discountPercent: product.discountPercent,
+      } : null,
+    };
+  }
+
+  if (operation === "get_opportunities") {
+    const input = commerceOperationInputSchemas.get_opportunities.parse(rawInput);
+    const products = (await commerceProvider.getActiveOpportunities(48, context.pricing))
+      .filter((product) => matchesFilters(product, input.categorySlug, input.maxPrice))
+      .slice(0, input.limit);
+    return {
+      kind: "products" as const,
+      reason: `Son oportunidades reales y vigentes verificadas por Lombardo. ${pricingNotice(context.pricing)}`,
+      products: products.map(toSalesProduct),
+      count: products.length,
+    };
+  }
+
+  if (operation === "search_guides") {
+    const input = commerceOperationInputSchemas.search_guides.parse(rawInput);
+    return {
+      kind: "guides" as const,
+      guides: searchGuides(input.query, input.limit),
+    };
+  }
+
+  const input = commerceOperationInputSchemas.build_selection.parse(rawInput);
+  const candidates = await scanCatalog({
+    categorySlug: input.categorySlug ?? "vinos",
+    maxPrice: input.totalBudget,
+    pricing: context.pricing,
+  });
+  const products = cheapestDiverseSelection(candidates, input.quantity);
+  const total = products.reduce((sum, product) => sum + product.price, 0);
+  return {
+    kind: "selection" as const,
+    reason: `Selección calculada con precios vigentes para ${input.quantity} unidades y un tope total de ${formatArs(input.totalBudget)}. Total: ${formatArs(total)}. ${pricingNotice(context.pricing)}`,
+    products: products.map(toSalesProduct),
+    quantity: products.length,
+    total,
+    budget: input.totalBudget,
+    withinBudget: products.length === input.quantity && total <= input.totalBudget,
   };
 }
 

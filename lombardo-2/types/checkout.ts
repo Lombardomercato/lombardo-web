@@ -17,7 +17,11 @@ export type PaymentStatus =
   | "rejected"
   | "cancelled"
   | "refunded";
-export type PaymentMethod = "mercado_pago" | "whatsapp_coordination";
+export type PaymentMethod =
+  | "mercado_pago"
+  | "whatsapp_coordination"
+  | "bank_transfer"
+  | "cash";
 export type OrderCurrency = "ARS";
 
 export interface CheckoutCustomer {

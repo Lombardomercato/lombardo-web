@@ -85,6 +85,7 @@ const cachedProductPage = unstable_cache(
     limit: number | undefined,
     search: string | undefined,
     categorySlug: string | undefined,
+    requireImage: boolean | undefined,
   ) =>
     getRuniaProvider().getProductPage(
       {
@@ -92,10 +93,11 @@ const cachedProductPage = unstable_cache(
         limit,
         search,
         categorySlug,
+        requireImage,
       },
       cachePricingContext(basePriceType, policy, discountPercent),
     ),
-  ["runia-real-catalog-page-v2"],
+  ["runia-real-catalog-page-v3"],
   { revalidate: 300, tags: ["runia-real-catalog"] },
 );
 
@@ -164,6 +166,7 @@ export const commerceProvider: CommerceProvider = {
       query.limit,
       query.search,
       query.categorySlug,
+      query.requireImage,
     );
     return {
       ...page,

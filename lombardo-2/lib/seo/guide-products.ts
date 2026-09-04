@@ -9,7 +9,11 @@ const PAGE_SIZE = 48;
 const MAX_PRICE_SCAN_PAGES = 12;
 
 function canRecommend(product: Product) {
-  return product.active && product.availability !== "UNAVAILABLE";
+  return (
+    product.active &&
+    product.availability !== "UNAVAILABLE" &&
+    product.images.length > 0
+  );
 }
 
 function diverseSelection(products: Product[], limit: number) {
@@ -45,6 +49,7 @@ async function loadPriceCappedProducts(
         categorySlug: guide.catalog.categorySlug,
         offset: pageIndex * PAGE_SIZE,
         limit: PAGE_SIZE,
+        requireImage: true,
       },
       pricingContext,
     );
@@ -73,7 +78,12 @@ export async function loadGuideProducts(
     const pages = await Promise.all(
       (guide.catalog.searchTerms ?? []).map((search) =>
         commerceProvider.getProductPage(
-          { categorySlug: guide.catalog.categorySlug, search, limit: 8 },
+          {
+            categorySlug: guide.catalog.categorySlug,
+            search,
+            limit: 8,
+            requireImage: true,
+          },
           pricingContext,
         ),
       ),
@@ -82,7 +92,11 @@ export async function loadGuideProducts(
     if (matches.length >= guide.catalog.limit) return diverseSelection(matches, guide.catalog.limit);
 
     const fallback = await commerceProvider.getProductPage(
-      { categorySlug: guide.catalog.categorySlug, limit: PAGE_SIZE },
+      {
+        categorySlug: guide.catalog.categorySlug,
+        limit: PAGE_SIZE,
+        requireImage: true,
+      },
       pricingContext,
     );
     return diverseSelection(
@@ -96,6 +110,7 @@ export async function loadGuideProducts(
       categorySlug: guide.catalog.categorySlug,
       search: guide.catalog.mode === "search" ? guide.catalog.search : undefined,
       limit: PAGE_SIZE,
+      requireImage: true,
     },
     pricingContext,
   );
@@ -110,10 +125,27 @@ export async function loadGuideCoverProducts(
   pricingContext: CustomerPricingContext,
 ) {
   const [general, malbec, bonarda, cabernetFranc] = await Promise.all([
-    commerceProvider.getProductPage({ categorySlug: "vinos", limit: 24 }, pricingContext),
-    commerceProvider.getProductPage({ categorySlug: "vinos", search: "malbec", limit: 8 }, pricingContext),
-    commerceProvider.getProductPage({ categorySlug: "vinos", search: "bonarda", limit: 8 }, pricingContext),
-    commerceProvider.getProductPage({ categorySlug: "vinos", search: "cabernet franc", limit: 8 }, pricingContext),
+    commerceProvider.getProductPage(
+      { categorySlug: "vinos", limit: 24, requireImage: true },
+      pricingContext,
+    ),
+    commerceProvider.getProductPage(
+      { categorySlug: "vinos", search: "malbec", limit: 8, requireImage: true },
+      pricingContext,
+    ),
+    commerceProvider.getProductPage(
+      { categorySlug: "vinos", search: "bonarda", limit: 8, requireImage: true },
+      pricingContext,
+    ),
+    commerceProvider.getProductPage(
+      {
+        categorySlug: "vinos",
+        search: "cabernet franc",
+        limit: 8,
+        requireImage: true,
+      },
+      pricingContext,
+    ),
   ]);
   const fallback = general.products.filter((product) => canRecommend(product) && product.images.length > 0);
   const cover = (products: Product[], fallbackIndex: number) =>

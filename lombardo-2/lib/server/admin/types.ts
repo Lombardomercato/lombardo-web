@@ -52,6 +52,8 @@ export interface AdminOrder {
   couponCode?: string;
   couponDiscountAmount?: number;
   deliveryCost: number;
+  deliveryCostSource: "checkout" | "manual" | "automation";
+  deliveryCostUpdatedAt?: string;
   total: number;
   commerceTotal: number;
   currency: OrderCurrency;
@@ -62,6 +64,7 @@ export interface AdminOrder {
   paymentMethod: PaymentMethod;
   paymentProviderId?: string;
   paymentPreferenceId?: string;
+  paymentManuallyUpdatedAt?: string;
   fulfillmentStatus: FulfillmentStatus;
   orderSource: "storefront" | "admin_manual";
   hasManagementOverride: boolean;
@@ -80,6 +83,7 @@ export interface AdminOrder {
   updatedAt: string;
   newOrderNotification?: OrderNotification;
   customerOrderConfirmation?: OrderNotification;
+  customerStatusNotifications?: OrderNotification[];
 }
 
 export interface AdminOrderManagementInput {
@@ -380,5 +384,11 @@ export interface AdminPromotionInput {
 
 export interface FulfillmentTransitionResult {
   changed: boolean;
+  order: AdminOrder;
+}
+
+export interface AdminOrderUpdateResult {
+  changed: boolean;
+  eventId?: string;
   order: AdminOrder;
 }

@@ -123,12 +123,13 @@ function supplierProductRow() {
 
 test("SEARCH consulta marca server-side y entrega precio de cuenta sin imágenes", async () => {
   const requests: URL[] = [];
+  let fuzzyBody: Record<string, unknown> | undefined;
   const provider = new RuniaCommerceProvider(
     {
       url: "https://example.supabase.co",
       secretKey: "sb_secret_test_value_123456789",
       tenantSlug: "lombardo",
-      fetcher: async (input) => {
+      fetcher: async (input, init) => {
         const url = new URL(String(input));
         requests.push(url);
         if (url.pathname.endsWith("/suppliers")) {
@@ -141,9 +142,10 @@ test("SEARCH consulta marca server-side y entrega precio de cuenta sin imágenes
             },
           ]);
         }
-        if (url.pathname.endsWith("/supplier_product_editorial")) {
+        if (url.pathname.endsWith("/rpc/supplier_search_product_ids")) {
+          fuzzyBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
           return Response.json([
-            { supplier_product_id: PRODUCT_ID, brand_name: "Casa Demo" },
+            { product_id: PRODUCT_ID, search_rank: 8, total_count: 1 },
           ]);
         }
         if (url.searchParams.has("id")) {
@@ -167,11 +169,10 @@ test("SEARCH consulta marca server-side y entrega precio de cuenta sin imágenes
   assert.equal(result.products[0]?.product.availability, "SUPPLIER_AVAILABLE");
   assert.equal(result.products[0]?.product.stock.quantity, 0);
 
-  const brandRequest = requests.find((url) =>
-    url.pathname.endsWith("/supplier_product_editorial"),
-  );
-  assert.ok(brandRequest);
-  assert.equal(brandRequest.searchParams.get("product.supplier_id"), `eq.${SUPPLIER_ID}`);
+  assert.equal(fuzzyBody?.p_query, "casa demo");
+  assert.equal(fuzzyBody?.p_supplier_id, SUPPLIER_ID);
+  assert.equal(fuzzyBody?.p_eligibility, "safe");
+  assert.equal(fuzzyBody?.p_price_type, "wholesale");
   const productRequest = requests.find(
     (url) => url.pathname.endsWith("/supplier_products") && url.searchParams.has("id"),
   );
@@ -189,7 +190,7 @@ test("SEARCH grande limita candidatos y nunca devuelve más de 30", async () => 
       url: "https://example.supabase.co",
       secretKey: "sb_secret_test_value_123456789",
       tenantSlug: "lombardo",
-      fetcher: async (input) => {
+      fetcher: async (input, init) => {
         const url = new URL(String(input));
         if (url.pathname.endsWith("/suppliers")) {
           return Response.json([
@@ -201,11 +202,14 @@ test("SEARCH grande limita candidatos y nunca devuelve más de 30", async () => 
             },
           ]);
         }
-        if (url.pathname.endsWith("/supplier_product_editorial")) {
-          return Response.json([]);
+        if (url.pathname.endsWith("/rpc/supplier_search_product_ids")) {
+          const body = JSON.parse(String(init?.body)) as { p_limit: number };
+          candidateLimit = body.p_limit;
+          return Response.json([
+            { product_id: PRODUCT_ID, search_rank: 8, total_count: 120 },
+          ]);
         }
-        candidateLimit = Number(url.searchParams.get("limit"));
-        return Response.json(Array.from({ length: candidateLimit }, () => row));
+        return Response.json([row]);
       },
     },
     pricingContext(),

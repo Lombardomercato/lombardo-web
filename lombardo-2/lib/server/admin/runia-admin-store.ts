@@ -7,6 +7,7 @@ import { isIP } from "node:net";
 import {
   categoryFilterForPostgrest,
   categoryForSupplierSku,
+  categorySearchScope,
   inferBrand,
 } from "../../commerce/runia-catalog-mapper";
 import type {
@@ -26,6 +27,7 @@ import type {
   AdminDashboard,
   AdminImageCandidate,
   AdminImageCandidatePage,
+  AdminOrderUpdateResult,
   ImageQualityStatus,
   AdminUnmatchedImageProductPage,
   MatchConfidenceBand,
@@ -112,6 +114,7 @@ interface OrderRow {
   payment_method: PaymentMethod;
   payment_provider_id: string | null;
   payment_preference_id: string | null;
+  payment_manually_updated_at?: string | null;
   fulfillment_status: FulfillmentStatus | null;
   fulfillment_updated_at: string | null;
   confirmed_at: string | null;
@@ -188,6 +191,12 @@ interface ProductRow {
   media?: ProductMediaRow[] | ProductMediaRow | null;
   all_prices?: ProductPriceRow[] | ProductPriceRow | null;
   anomalies?: ProductAnomalyRow[] | ProductAnomalyRow | null;
+}
+
+interface SearchProductIdRow {
+  product_id: string;
+  search_rank: number | string;
+  total_count: number | string;
 }
 
 interface ProductPriceRow {
@@ -333,6 +342,7 @@ interface SupplierRow {
 
 interface TransitionRow {
   changed: boolean;
+  event_id?: string | number | null;
   order_record: OrderRow;
 }
 
@@ -344,6 +354,7 @@ interface NotificationRow {
   order_id: string | number;
   kind: OrderNotification["kind"];
   channel: OrderNotification["channel"];
+  event_key?: string;
   status: OrderNotificationStatus;
   attempt_count: number;
   provider_message_id: string | null;
@@ -360,6 +371,7 @@ function mapNotification(row: NotificationRow): OrderNotification {
     orderId: String(row.order_id),
     kind: row.kind,
     channel: row.channel,
+    eventKey: row.event_key ?? "initial",
     status: row.status,
     attemptCount: Number(row.attempt_count),
     providerMessageId: row.provider_message_id ?? undefined,
@@ -407,6 +419,7 @@ const ORDER_SELECT = [
   "payment_method",
   "payment_provider_id",
   "payment_preference_id",
+  "payment_manually_updated_at",
   "fulfillment_status",
   "fulfillment_updated_at",
   "confirmed_at",
@@ -452,6 +465,8 @@ function mapOrder(row: OrderRow): AdminOrder {
       ? undefined
       : row.coupon_discount_amount === undefined ? undefined : Number(row.coupon_discount_amount),
     deliveryCost: hasManagementOverride ? Number(row.management_delivery_cost) : Number(row.delivery_cost),
+    deliveryCostSource: hasManagementOverride ? "manual" : "checkout",
+    deliveryCostUpdatedAt: row.management_updated_at ?? undefined,
     total: hasManagementOverride ? Number(row.management_total) : Number(row.total),
     commerceTotal: Number(row.total),
     currency: row.currency,
@@ -464,6 +479,7 @@ function mapOrder(row: OrderRow): AdminOrder {
     paymentMethod: row.payment_method,
     paymentProviderId: row.payment_provider_id ?? undefined,
     paymentPreferenceId: row.payment_preference_id ?? undefined,
+    paymentManuallyUpdatedAt: row.payment_manually_updated_at ?? undefined,
     fulfillmentStatus,
     orderSource: row.order_source ?? "storefront",
     hasManagementOverride,
@@ -588,10 +604,43 @@ function validImageBytes(bytes: Uint8Array, mimeType: string) {
 }
 
 function htmlImageCandidate(html: string, baseUrl: URL) {
-  const encoded = html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1]
+  let encoded = html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1]
     || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i)?.[1]
     || html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
     || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)?.[1];
+  if (!encoded) {
+    for (const match of html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+      try {
+        const queue: unknown[] = [JSON.parse(match[1])];
+        while (queue.length) {
+          const value = queue.shift();
+          if (Array.isArray(value)) {
+            queue.push(...value);
+            continue;
+          }
+          if (!value || typeof value !== "object") continue;
+          const record = value as Record<string, unknown>;
+          const type = record["@type"];
+          const product = type === "Product" || (Array.isArray(type) && type.includes("Product"));
+          if (product) {
+            const image = record.image;
+            const first = Array.isArray(image) ? image[0] : image;
+            if (typeof first === "string") encoded = first;
+            else if (first && typeof first === "object") {
+              const imageRecord = first as Record<string, unknown>;
+              const url = imageRecord.url ?? imageRecord.contentUrl;
+              if (typeof url === "string") encoded = url;
+            }
+            if (encoded) break;
+          }
+          queue.push(...Object.values(record));
+        }
+      } catch {
+        // Keep reading other structured-data blocks from the approved source page.
+      }
+      if (encoded) break;
+    }
+  }
   if (!encoded) return null;
   const decoded = encoded
     .replaceAll("&amp;", "&")
@@ -653,6 +702,37 @@ export class RuniaAdminStore {
     const response = await this.request(path, {}, prefer);
     if (!response.ok) throw new AdminStoreError(fallback, 502);
     return { rows: (await response.json()) as T[], response };
+  }
+
+  private async fuzzyProductIds(input: {
+    supplierId: string;
+    query: string;
+    offset: number;
+    limit: number;
+    eligibility?: AdminProduct["eligibilityStatus"];
+    category?: string;
+  }) {
+    const category = categorySearchScope(input.category);
+    const response = await this.request("rpc/supplier_search_product_ids", {
+      method: "POST",
+      body: JSON.stringify({
+        p_supplier_id: input.supplierId,
+        p_query: input.query,
+        p_offset: input.offset,
+        p_limit: input.limit,
+        p_eligibility: input.eligibility ?? null,
+        p_active_only: false,
+        p_price_type: null,
+        p_require_image: false,
+        p_prioritize_images: false,
+        p_category_prefixes: category.prefixes ?? null,
+        p_excluded_category_prefixes: category.excludedPrefixes ?? null,
+      }),
+    });
+    if (!response.ok) {
+      throw new AdminStoreError("No pudimos buscar los productos.", 502);
+    }
+    return (await response.json()) as SearchProductIdRow[];
   }
 
   private async tenantRecordId() {
@@ -799,12 +879,12 @@ export class RuniaAdminStore {
     const order = mapOrder(rows[0]);
     const notificationSearch = new URLSearchParams({
       select:
-        "id,order_id,kind,channel,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
+        "id,order_id,kind,channel,event_key,status,attempt_count,provider_message_id,last_error_code,last_error_summary,sent_at,created_at,updated_at",
       tenant_id: `eq.${this.tenantId}`,
       order_id: `eq.${order.id}`,
-      kind: "in.(new_order,customer_order_confirmation)",
+      kind: "in.(new_order,customer_order_confirmation,customer_fulfillment_status,customer_payment_status,customer_delivery_update)",
       order: "created_at.desc",
-      limit: "2",
+      limit: "20",
     });
     const notificationResult = await this.rows<NotificationRow>(
       `commerce_order_notifications?${notificationSearch}`,
@@ -816,6 +896,10 @@ export class RuniaAdminStore {
     const customerOrderConfirmation = notificationResult.rows.find(
       (notification) => notification.kind === "customer_order_confirmation",
     );
+    const customerStatusNotifications = notificationResult.rows
+      .filter((notification) => notification.kind.startsWith("customer_")
+        && notification.kind !== "customer_order_confirmation")
+      .map(mapNotification);
     return {
       ...order,
       newOrderNotification: newOrderNotification
@@ -824,6 +908,7 @@ export class RuniaAdminStore {
       customerOrderConfirmation: customerOrderConfirmation
         ? mapNotification(customerOrderConfirmation)
         : undefined,
+      customerStatusNotifications,
     };
   }
 
@@ -997,6 +1082,61 @@ export class RuniaAdminStore {
     return { changed: rows[0].changed, order: mapOrder(rows[0].order_record) };
   }
 
+  async updatePayment(
+    orderId: string,
+    expectedStatus: PaymentStatus,
+    expectedMethod: PaymentMethod,
+    targetStatus: PaymentStatus,
+    targetMethod: PaymentMethod,
+    operatorUserId: string,
+  ): Promise<AdminOrderUpdateResult> {
+    if (!/^\d{1,18}$/.test(orderId)) {
+      throw new AdminStoreError("El pedido no es válido.", 400);
+    }
+    const response = await this.request("rpc/lombardo_admin_update_payment", {
+      method: "POST",
+      body: JSON.stringify({
+        p_tenant_id: this.tenantId,
+        p_order_id: Number(orderId),
+        p_expected_status: expectedStatus,
+        p_expected_method: expectedMethod,
+        p_target_status: targetStatus,
+        p_target_method: targetMethod,
+        p_operator_user_id: operatorUserId,
+      }),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        code?: string;
+        message?: string;
+      };
+      if (payload.code === "40001") {
+        throw new AdminStoreError(
+          "El pago cambió en otra pantalla. Actualizá y volvé a intentar.",
+          409,
+        );
+      }
+      if (payload.code === "22023") {
+        throw new AdminStoreError(
+          payload.message === "cancelled order cannot be approved"
+            ? "Un pedido cancelado no puede marcarse como pagado."
+            : "El estado o la forma de pago no son válidos.",
+          422,
+        );
+      }
+      throw new AdminStoreError("No pudimos actualizar el pago.", 502);
+    }
+    const rows = (await response.json()) as TransitionRow[];
+    if (!rows[0]?.order_record) {
+      throw new AdminStoreError("Runia no devolvió el pago actualizado.", 502);
+    }
+    return {
+      changed: rows[0].changed,
+      eventId: rows[0].event_id == null ? undefined : String(rows[0].event_id),
+      order: mapOrder(rows[0].order_record),
+    };
+  }
+
   private async supplierId() {
     this.supplierIdPromise ??= (async () => {
       const search = new URLSearchParams({
@@ -1060,9 +1200,10 @@ export class RuniaAdminStore {
     productId: string;
     bytes: Uint8Array;
     contentSha256: string;
-    backgroundConfidence: "high" | "medium";
+    backgroundConfidence: "high" | "medium" | "low";
     edgeCoverage: number;
     operatorUserId: string | null;
+    jobId?: string;
   }) {
     if (!UUID_PATTERN.test(input.sourceMediaId) || !UUID_PATTERN.test(input.productId)) {
       throw new AdminStoreError("La imagen de origen no es válida.", 422);
@@ -1086,7 +1227,15 @@ export class RuniaAdminStore {
     );
     if (!upload.ok) throw new AdminStoreError("No pudimos subir el render normalizado.", 502);
     try {
-      await this.rpc("supplier_publish_normalized_product_render", {
+      if (input.backgroundConfidence === "low" && (!input.jobId || !UUID_PATTERN.test(input.jobId))) {
+        throw new AdminStoreError("El render de baja confianza requiere un trabajo autorizado.", 409);
+      }
+      await this.rpc(
+        input.backgroundConfidence === "low"
+          ? "supplier_publish_owner_directed_normalized_product_render"
+          : "supplier_publish_normalized_product_render",
+        {
+        ...(input.backgroundConfidence === "low" ? { p_job_id: input.jobId } : {}),
         p_source_media_id: input.sourceMediaId,
         p_storage_path: path,
         p_byte_size: input.bytes.byteLength,
@@ -1144,13 +1293,35 @@ export class RuniaAdminStore {
     const supplierId = await this.supplierId();
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
     const limit = Math.min(100, Math.max(20, Math.trunc(input.limit ?? 50)));
+    const term = safeSearch(input.search);
+    const fuzzyRows = term
+      ? await this.fuzzyProductIds({
+          supplierId,
+          query: term,
+          offset,
+          limit,
+          eligibility: input.eligibility,
+          category: input.category,
+        })
+      : null;
+    const rankedIds = fuzzyRows?.map((row) => row.product_id);
+    if (rankedIds && !rankedIds.length) {
+      return {
+        products: [],
+        total: 0,
+        offset,
+        limit,
+        hasMore: false,
+      };
+    }
     const search = new URLSearchParams({
       select:
         "id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices(price_type,current_price),editorial:supplier_product_editorial(name_override,brand_name,category_slug,description,tags,internal_notes,editorial_status),media:supplier_product_media(id,bucket_id,storage_path,mime_type,byte_size,alt_text,position,is_primary,source,source_url,approval_status,rights_status)",
       supplier_id: `eq.${supplierId}`,
       order: "normalized_name.asc,id.asc",
-      offset: String(offset),
-      limit: String(limit),
+      ...(rankedIds
+        ? { id: `in.(${rankedIds.join(",")})`, limit: String(rankedIds.length) }
+        : { offset: String(offset), limit: String(limit) }),
     });
     if (input.eligibility) {
       search.set("eligibility_status", `eq.${input.eligibility}`);
@@ -1159,20 +1330,25 @@ export class RuniaAdminStore {
       ? categoryFilterForPostgrest(input.category)
       : null;
     if (categoryFilter) search.append(categoryFilter.key, categoryFilter.value);
-    const term = safeSearch(input.search);
-    if (term) {
-      search.append(
-        "or",
-        `(normalized_name.ilike.*${term}*,supplier_sku.ilike.*${term}*)`,
-      );
-    }
     const { rows, response } = await this.rows<ProductRow>(
       `supplier_products?${search}`,
       "No pudimos cargar los productos.",
       "count=exact",
     );
-    const products = rows.map((row) => this.mapProduct(row));
-    const total = contentRangeTotal(response, offset + products.length);
+    const rankById = new Map(
+      (rankedIds ?? []).map((id, index) => [id, index]),
+    );
+    const products = rows
+      .map((row) => this.mapProduct(row))
+      .sort((left, right) =>
+        rankedIds
+          ? (rankById.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+            (rankById.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+          : 0,
+      );
+    const total = fuzzyRows
+      ? Number(fuzzyRows[0]?.total_count ?? 0)
+      : contentRangeTotal(response, offset + products.length);
     return {
       products,
       total,
@@ -1771,37 +1947,46 @@ export class RuniaAdminStore {
       /-480-0([.](?:webp|avif|png|jpe?g))$/i,
       "-1024-1024$1",
     );
-    let imageUrl = await assertPublicHttpsUrl(preferredSourceImage);
-    let imageResponse: Response | undefined;
-    for (let redirect = 0; redirect < 4; redirect += 1) {
-      imageResponse = await this.fetcher(imageUrl, {
-        method: "GET",
-        redirect: "manual",
-        headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
-        cache: "no-store",
-      });
-      if (![301, 302, 303, 307, 308].includes(imageResponse.status)) break;
-      const location = imageResponse.headers.get("location");
-      if (!location) throw new AdminStoreError("La fuente externa redirigió sin destino.", 422);
-      imageUrl = await assertPublicHttpsUrl(new URL(location, imageUrl).toString());
-    }
-    if (!imageResponse?.ok) throw new AdminStoreError("No pudimos descargar la imagen aprobada.", 502);
+    const fetchExternal = async (rawUrl: string, accept: string) => {
+      let url = await assertPublicHttpsUrl(rawUrl);
+      let response: Response | undefined;
+      for (let redirect = 0; redirect < 4; redirect += 1) {
+        response = await this.fetcher(url, {
+          method: "GET",
+          redirect: "manual",
+          headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: accept },
+          cache: "no-store",
+          signal: AbortSignal.timeout(12_000),
+        });
+        if (![301, 302, 303, 307, 308].includes(response.status)) break;
+        const location = response.headers.get("location");
+        if (!location) throw new AdminStoreError("La fuente externa redirigió sin destino.", 422);
+        url = await assertPublicHttpsUrl(new URL(location, url).toString());
+      }
+      if (!response) throw new AdminStoreError("La fuente externa no respondió.", 502);
+      return { url, response };
+    };
+    let external = await fetchExternal(preferredSourceImage, "image/avif,image/webp,image/png,image/jpeg");
+    let imageUrl = external.url;
+    let imageResponse = external.response;
     let mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
-    if (mimeType === "text/html" || mimeType === "application/xhtml+xml") {
-      const declaredHtmlBytes = Number(imageResponse.headers.get("content-length") || 0);
+    const imageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+    if (!imageResponse.ok || !imageTypes.has(mimeType)) {
+      const page = imageResponse.ok && (mimeType === "text/html" || mimeType === "application/xhtml+xml")
+        ? { url: imageUrl, response: imageResponse }
+        : await fetchExternal(candidate.source_url, "text/html,application/xhtml+xml");
+      if (!page.response.ok) throw new AdminStoreError("No pudimos recuperar la página de origen aprobada.", 502);
+      const declaredHtmlBytes = Number(page.response.headers.get("content-length") || 0);
       if (declaredHtmlBytes > 1_000_000) throw new AdminStoreError("La página de origen es demasiado grande.", 422);
-      const html = (await imageResponse.text()).slice(0, 1_000_000);
-      const resolved = htmlImageCandidate(html, imageUrl);
+      const html = (await page.response.text()).slice(0, 1_000_000);
+      const resolved = htmlImageCandidate(html, page.url);
       if (!resolved) throw new AdminStoreError("La página de origen no publica una imagen utilizable.", 422);
-      imageUrl = await assertPublicHttpsUrl(resolved);
-      imageResponse = await this.fetcher(imageUrl, {
-        method: "GET",
-        headers: { "User-Agent": "LombardoProductMedia/1.0", Accept: "image/avif,image/webp,image/png,image/jpeg" },
-        cache: "no-store",
-      });
-      if (!imageResponse.ok) throw new AdminStoreError("No pudimos descargar la imagen indicada por la fuente.", 502);
+      external = await fetchExternal(resolved, "image/avif,image/webp,image/png,image/jpeg");
+      imageUrl = external.url;
+      imageResponse = external.response;
       mimeType = (imageResponse.headers.get("content-type") || "").split(";")[0].trim();
     }
+    if (!imageResponse.ok) throw new AdminStoreError("No pudimos descargar la imagen indicada por la fuente.", 502);
     const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/avif": "avif" };
     const extension = extensions[mimeType];
     const declaredBytes = Number(imageResponse.headers.get("content-length") || 0);

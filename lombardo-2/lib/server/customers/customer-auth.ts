@@ -4,6 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 import { readRuniaConfiguration } from "@/lib/server/environment";
+import {
+  fetchSupabaseRest,
+  supabaseRestResponseError,
+} from "@/lib/server/supabase-rest";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
@@ -111,16 +115,23 @@ async function resolveConfiguredTenant(): Promise<{
     slug: `eq.${configuration.tenantSlug}`,
     limit: "1",
   });
-  const response = await fetch(`${configuration.url}/rest/v1/tenants?${search}`, {
-    headers: {
-      apikey: configuration.secretKey,
-      Authorization: `Bearer ${configuration.secretKey}`,
+  const operation = "Customer access REST GET tenants";
+  const response = await fetchSupabaseRest(
+    `${configuration.url}/rest/v1/tenants?${search}`,
+    {
+      headers: {
+        apikey: configuration.secretKey,
+        Authorization: `Bearer ${configuration.secretKey}`,
+      },
+      cache: "no-store",
     },
-    cache: "no-store",
-  });
+    { operation },
+  );
 
   if (!response.ok) {
-    throw new Error("No se pudo resolver el tenant configurado.");
+    throw new Error("No se pudo resolver el tenant configurado.", {
+      cause: await supabaseRestResponseError(response, operation),
+    });
   }
   const rows = (await response.json()) as TenantRow[];
   if (!rows[0]?.id) {

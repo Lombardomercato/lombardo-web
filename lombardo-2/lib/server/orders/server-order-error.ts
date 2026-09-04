@@ -11,9 +11,16 @@ export class ServerOrderError extends Error {
   constructor(
     code: OrderRepositoryErrorCode,
     message: string,
-    options: { status?: number; priceChanges?: PriceChange[] } = {},
+    options: {
+      status?: number;
+      priceChanges?: PriceChange[];
+      cause?: unknown;
+    } = {},
   ) {
-    super(message);
+    super(
+      message,
+      options.cause === undefined ? undefined : { cause: options.cause },
+    );
     this.name = "ServerOrderError";
     this.code = code;
     this.status = options.status ?? 400;

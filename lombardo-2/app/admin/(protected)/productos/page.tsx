@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminDynamicProductSearch } from "@/components/admin/AdminDynamicProductSearch";
 import { ELIGIBILITY_LABELS } from "@/lib/admin/presentation";
 import { RUNIA_CATALOG_CATEGORIES } from "@/lib/commerce/runia-catalog-mapper";
 import { loadAdminProducts } from "@/lib/server/admin/admin-data";
@@ -46,7 +47,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <form className={styles.filterForm}>
         <div className={styles.filterField}>
           <label htmlFor="buscar">BUSCAR</label>
-          <input id="buscar" name="buscar" defaultValue={value(query, "buscar")} placeholder="SKU, nombre o marca" />
+          <AdminDynamicProductSearch initialValue={value(query, "buscar")} />
         </div>
         <div className={styles.filterField}>
           <label htmlFor="categoria">CATEGORÍA</label>

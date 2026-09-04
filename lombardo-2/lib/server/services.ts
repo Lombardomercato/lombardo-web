@@ -1,19 +1,29 @@
 import { RuniaCommerceProvider } from "../commerce/runia-commerce-provider";
 import {
+  customerStatusWhatsAppNotificationsEnabled,
   emailOrderNotificationsEnabled,
   paymentsEnabled,
+  readCustomerStatusWhatsAppNotificationConfiguration,
   readEmailOrderNotificationConfiguration,
   readMercadoPagoConfiguration,
+  readRuniaOrderStatusNotificationConfiguration,
   readRuniaConfiguration,
   readWhatsAppOrderNotificationConfiguration,
   whatsAppOrderNotificationsEnabled,
+  runiaOrderStatusNotificationsEnabled,
 } from "./environment";
+import {
+  CustomerOrderUpdateEmailService,
+  CustomerOrderUpdateWhatsAppService,
+  type CustomerOrderUpdateInput,
+} from "./notifications/customer-order-update-service";
 import { EmailOrderNotificationService } from "./notifications/email-order-notification-service";
 import { CustomerOrderConfirmationService } from "./notifications/customer-order-confirmation-service";
 import { OrderNotificationService } from "./notifications/order-notification-service";
 import { SupabaseOrderNotificationStore } from "./notifications/supabase-order-notification-store";
 import { ResendEmailApi } from "./notifications/resend-email-api";
 import { WhatsAppCloudApi } from "./notifications/whatsapp-cloud-api";
+import { RuniaCustomerOrderUpdateService } from "./notifications/runia-order-status-whatsapp";
 import { RuniaOrderRepository } from "./orders/runia-order-repository";
 import { EnvironmentDeliveryPricing } from "./orders/server-delivery-pricing";
 import { ServerOrderError } from "./orders/server-order-error";
@@ -98,6 +108,70 @@ export function createCustomerOrderConfirmationNotifier() {
       };
     },
   });
+}
+
+export function createCustomerOrderUpdateNotifiers(
+  kind: CustomerOrderUpdateInput["kind"],
+) {
+  const runia = readRuniaConfiguration();
+  const notifiers = [];
+  if (emailOrderNotificationsEnabled()) {
+    notifiers.push(new CustomerOrderUpdateEmailService({
+      store: new SupabaseOrderNotificationStore({
+        url: runia.url,
+        secretKey: runia.secretKey,
+        channel: "email_resend",
+        kind,
+      }),
+      configurationFactory: () => {
+        const configuration = readEmailOrderNotificationConfiguration();
+        return {
+          provider: new ResendEmailApi({ apiKey: configuration.apiKey }),
+          sender: configuration.sender,
+          appUrl: configuration.appUrl,
+        };
+      },
+    }));
+  }
+  if (runiaOrderStatusNotificationsEnabled()) {
+    notifiers.push(new RuniaCustomerOrderUpdateService({
+      store: new SupabaseOrderNotificationStore({
+        url: runia.url,
+        secretKey: runia.secretKey,
+        channel: "whatsapp_cloud_api",
+        kind,
+      }),
+      configurationFactory: () => readRuniaOrderStatusNotificationConfiguration(),
+    }));
+  } else if (customerStatusWhatsAppNotificationsEnabled()) {
+    notifiers.push(new CustomerOrderUpdateWhatsAppService({
+      store: new SupabaseOrderNotificationStore({
+        url: runia.url,
+        secretKey: runia.secretKey,
+        channel: "whatsapp_cloud_api",
+        kind,
+      }),
+      configurationFactory: () => {
+        const configuration = readCustomerStatusWhatsAppNotificationConfiguration();
+        return {
+          provider: new WhatsAppCloudApi({
+            accessToken: configuration.accessToken,
+            phoneNumberId: configuration.phoneNumberId,
+            graphApiVersion: configuration.graphApiVersion,
+          }),
+          templateName: configuration.templateName,
+          languageCode: configuration.languageCode,
+          appUrl: configuration.appUrl,
+        };
+      },
+    }));
+  }
+  return notifiers;
+}
+
+export async function notifyCustomerOrderUpdate(input: CustomerOrderUpdateInput) {
+  const notifiers = createCustomerOrderUpdateNotifiers(input.kind);
+  return Promise.allSettled(notifiers.map((notifier) => notifier.notify(input)));
 }
 
 export function createNewOrderNotifier() {

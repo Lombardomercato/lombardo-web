@@ -12,11 +12,13 @@ import {
 } from "@/lib/server/admin/admin-auth";
 import { AdminStoreError } from "@/lib/server/admin/runia-admin-store";
 import type { FulfillmentStatus } from "@/lib/server/admin/types";
+import type { PaymentMethod, PaymentStatus } from "@/types/checkout";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import {
   createCustomerOrderConfirmationNotifier,
   createNewOrderNotifier,
   createOrderServices,
+  notifyCustomerOrderUpdate,
 } from "@/lib/server/services";
 import { parseCreateOrderInput } from "@/lib/server/orders/order-input";
 import { ServerOrderError } from "@/lib/server/orders/server-order-error";
@@ -83,6 +85,21 @@ const FULFILLMENT_STATUSES: readonly FulfillmentStatus[] = [
   "cancelled",
 ];
 
+const PAYMENT_STATUSES: readonly PaymentStatus[] = [
+  "pending",
+  "approved",
+  "rejected",
+  "cancelled",
+  "refunded",
+];
+
+const PAYMENT_METHODS: readonly PaymentMethod[] = [
+  "mercado_pago",
+  "whatsapp_coordination",
+  "bank_transfer",
+  "cash",
+];
+
 function formText(formData: FormData, name: string, maximum: number) {
   const value = formData.get(name);
   return typeof value === "string" ? value.trim().slice(0, maximum) : "";
@@ -111,6 +128,39 @@ async function settleInBatches<T>(items: T[], batchSize: number, operation: (ite
 
 function validStatus(value: string): value is FulfillmentStatus {
   return FULFILLMENT_STATUSES.includes(value as FulfillmentStatus);
+}
+
+function validPaymentStatus(value: string): value is PaymentStatus {
+  return PAYMENT_STATUSES.includes(value as PaymentStatus);
+}
+
+function validPaymentMethod(value: string): value is PaymentMethod {
+  return PAYMENT_METHODS.includes(value as PaymentMethod);
+}
+
+function publicOrderId(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function notificationEventKey(prefix: string, value: string) {
+  return `${prefix}-${value.replace(/[^a-z0-9]/gi, "").toLocaleLowerCase("en-US")}`.slice(0, 120);
+}
+
+async function customerUpdateFeedback(
+  order: Parameters<typeof notifyCustomerOrderUpdate>[0]["order"],
+  kind: Parameters<typeof notifyCustomerOrderUpdate>[0]["kind"],
+  eventKey: string,
+) {
+  const results = await notifyCustomerOrderUpdate({ order, kind, eventKey });
+  if (!results.length) return "Sin canal automático configurado.";
+  const labels = results.map((result) => {
+    if (result.status === "rejected") return "notificación no registrada";
+    const channel = result.value.channel === "email_resend" ? "email" : "WhatsApp";
+    return result.value.status === "sent"
+      ? `${channel} enviado`
+      : `${channel} ${result.value.status === "unknown" ? "a verificar" : "no enviado"}`;
+  });
+  return labels.join(" · ");
 }
 
 function validAutomationType(value: string): value is AutomationType {
@@ -661,9 +711,7 @@ export async function transitionOrderAction(formData: FormData) {
   const expected = formText(formData, "expectedStatus", 20);
   const target = formText(formData, "targetStatus", 20);
   if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      publicId,
-    ) ||
+    !publicOrderId(publicId) ||
     !validStatus(expected) ||
     !validStatus(target)
   ) {
@@ -683,8 +731,15 @@ export async function transitionOrderAction(formData: FormData) {
         target,
         session.authUserId,
       );
+      const notification = result.changed
+        ? await customerUpdateFeedback(
+          { ...result.order, tenantId: createOrderServices().tenantId },
+          "customer_fulfillment_status",
+          notificationEventKey("fulfillment", result.order.fulfillmentUpdatedAt),
+        )
+        : null;
       const message = result.changed
-        ? "Estado actualizado."
+        ? `Estado actualizado. ${notification}`
         : "El pedido ya estaba en ese estado.";
       destination += `?success=${encodeURIComponent(message)}`;
       revalidatePath("/admin");
@@ -757,6 +812,145 @@ export async function updateAdminOrderAction(formData: FormData) {
     destination = `/admin/pedidos/${order.publicId}?success=${encodeURIComponent("Pedido actualizado. El snapshot comercial original quedó intacto.")}`;
   } catch (error) {
     destination += `?error=${encodeURIComponent(adminOrderError(error))}`;
+  }
+  redirect(destination);
+}
+
+export async function updateOrderPaymentAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const publicId = formText(formData, "publicId", 36);
+  const expectedStatus = formText(formData, "expectedPaymentStatus", 20);
+  const expectedMethod = formText(formData, "expectedPaymentMethod", 30);
+  const targetStatus = formText(formData, "paymentStatus", 20);
+  const targetMethod = formText(formData, "paymentMethod", 30);
+  if (
+    !publicOrderId(publicId)
+    || !validPaymentStatus(expectedStatus)
+    || !validPaymentMethod(expectedMethod)
+    || !validPaymentStatus(targetStatus)
+    || !validPaymentMethod(targetMethod)
+  ) {
+    redirect("/admin/pedidos?error=Solicitud%20inv%C3%A1lida");
+  }
+
+  let destination = `/admin/pedidos/${publicId}`;
+  try {
+    const store = createAdminStore();
+    const order = await store.getOrder(publicId);
+    if (!order) throw new AdminStoreError("Pedido no encontrado.", 404);
+    const result = await store.updatePayment(
+      order.id,
+      expectedStatus,
+      expectedMethod,
+      targetStatus,
+      targetMethod,
+      session.authUserId,
+    );
+    const notification = result.changed && result.eventId
+      ? await customerUpdateFeedback(
+        { ...result.order, tenantId: createOrderServices().tenantId },
+        "customer_payment_status",
+        notificationEventKey("payment", result.eventId),
+      )
+      : null;
+    destination += `?success=${encodeURIComponent(result.changed
+      ? `Pago actualizado. ${notification}`
+      : "El pago ya tenía esos valores.")}`;
+    revalidatePath("/admin");
+    revalidatePath("/admin/pedidos");
+    revalidatePath(`/admin/pedidos/${publicId}`);
+    revalidatePath(`/pedido/${publicId}`);
+  } catch (error) {
+    const message = error instanceof AdminStoreError
+      ? error.message
+      : "No pudimos actualizar el pago.";
+    destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+export async function updateOrderDeliveryCostAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const publicId = formText(formData, "publicId", 36);
+  const expectedCost = Number(formText(formData, "expectedDeliveryCost", 20).replace(",", "."));
+  const managementRevision = Number(formText(formData, "managementRevision", 12));
+  const deliveryCost = Number(formText(formData, "deliveryCost", 20).replace(",", "."));
+  if (
+    !publicOrderId(publicId)
+    || !Number.isFinite(expectedCost)
+    || !Number.isSafeInteger(managementRevision)
+    || managementRevision < 0
+    || !Number.isFinite(deliveryCost)
+    || deliveryCost < 0
+    || deliveryCost > 1_000_000
+    || Math.round(deliveryCost * 100) !== deliveryCost * 100
+  ) {
+    redirect("/admin/pedidos?error=Costo%20de%20env%C3%ADo%20inv%C3%A1lido");
+  }
+
+  let destination = `/admin/pedidos/${publicId}`;
+  try {
+    const store = createAdminStore();
+    const order = await store.getOrder(publicId);
+    if (!order) throw new AdminStoreError("Pedido no encontrado.", 404);
+    if (order.deliveryMethod === "PICKUP") {
+      throw new AdminStoreError("El retiro no admite costo de envío.", 422);
+    }
+    if (Math.abs(order.deliveryCost - expectedCost) >= 0.01) {
+      throw new AdminStoreError(
+        "El costo de envío cambió en otra pantalla. Actualizá y volvé a intentar.",
+        409,
+      );
+    }
+    if (Math.abs(order.deliveryCost - deliveryCost) < 0.01) {
+      destination += `?success=${encodeURIComponent("El costo de envío no cambió.")}`;
+    } else {
+      const itemsSubtotal = Math.round(
+        order.items.reduce((sum, item) => sum + item.lineTotal, 0) * 100,
+      ) / 100;
+      const discountAmount = Math.round(
+        Math.max(0, itemsSubtotal - order.subtotal) * 100,
+      ) / 100;
+      const updatedOrder = await store.updateOrderManagement(
+        order.id,
+        managementRevision,
+        {
+          customer: order.customer,
+          items: order.items,
+          deliveryMethod: order.deliveryMethod,
+          deliveryAddress: order.deliveryAddress,
+          itemsSubtotal,
+          discountAmount,
+          discountReason: discountAmount > 0
+            ? order.manualDiscountReason
+              ?? "Condición comercial original preservada al editar el envío"
+            : order.manualDiscountReason,
+          subtotal: order.subtotal,
+          deliveryCost,
+          total: Math.round((order.subtotal + deliveryCost) * 100) / 100,
+          notes: order.managementNotes,
+        },
+        session.authUserId,
+      );
+      const notification = await customerUpdateFeedback(
+        { ...updatedOrder, tenantId: createOrderServices().tenantId },
+        "customer_delivery_update",
+        notificationEventKey(
+          "delivery",
+          updatedOrder.managementUpdatedAt ?? String(updatedOrder.managementRevision),
+        ),
+      );
+      destination += `?success=${encodeURIComponent(`Costo de envío actualizado. ${notification}`)}`;
+    }
+    revalidatePath("/admin");
+    revalidatePath("/admin/pedidos");
+    revalidatePath(`/admin/pedidos/${publicId}`);
+    revalidatePath(`/pedido/${publicId}`);
+  } catch (error) {
+    const message = error instanceof AdminStoreError
+      ? error.message
+      : "No pudimos actualizar el envío.";
+    destination += `?error=${encodeURIComponent(message)}`;
   }
   redirect(destination);
 }

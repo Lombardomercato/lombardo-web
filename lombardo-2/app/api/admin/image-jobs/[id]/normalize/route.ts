@@ -66,6 +66,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           backgroundConfidence: render.confidence,
           edgeCoverage: render.edgeCoverage,
           operatorUserId: null,
+          jobId,
         });
         return { mediaId: item.id, status: "published" as const };
       } catch {

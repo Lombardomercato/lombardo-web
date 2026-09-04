@@ -77,6 +77,7 @@ test("sólo participan botellas publicables, retail y no excluidas", () => {
   const costOnly = product(91, { basePrice: 0, price: 0 });
   const gourmet = product(92, { category: { id: "gourmet", slug: "gourmet", name: "Gourmet" } });
   const excluded = product(93);
+  const withoutImage = product(94, { images: [] });
   const challenge = generateSecretCellarChallenge({
     tenantId: "17c7fda1-0b07-47bd-8379-f0bd00fac1de",
     date: "2026-08-30",
@@ -86,6 +87,7 @@ test("sólo participan botellas publicables, retail y no excluidas", () => {
       costOnly,
       gourmet,
       excluded,
+      withoutImage,
     ],
     excludedProductIds: new Set([excluded.id]),
     settings,
@@ -96,6 +98,7 @@ test("sólo participan botellas publicables, retail y no excluidas", () => {
   assert.equal(ids.has(costOnly.id), false);
   assert.equal(ids.has(gourmet.id), false);
   assert.equal(ids.has(excluded.id), false);
+  assert.equal(ids.has(withoutImage.id), false);
   assert.ok(challenge.candidates.every((candidate) => candidate.price > 0));
 });
 
