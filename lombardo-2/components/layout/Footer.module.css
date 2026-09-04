@@ -140,6 +140,15 @@
   text-underline-offset: 0.2rem;
 }
 
+.developerCredit {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  text-align: right;
+}
+
 @media (max-width: 63.99rem) {
   .mainRow {
     grid-template-columns: minmax(11rem, 1fr) auto auto;
@@ -183,6 +192,11 @@
     flex-direction: column;
     gap: 0.35rem;
     font-size: 0.5rem;
+  }
+
+  .developerCredit {
+    justify-content: flex-start;
+    text-align: left;
   }
 }
 

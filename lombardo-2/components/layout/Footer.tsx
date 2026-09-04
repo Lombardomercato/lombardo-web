@@ -2,6 +2,14 @@ import Link from "next/link";
 import { SITE_CONTACT } from "@/lib/config/site";
 import styles from "./Footer.module.css";
 
+const RUNIA_WEB_URL = "https://web.runia.ar/";
+const RUNIA_WEB_PHONE = "543416186760";
+const RUNIA_WEB_CONTACT_MESSAGE =
+  "Vi una página web hecha por vos y me interesa averiguar.";
+const RUNIA_WEB_CONTACT_URL = `https://wa.me/${RUNIA_WEB_PHONE}?text=${encodeURIComponent(
+  RUNIA_WEB_CONTACT_MESSAGE,
+)}`;
+
 function WhatsAppIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -63,6 +71,23 @@ export function Footer() {
 
         <div className={styles.legalRow}>
           <p>© {currentYear} Lombardo Mercato. Todos los derechos reservados.</p>
+          <p className={styles.developerCredit}>
+            <span>
+              Developed by{" "}
+              <Link href={RUNIA_WEB_URL} target="_blank" rel="noreferrer">
+                Runia Web
+              </Link>
+            </span>
+            <span aria-hidden="true">·</span>
+            <Link
+              href={RUNIA_WEB_CONTACT_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Contactar a Runia Web por WhatsApp al +54 341 618-6760"
+            >
+              WhatsApp +54 341 618-6760
+            </Link>
+          </p>
         </div>
       </div>
     </footer>
