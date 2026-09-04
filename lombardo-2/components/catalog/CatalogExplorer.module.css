@@ -814,6 +814,7 @@
     min-height: clamp(23.75rem, 50vw, 27.5rem);
     padding-top: calc(var(--header-height-mobile) + 1.5rem);
     padding-bottom: 2rem;
+    grid-template-rows: auto 1fr auto;
   }
 
   .catalogHero h1 {

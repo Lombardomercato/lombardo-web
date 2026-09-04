@@ -32,6 +32,7 @@ test("la portada de Tienda mantiene el acento editorial unido al contenido", () 
   assert.doesNotMatch(catalogCss, /\.catalogHero h1 span:last-child\s*\{[^}]*margin-left/);
   assert.match(catalogCss, /\.heroAside\s*\{[\s\S]*grid-column:\s*9 \/ 12/);
   assert.match(catalogCss, /min-height:\s*clamp\(28\.75rem, 32vw, 29\.25rem\)/);
+  assert.match(catalogCss, /@media \(max-width: 63\.99rem\)\s*\{[\s\S]*?\.catalogHero\s*\{[^}]*grid-template-rows:\s*auto 1fr auto/);
   assert.match(catalogCss, /\.heroAside::before\s*\{[\s\S]*background:\s*var\(--lombardo-green\)/);
   assert.match(catalogCss, /\.catalogSection\s*\{[\s\S]*padding:\s*clamp\(3rem, 4\.75vw, 4\.75rem\)/);
 });
