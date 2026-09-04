@@ -21,6 +21,15 @@
   --step-3: clamp(2.25rem, 1.6rem + 3.2vw, 4.5rem);
   --step-hero: clamp(3.2rem, 1.55rem + 8.2vw, 10.5rem);
 
+  /* Public visual hierarchy: campaign > page > section. */
+  --type-campaign-display: clamp(7rem, 9.4vw, 8.5rem);
+  --type-page-title: clamp(4.5rem, 6.7vw, 6rem);
+  --type-section-title: clamp(3.5rem, 5vw, 4.5rem);
+
+  --control-compact-height: 2.875rem;
+  --control-large-height: 3.25rem;
+  --badge-height: 1.75rem;
+
   --space-1: 0.5rem;
   --space-2: 0.75rem;
   --space-3: 1rem;
@@ -35,4 +44,20 @@
   --header-height: 6rem;
   --header-height-mobile: 4.75rem;
   --focus-ring: 3px solid var(--lombardo-red);
+}
+
+@media (max-width: 63.99rem) {
+  :root {
+    --type-campaign-display: clamp(4.5rem, 10vw, 6rem);
+    --type-page-title: clamp(3.25rem, 8vw, 4rem);
+    --type-section-title: clamp(2.5rem, 6vw, 3.25rem);
+  }
+}
+
+@media (max-width: 47.99rem) {
+  :root {
+    --type-campaign-display: clamp(3.5rem, 17vw, 4.5rem);
+    --type-page-title: clamp(2.5rem, 11vw, 3.25rem);
+    --type-section-title: clamp(2rem, 9.5vw, 2.625rem);
+  }
 }

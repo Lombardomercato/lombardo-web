@@ -34,7 +34,7 @@ test("la landing limita el tÃ­tulo editorial y usa tarjetas con lenguaje de catÃ
   assert.doesNotMatch(homeOpportunitiesCss, /\.section h2\s*\{/);
   assert.match(homeOpportunitiesCss, /grid-template-columns:\s*repeat\(12, minmax\(0, 1fr\)\)/);
   assert.match(homeOpportunitiesCss, /\.section > header > div\s*\{[\s\S]*grid-column:\s*1 \/ 9/);
-  assert.match(homeOpportunitiesCss, /@media \(max-width: 800px\)[\s\S]*font-size:\s*clamp\(2\.8rem, 12vw, 4rem\)/);
+  assert.match(homeOpportunitiesCss, /@media \(max-width: 800px\)[\s\S]*font-size:\s*var\(--type-section-title\)/);
   assert.match(opportunitiesCss, /\.grid\[data-surface="home"\]\s*\{[\s\S]*border:\s*0/);
   assert.match(opportunitiesCss, /\.grid\[data-surface="home"\] \.card[\s\S]*border-top:\s*1px solid/);
   assert.match(opportunitiesCss, /\.grid\[data-surface="home"\] \.details h2\s*\{[\s\S]*font-size:\s*clamp\(1\.35rem, 2vw, 2\.3rem\)/);

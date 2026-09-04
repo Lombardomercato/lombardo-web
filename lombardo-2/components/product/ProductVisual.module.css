@@ -29,7 +29,10 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  padding: 0.65rem 0.85rem;
+  min-height: var(--badge-height);
+  padding: 0.35rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
   background: var(--lombardo-blue);
   color: var(--neutral-paper);
   font-size: 0.65rem;

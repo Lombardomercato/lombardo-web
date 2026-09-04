@@ -45,7 +45,7 @@
 .heading h1 {
   max-width: 16ch;
   font-family: var(--font-display);
-  font-size: clamp(3.4rem, 6.4vw, 7rem);
+  font-size: var(--type-page-title);
   font-weight: 700;
   line-height: 0.82;
   letter-spacing: -0.06em;
@@ -189,7 +189,7 @@
 
 .addButton {
   width: 100%;
-  min-height: 5rem;
+  min-height: var(--control-large-height);
   margin-top: 1rem;
   padding-inline: clamp(1rem, 2vw, 1.5rem);
   display: flex;
@@ -215,12 +215,16 @@
 }
 
 @media (max-width: 63.99rem) {
+  .composition {
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+  }
+
   .visualColumn {
-    grid-column: 1 / 7;
+    grid-column: 1;
   }
 
   .purchase {
-    grid-column: 7 / -1;
+    grid-column: 2;
   }
 }
 
@@ -252,29 +256,42 @@
 
   .heading h1 {
     max-width: 14ch;
-    font-size: clamp(2.45rem, 11vw, 3.75rem);
+    font-size: var(--type-page-title);
     line-height: 0.84;
   }
 
   .composition {
     display: flex;
     flex-direction: column;
+    gap: 0;
   }
 
   .visualColumn {
+    display: contents;
+  }
+
+  .visualColumn > :first-child {
     width: 100%;
-    order: 2;
-    margin-top: 2rem;
+    height: clamp(18.75rem, 86vw, 22.5rem);
+    min-height: 0;
+    order: 1;
+    aspect-ratio: auto;
   }
 
   .visualFoot {
+    order: 3;
+    margin-inline: var(--page-gutter);
+  }
+
+  .imageNote {
+    order: 4;
     margin-inline: var(--page-gutter);
   }
 
   .purchase {
     position: static;
-    order: 1;
-    margin-top: 0;
+    order: 2;
+    margin-top: 1.5rem;
   }
 
   .price strong {
@@ -290,7 +307,7 @@
   }
 
   .addButton {
-    min-height: 4.25rem;
+    min-height: var(--control-large-height);
     margin-top: 0.65rem;
   }
 }

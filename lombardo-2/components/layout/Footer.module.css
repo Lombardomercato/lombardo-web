@@ -147,6 +147,14 @@
   flex-wrap: wrap;
   gap: 0.3rem;
   text-align: right;
+  color: rgba(255, 253, 249, 0.34);
+  font-size: 0.48rem;
+  letter-spacing: 0.02em;
+}
+
+.developerCredit a {
+  color: inherit;
+  text-decoration-color: rgba(255, 253, 249, 0.18);
 }
 
 @media (max-width: 63.99rem) {

@@ -110,7 +110,8 @@ test("la UI expone el contrato público exacto y funciona en mobile", () => {
   assert.match(assistant, /querySelectorAll<HTMLElement>/);
   assert.match(css, /grid-template-rows: auto minmax\(0, 1fr\) auto auto/);
   assert.match(css, /@media \(max-width: 47\.99rem\)/);
-  assert.match(css, /inset: var\(--header-height-mobile\) 0 0/);
+  assert.match(css, /inset: var\(--header-height-mobile\) 0 auto/);
+  assert.match(css, /max-height: calc\(100svh - var\(--header-height-mobile\)\)/);
   assert.match(css, /width: 100%/);
 });
 

@@ -19,9 +19,9 @@
 .allResults { width: fit-content; min-height: 2.75rem; margin-top: 1rem; display: inline-flex; align-items: center; gap: 1rem; border-bottom: 1px solid currentColor; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; }
 @media (max-width: 63.99rem) { .resultList { grid-template-columns: repeat(2, minmax(0, 1fr)); } .resultList a:nth-child(2n) { border-right: 0; } }
 @media (max-width: 47.99rem) {
-  .dialog { min-height: 100svh; padding: calc(var(--header-height-mobile) + 0.8rem) var(--page-gutter) max(1rem, env(safe-area-inset-bottom)); }
+  .dialog { min-height: min(72svh, 38rem); padding: calc(var(--header-height-mobile) + 0.8rem) var(--page-gutter) max(1rem, env(safe-area-inset-bottom)); }
   .searchRow { grid-template-columns: minmax(0, 1fr); }
-  .searchRow input { font-size: clamp(1.65rem, 8vw, 2.5rem); }
+  .searchRow input { font-size: clamp(1.5rem, 7vw, 2rem); }
   .searchRow button { justify-self: end; padding-left: 0; }
   .resultList { grid-template-columns: 1fr; }
   .resultList a { min-height: 6.8rem; border-right: 0; }

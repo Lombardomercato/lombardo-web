@@ -7,8 +7,8 @@
 }
 
 .hero {
-  min-height: min(43rem, 78svh);
-  padding: clamp(4rem, 9vw, 9rem) var(--page-gutter) clamp(3rem, 6vw, 6rem);
+  min-height: clamp(28.75rem, 36vw, 32.5rem);
+  padding: clamp(2.5rem, 4vw, 4rem) var(--page-gutter) clamp(2rem, 3vw, 3rem);
   display: grid;
   align-content: space-between;
   gap: 2rem;
@@ -23,7 +23,7 @@
 
 .hero h1 {
   font-family: var(--font-display);
-  font-size: clamp(4.6rem, 11.7vw, 12.6rem);
+  font-size: var(--type-page-title);
   line-height: 0.72;
   letter-spacing: -0.065em;
 }
@@ -51,9 +51,15 @@
   border-top: 1px solid currentColor;
 }
 
+@media (max-width: 63.99rem) {
+  .hero {
+    min-height: clamp(23.75rem, 50vw, 27.5rem);
+  }
+}
+
 @media (max-width: 640px) {
   .page { padding-top: var(--header-height-mobile); }
-  .hero { min-height: 34rem; }
-  .hero h1 { font-size: clamp(2.15rem, 11.2vw, 4.5rem); }
+  .hero { min-height: 21rem; padding-block: 2rem; }
+  .hero h1 { font-size: var(--type-page-title); }
   .hero > div { display: grid; }
 }

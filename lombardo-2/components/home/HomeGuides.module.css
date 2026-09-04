@@ -1,7 +1,7 @@
-.section { padding: clamp(5rem, 10vw, 10rem) var(--page-gutter); background: var(--lombardo-beige); color: var(--lombardo-blue); }
+.section { padding: clamp(4rem, 8vw, 8rem) var(--page-gutter); background: var(--lombardo-beige); color: var(--lombardo-blue); }
 .section > header { margin-bottom: clamp(3rem, 6vw, 6rem); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem; align-items: end; }
 .section header p { color: var(--lombardo-red); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; }
-.section h2 { max-width: 12ch; margin-top: 1.2rem; font-family: var(--font-display); font-size: clamp(3.5rem, 7vw, 7.5rem); line-height: 0.8; letter-spacing: -0.055em; }
+.section h2 { max-width: 12ch; margin-top: 1.2rem; font-family: var(--font-display); font-size: var(--type-section-title); line-height: 0.82; letter-spacing: -0.05em; }
 .section > header > a { padding-bottom: 0.4rem; border-bottom: 1px solid currentColor; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
 .grid article { min-width: 0; }
@@ -15,9 +15,9 @@
 .grid article > div > a { display: inline-block; padding-bottom: 0.3rem; border-bottom: 1px solid currentColor; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; }
 @media (max-width: 47.99rem) {
   .section > header { grid-template-columns: 1fr; }
-  .section h2 { font-size: clamp(3.1rem, 14vw, 4.8rem); }
+  .section h2 { font-size: var(--type-section-title); }
   .section > header > a { justify-self: start; }
-  .grid { grid-template-columns: 1fr; gap: 3.5rem; }
-  .visual { min-height: 30rem; }
+  .grid { grid-template-columns: 1fr; gap: 2.8rem; }
+  .visual { min-height: 24rem; }
   .grid h3 { min-height: 0; }
 }

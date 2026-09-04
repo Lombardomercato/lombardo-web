@@ -37,7 +37,7 @@
 .business h2 {
   max-width: 10ch;
   font-family: var(--font-display);
-  font-size: clamp(3rem, 7vw, 7.8rem);
+  font-size: var(--type-section-title);
   font-weight: 700;
   line-height: 0.8;
   letter-spacing: -0.055em;
@@ -302,7 +302,7 @@
 
 .catalogAction {
   width: 100%;
-  min-height: 5.5rem;
+  min-height: var(--control-large-height);
   margin-top: clamp(3rem, 6vw, 6rem);
   padding-inline: clamp(1.25rem, 3vw, 3rem);
   display: flex;
@@ -378,7 +378,7 @@
 @media (max-width: 47.99rem) {
   .categories,
   .products {
-    padding-block: 4.5rem;
+    padding-block: 3.75rem;
   }
 
   .categories,
@@ -395,7 +395,7 @@
   .sectionHeader h2,
   .productHeader h2,
   .business h2 {
-    font-size: clamp(3rem, 14vw, 4.7rem);
+    font-size: var(--type-section-title);
   }
 
   .sectionHeader > a {
@@ -408,7 +408,7 @@
   }
 
   .categoryCard {
-    min-height: 30rem;
+    min-height: 25rem;
     border: 1px solid var(--lombardo-blue) !important;
     border-top: 0 !important;
   }
@@ -432,6 +432,10 @@
 
   .business h2 {
     grid-row: auto;
+  }
+
+  .business {
+    padding-block: 4rem;
   }
 }
 

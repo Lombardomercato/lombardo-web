@@ -6,7 +6,10 @@
 
 .badge {
   width: fit-content;
-  padding: 0.38rem 0.55rem 0.32rem;
+  min-height: var(--badge-height);
+  padding: 0.35rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
   border: 1px solid currentColor;
   background: var(--lombardo-green);
   font-size: 0.58rem;

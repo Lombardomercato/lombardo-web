@@ -38,7 +38,7 @@
   min-width: 0;
   padding: 0.9rem 1rem 1rem;
   display: grid;
-  grid-template-rows: auto minmax(2.5rem, auto) auto auto;
+  grid-template-rows: 1.2rem minmax(2.5rem, auto) minmax(4.4rem, auto) var(--control-compact-height);
   gap: 0.58rem;
   border-top: 1px solid rgba(0, 58, 112, 0.25);
 }
@@ -56,6 +56,11 @@
 
 .details h2 {
   max-width: 28ch;
+  min-height: 2.24em;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
   font-size: clamp(0.9rem, 1vw, 1.08rem);
   line-height: 1.12;
@@ -72,8 +77,8 @@
 }
 
 .details button {
-  min-height: 2.45rem;
-  padding: 0.55rem 0 0;
+  min-height: var(--control-compact-height);
+  padding: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -175,7 +180,7 @@
 .grid[data-surface="home"] .details {
   flex: 1;
   padding: 1rem 0 0;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: 1.2rem minmax(3.4rem, auto) minmax(4.4rem, auto) var(--control-compact-height);
   align-content: start;
   gap: 0.85rem;
   border-top: 0;
@@ -219,7 +224,7 @@
 @media (max-width: 720px) {
   .grid[data-surface="home"] {
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 3.5rem;
+    row-gap: 3rem;
   }
 
   .grid[data-surface="home"] .card,
@@ -233,5 +238,10 @@
 
   .grid[data-surface="home"] .details h2 {
     font-size: clamp(1.35rem, 7.8vw, 2rem);
+  }
+
+  .grid[data-surface="home"] .visual > div {
+    height: 22rem;
+    aspect-ratio: auto;
   }
 }
