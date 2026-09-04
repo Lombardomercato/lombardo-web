@@ -23,6 +23,7 @@ const categoryArtwork: Record<string, string> = {
   vinos: "/images/editorial/categories/vinos-v1.jpg",
   destilados: "/images/editorial/categories/destilados-v1.jpg",
   gourmet: "/images/editorial/categories/gourmet-v1.jpg",
+  cervezas: "/images/editorial/categories/cervezas-v1.jpg",
 };
 
 interface CommercialDiscoveryProps {
