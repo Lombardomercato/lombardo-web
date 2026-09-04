@@ -8,7 +8,7 @@ import { HomeOpportunities } from "@/components/home/HomeOpportunities";
 import { OperationalStrip } from "@/components/home/OperationalStrip";
 import { SecretCellarTeaser } from "@/components/home/SecretCellarTeaser";
 import { commerceProvider } from "@/lib/commerce";
-import { canAddToCart } from "@/lib/commerce/availability";
+import { completeOpportunitySelection } from "@/lib/commerce/opportunity-selection";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { loadDailyHomeData } from "@/lib/server/automations/live-data";
 import type { CustomerPricingContext } from "@/lib/server/customers/types";
@@ -68,17 +68,10 @@ export default async function Home() {
     loadCommercialDiscovery(pricingContext),
     commerceProvider.getActiveOpportunities(6, pricingContext).catch(() => []),
   ]);
-  const opportunityIds = new Set(opportunities.map((product) => product.id));
-  const recommendation = opportunities.length === 5
-    ? discovery.featuredProducts.find((product) =>
-        !opportunityIds.has(product.id) &&
-        !product.opportunity &&
-        product.images.length > 0 &&
-        canAddToCart(product.availability))
-    : undefined;
-  const homeOpportunities = recommendation
-    ? [...opportunities, recommendation]
-    : opportunities;
+  const opportunitySelection = completeOpportunitySelection(
+    opportunities,
+    discovery.featuredProducts,
+  );
 
   return (
     <>
@@ -87,8 +80,8 @@ export default async function Home() {
         <FirstAct />
         <OperationalStrip />
         <HomeOpportunities
-          products={homeOpportunities}
-          recommendedProductId={recommendation?.id}
+          products={opportunitySelection.products}
+          recommendedProductId={opportunitySelection.recommendedProductId}
         />
         <CommercialDiscovery
           categories={discovery.categories}

@@ -3,6 +3,9 @@ import { Footer } from "@/components/layout/Footer";
 import { OpportunityGrid } from "@/components/opportunities/OpportunityGrid";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { commerceProvider } from "@/lib/commerce";
+import { completeOpportunitySelection } from "@/lib/commerce/opportunity-selection";
+import { loadDailyHomeData } from "@/lib/server/automations/live-data";
+import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { breadcrumbStructuredData, productStructuredData } from "@/lib/seo/structured-data";
 import styles from "./page.module.css";
 
@@ -10,6 +13,21 @@ export const dynamic = "force-dynamic";
 
 async function products() {
   return commerceProvider.getActiveOpportunities(48);
+}
+
+async function opportunitySelection() {
+  const pricingContext = await getCurrentCustomerPricingContext();
+  const [opportunities, categories, catalog] = await Promise.all([
+    commerceProvider.getActiveOpportunities(6, pricingContext),
+    commerceProvider.getCategories(),
+    commerceProvider.getProductPage({ limit: 12 }, pricingContext),
+  ]);
+  const daily = await loadDailyHomeData(pricingContext, categories).catch(() => null);
+
+  return completeOpportunitySelection(
+    opportunities,
+    daily?.products.length ? daily.products : catalog.products,
+  );
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,7 +48,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function OpportunitiesPage() {
-  const active = await products();
+  const selection = await opportunitySelection();
+  const active = selection.products;
   return (
     <>
       <JsonLd data={[
@@ -45,13 +64,21 @@ export default async function OpportunitiesPage() {
           <p>PRECIO REAL · SELECCIÓN VIGENTE</p>
           <h1>OPORTUNIDADES.</h1>
           <div>
-            <p>Una selección breve de productos conocidos que hoy tienen un precio especialmente bueno.</p>
+            <p>
+              {selection.recommendedProductId
+                ? "Cinco oportunidades vigentes y un elegido Lombardo para completar la selección."
+                : "Una selección breve de productos conocidos que hoy tienen un precio especialmente bueno."}
+            </p>
             <span>{active.length.toLocaleString("es-AR")} PRODUCTOS</span>
           </div>
         </header>
         <section className={styles.products} aria-label="Oportunidades vigentes">
           {active.length ? (
-            <OpportunityGrid products={active} surface="opportunities" />
+            <OpportunityGrid
+              products={active}
+              surface="opportunities"
+              recommendedProductId={selection.recommendedProductId}
+            />
           ) : (
             <p className={styles.empty}>Estamos revisando la próxima selección. Volvé pronto.</p>
           )}

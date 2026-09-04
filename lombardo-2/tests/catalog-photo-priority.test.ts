@@ -48,7 +48,14 @@ test("Guías, Cava y automatizaciones exigen productos con foto", async () => {
 });
 
 test("Home no vuelve a introducir una selección arbitraria de productos", async () => {
-  const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const [home, opportunities, selection] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/oportunidades/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../lib/commerce/opportunity-selection.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
   const discovery = await readFile(
     new URL("../components/home/CommercialDiscovery.tsx", import.meta.url),
     "utf8",
@@ -57,7 +64,9 @@ test("Home no vuelve a introducir una selección arbitraria de productos", async
   assert.doesNotMatch(home, /requireImage:\s*true/);
   assert.doesNotMatch(discovery, /Algunas buenas ideas/i);
   assert.doesNotMatch(discovery, /ProductCard/);
-  assert.match(home, /discovery\.featuredProducts\.find/);
-  assert.match(home, /opportunities\.length === 5/);
-  assert.match(home, /!product\.opportunity/);
+  assert.match(home, /completeOpportunitySelection/);
+  assert.match(opportunities, /completeOpportunitySelection/);
+  assert.match(selection, /opportunities\.length !== 5/);
+  assert.match(selection, /!product\.opportunity/);
+  assert.match(selection, /products:\s*\[\.\.\.opportunities, recommendation\]/);
 });

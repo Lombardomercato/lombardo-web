@@ -18,8 +18,16 @@
   contain: inline-size;
 }
 
-.card:nth-child(4) {
+.card:nth-child(4):nth-last-child(2) {
   grid-column: 3 / span 4;
+}
+
+.grid[data-surface="opportunities"] .card[data-kind="recommendation"] {
+  box-shadow: inset 0 2px 0 var(--lombardo-red);
+}
+
+.grid[data-surface="opportunities"] .card[data-kind="recommendation"] .details > p {
+  color: var(--lombardo-red);
 }
 
 .visual {

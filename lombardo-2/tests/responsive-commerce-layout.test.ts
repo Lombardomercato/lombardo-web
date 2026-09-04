@@ -43,6 +43,8 @@ test("los CTA del primer acto forman un grupo legible sobre la fotografía", () 
 test("Oportunidades evita cinco columnas frágiles y colapsa a una en mobile", () => {
   assert.match(opportunitiesCss, /grid-template-columns:\s*repeat\(12, minmax\(0, 1fr\)\)/);
   assert.match(opportunitiesCss, /\.card\s*\{[\s\S]*grid-column:\s*span 4/);
+  assert.match(opportunitiesCss, /\.card:nth-child\(4\):nth-last-child\(2\)/);
+  assert.match(opportunitiesCss, /data-kind="recommendation"/);
   assert.match(opportunitiesCss, /\.visual > div\s*\{[\s\S]*height:\s*clamp\(17rem, 25vw, 24rem\)/);
   assert.match(opportunitiesCss, /@media \(max-width: 720px\)[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(opportunitiesCss, /overflow-wrap:\s*anywhere/);
