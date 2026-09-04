@@ -55,6 +55,10 @@
 }
 
 @media (max-width: 800px) {
+  .section {
+    padding-block: 2.5rem;
+  }
+
   .section > header {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 1.25rem;

@@ -224,7 +224,7 @@
 @media (max-width: 720px) {
   .grid[data-surface="home"] {
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 3rem;
+    row-gap: 2.5rem;
   }
 
   .grid[data-surface="home"] .card,
@@ -241,7 +241,7 @@
   }
 
   .grid[data-surface="home"] .visual > div {
-    height: 22rem;
+    height: 18rem;
     aspect-ratio: auto;
   }
 }

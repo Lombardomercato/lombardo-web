@@ -17,7 +17,7 @@
   .section > header { grid-template-columns: 1fr; }
   .section h2 { font-size: var(--type-section-title); }
   .section > header > a { justify-self: start; }
-  .grid { grid-template-columns: 1fr; gap: 2.8rem; }
-  .visual { min-height: 24rem; }
+  .grid { grid-template-columns: 1fr; gap: 2.5rem; }
+  .visual { min-height: 22.75rem; }
   .grid h3 { min-height: 0; }
 }

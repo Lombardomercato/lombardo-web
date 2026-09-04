@@ -378,7 +378,7 @@
 @media (max-width: 47.99rem) {
   .categories,
   .products {
-    padding-block: 3.75rem;
+    padding-block: 3.5rem;
   }
 
   .categories,
@@ -408,7 +408,7 @@
   }
 
   .categoryCard {
-    min-height: 25rem;
+    min-height: 24rem;
     border: 1px solid var(--lombardo-blue) !important;
     border-top: 0 !important;
   }
@@ -435,7 +435,7 @@
   }
 
   .business {
-    padding-block: 4rem;
+    padding-block: 3.5rem;
   }
 }
 
