@@ -1092,7 +1092,11 @@ export function CheckoutPage({
               </div>
             </div>
 
-            <fieldset className={styles.deliveryMethods}>
+            <fieldset
+              className={styles.deliveryMethods}
+              role="radiogroup"
+              aria-required="true"
+            >
               <legend className="sr-only">Método de entrega</legend>
               <label>
                 <input
