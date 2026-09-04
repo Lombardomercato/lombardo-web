@@ -8,7 +8,11 @@ import {
 import { sanitizeCustomerReturnPath } from "@/lib/server/customers/validation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const CUSTOMER_EMAIL_TYPES = new Set<EmailOtpType>(["invite", "recovery"]);
+const CUSTOMER_EMAIL_TYPES = new Set<EmailOtpType>([
+  "invite",
+  "recovery",
+  "signup",
+]);
 
 function loginError(request: NextRequest) {
   return NextResponse.redirect(new URL("/login?auth=invalid", request.url));

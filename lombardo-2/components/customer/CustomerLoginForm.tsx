@@ -60,6 +60,9 @@ export function CustomerLoginForm({ next }: { next: string }) {
       <Link className={styles.secondaryLink} href="/recuperar-clave">
         ¿Olvidaste tu contraseña?
       </Link>
+      <Link className={styles.createAccountLink} href="/crear-cuenta">
+        Crear cuenta de consumidor final →
+      </Link>
     </form>
   );
 }

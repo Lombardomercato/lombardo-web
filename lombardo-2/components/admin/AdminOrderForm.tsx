@@ -182,7 +182,7 @@ export function AdminOrderForm({
   return (
     <form
       action={mode === "create" ? createManualOrderAction : updateAdminOrderAction}
-      className={styles.orderManagementForm}
+      className={styles.orderEditorForm}
     >
       <input name="payload" type="hidden" value={JSON.stringify(payload)} />
       {mode === "edit" ? (

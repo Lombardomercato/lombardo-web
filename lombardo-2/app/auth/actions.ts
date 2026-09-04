@@ -15,7 +15,10 @@ import {
   sanitizeCustomerReturnPath,
   validateCustomerLogin,
   validateCustomerPassword,
+  validateCustomerRegistration,
 } from "@/lib/server/customers/validation";
+import { provisionRetailCustomerAccount } from "@/lib/server/customers/customer-registration";
+import { AdminStoreError } from "@/lib/server/admin/runia-admin-store";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface CustomerLoginActionState {
@@ -27,6 +30,8 @@ export interface CustomerAccessActionState {
   status: "idle" | "error" | "success";
   message: string;
 }
+
+export type CustomerRegistrationActionState = CustomerAccessActionState;
 
 const INVALID_LOGIN_MESSAGE =
   "No pudimos iniciar sesión. Revisá tus datos o el estado de tu cuenta.";
@@ -114,6 +119,84 @@ export async function loginCustomer(
       : undefined,
   );
   redirect(next);
+}
+
+export async function registerRetailCustomer(
+  _previousState: CustomerRegistrationActionState,
+  formData: FormData,
+): Promise<CustomerRegistrationActionState> {
+  const validation = validateCustomerRegistration(formData);
+  if (!validation.valid) {
+    return { status: "error", message: validation.message };
+  }
+
+  const ip = await requestIp();
+  const identity = rateLimitIdentity(`${ip}:${validation.values.email}`);
+  const ipLimit = checkRateLimit(`customer-registration-ip:${ip}`, {
+    limit: 10,
+    windowMs: 60 * 60 * 1_000,
+  });
+  const identityLimit = checkRateLimit(`customer-registration:${identity}`, {
+    limit: 3,
+    windowMs: 60 * 60 * 1_000,
+  });
+  if (!ipLimit.allowed || !identityLimit.allowed) {
+    return {
+      status: "error",
+      message: "Demasiados intentos. Esperá unos minutos y volvé a probar.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const origin = configuredAppOrigin();
+  const { data, error } = await supabase.auth.signUp({
+    email: validation.values.email,
+    password: validation.values.password,
+    options: {
+      emailRedirectTo: origin
+        ? `${origin}/auth/confirm?next=/mi-cuenta`
+        : undefined,
+    },
+  });
+
+  if (error || !data.user?.id) {
+    return {
+      status: "error",
+      message: "No pudimos crear la cuenta en este momento. Probá nuevamente.",
+    };
+  }
+
+  // Supabase can return an obfuscated user for an already registered email.
+  // Do not create or link a customer account unless a new identity was created.
+  if (!data.user.identities?.length) {
+    await supabase.auth.signOut();
+    return {
+      status: "success",
+      message:
+        "Revisá tu correo. Si ya tenías una cuenta, podés ingresar o recuperar tu contraseña.",
+    };
+  }
+
+  try {
+    await provisionRetailCustomerAccount(validation.values, data.user.id);
+  } catch (provisionError) {
+    await supabase.auth.signOut();
+    return {
+      status: "error",
+      message:
+        provisionError instanceof AdminStoreError && provisionError.status === 409
+          ? "Ese email ya está asociado a una cuenta. Ingresá o recuperá tu contraseña."
+          : "No pudimos completar la cuenta. No se guardaron datos incompletos.",
+    };
+  }
+
+  if (data.session) redirect("/mi-cuenta");
+
+  return {
+    status: "success",
+    message:
+      "Te enviamos un correo de confirmación. Abrilo para activar tu cuenta Lombardo.",
+  };
 }
 
 export async function logoutCustomer() {

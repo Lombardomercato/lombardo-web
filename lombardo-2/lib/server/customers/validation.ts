@@ -1,4 +1,5 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^\+[1-9]\d{7,14}$/;
 const ALLOWED_RETURN_PATHS = [
   "/mi-cuenta",
   "/checkout",
@@ -16,8 +17,19 @@ export interface CustomerLoginValues {
   password: string;
 }
 
+export interface CustomerRegistrationValues {
+  name: string;
+  email: string;
+  whatsapp: string;
+  password: string;
+}
+
 export type CustomerLoginValidation =
   | { valid: true; values: CustomerLoginValues }
+  | { valid: false; message: string };
+
+export type CustomerRegistrationValidation =
+  | { valid: true; values: CustomerRegistrationValues }
   | { valid: false; message: string };
 
 function formString(formData: FormData, name: string) {
@@ -43,6 +55,42 @@ export function validateCustomerLogin(
   }
 
   return { valid: true, values: { email, password } };
+}
+
+export function validateCustomerRegistration(
+  formData: FormData,
+): CustomerRegistrationValidation {
+  const name = formString(formData, "name").trim().replace(/\s+/g, " ");
+  const email = normalizeCustomerEmail(formString(formData, "email"));
+  const whatsapp = formString(formData, "whatsapp")
+    .trim()
+    .replace(/[\s()-]/g, "");
+  const password = formString(formData, "password");
+  const passwordConfirmation = formString(formData, "passwordConfirmation");
+
+  if (name.length < 2 || name.length > 120) {
+    return { valid: false, message: "Ingresá tu nombre y apellido." };
+  }
+  if (!email || email.length > 254 || !EMAIL_PATTERN.test(email)) {
+    return { valid: false, message: "Ingresá un email válido." };
+  }
+  if (!PHONE_PATTERN.test(whatsapp)) {
+    return {
+      valid: false,
+      message: "WhatsApp debe incluir código de país, por ejemplo +5493415551234.",
+    };
+  }
+  if (password.length < 10 || password.length > 256) {
+    return {
+      valid: false,
+      message: "La contraseña debe tener al menos 10 caracteres.",
+    };
+  }
+  if (password !== passwordConfirmation) {
+    return { valid: false, message: "Las contraseñas no coinciden." };
+  }
+
+  return { valid: true, values: { name, email, whatsapp, password } };
 }
 
 export function sanitizeCustomerReturnPath(
