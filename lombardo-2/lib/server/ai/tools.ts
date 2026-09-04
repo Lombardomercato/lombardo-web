@@ -86,19 +86,19 @@ export function createSalesTools(context: SalesToolsContext) {
 
   return {
     search_products: tool({
-      description: "Busca productos SAFE reales por nombre, marca o SKU. También permite filtrar categoría y precio efectivo.",
+      description: "Busca productos reales del catálogo por nombre, marca o código. También permite filtrar categoría y precio efectivo.",
       inputSchema: commerceOperationInputSchemas.search_products,
       execute: (input) => execute("search_products", () => executeCommerceOperation(context, "search_products", input)),
     }),
 
     get_product: tool({
-      description: "Obtiene un producto SAFE real por UUID o SKU y devuelve sus datos vigentes.",
+      description: "Obtiene un producto real por identificador y devuelve sus datos vigentes.",
       inputSchema: commerceOperationInputSchemas.get_product,
       execute: (input) => execute("get_product", () => executeCommerceOperation(context, "get_product", input)),
     }),
 
     recommend_products: tool({
-      description: "Elige productos SAFE reales para una ocasión o presupuesto. Usala para asados, regalos y búsquedas generales por precio.",
+      description: "Elige productos reales para una ocasión o presupuesto. Usala para asados, regalos y búsquedas generales por precio.",
       inputSchema: commerceOperationInputSchemas.recommend_products,
       execute: (input) => execute("recommend_products", () => executeCommerceOperation(context, "recommend_products", input)),
     }),
@@ -110,7 +110,7 @@ export function createSalesTools(context: SalesToolsContext) {
     }),
 
     get_opportunities: tool({
-      description: "Obtiene oportunidades SAFE reales y vigentes del catálogo Lombardo.",
+      description: "Obtiene oportunidades reales y vigentes del catálogo Lombardo.",
       inputSchema: commerceOperationInputSchemas.get_opportunities,
       execute: (input) => execute("get_opportunities", () => executeCommerceOperation(context, "get_opportunities", input)),
     }),
@@ -122,7 +122,7 @@ export function createSalesTools(context: SalesToolsContext) {
     }),
 
     build_selection: tool({
-      description: "Arma una selección de varias botellas SAFE sin superar un presupuesto total real.",
+      description: "Arma una selección de varias botellas sin superar un presupuesto total real.",
       inputSchema: commerceOperationInputSchemas.build_selection,
       execute: (input) => execute("build_selection", () => executeCommerceOperation(context, "build_selection", input)),
     }),
@@ -392,8 +392,8 @@ function recommendationReason(occasion: string, maxPrice?: number) {
 
 function pricingNotice(pricing: CustomerPricingContext) {
   return pricing.policy === "RETAIL"
-    ? "Los precios corresponden a tu sesión minorista; escribir que sos mayorista no cambia la lista."
-    : "Los precios corresponden a la identidad comercial verificada de tu sesión.";
+    ? "Usá los precios efectivos de esta sesión."
+    : "Usá los precios comerciales efectivos de esta sesión.";
 }
 
 function formatArs(value: number) {

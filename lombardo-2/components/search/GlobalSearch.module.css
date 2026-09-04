@@ -1,0 +1,28 @@
+.layer { position: fixed; z-index: 80; inset: 0; }
+.backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(2, 20, 38, 0.48); }
+.dialog { position: relative; width: 100%; max-height: 100svh; padding: calc(var(--header-height) + 1.25rem) var(--page-gutter) 1.5rem; overflow-y: auto; background: var(--neutral-paper); color: var(--lombardo-blue); box-shadow: 0 1.5rem 4rem rgba(0, 24, 48, 0.24); }
+.dialog > header { min-height: 2.75rem; display: flex; align-items: flex-start; justify-content: space-between; border-top: 1px solid currentColor; padding-top: 0.7rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.09em; }
+.dialog > header button { min-height: 2.75rem; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; }
+.searchRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-bottom: 2px solid currentColor; }
+.searchRow input { width: 100%; min-width: 0; padding: 0.6rem 0 0.8rem; border: 0; outline: 0; background: transparent; color: inherit; font-family: var(--font-display); font-size: clamp(2rem, 5vw, 5.2rem); font-weight: 700; letter-spacing: -0.045em; }
+.searchRow input::placeholder { color: rgba(0, 58, 112, 0.58); opacity: 1; }
+.searchRow button { min-height: 2.75rem; padding: 0 0 0 1rem; border: 0; background: transparent; color: inherit; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em; cursor: pointer; }
+.results { min-height: 8rem; padding-top: 1.25rem; }
+.results > p { max-width: 45ch; color: rgba(0, 58, 112, 0.76); line-height: 1.4; }
+.resultList { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid rgba(0, 58, 112, 0.28); }
+.resultList a { min-width: 0; min-height: 8.5rem; padding: 1rem; display: flex; flex-direction: column; border-right: 1px solid rgba(0, 58, 112, 0.22); border-bottom: 1px solid rgba(0, 58, 112, 0.22); }
+.resultList a:nth-child(4n) { border-right: 0; }
+.resultList span { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
+.resultList strong { margin-top: 0.7rem; font-family: var(--font-display); font-size: clamp(1.15rem, 1.8vw, 1.65rem); line-height: 0.96; text-transform: uppercase; }
+.resultList b { margin-top: auto; padding-top: 0.8rem; font-family: var(--font-functional); font-size: 0.82rem; }
+.resultList a:hover, .resultList a:focus-visible { background: var(--lombardo-green); }
+.allResults { width: fit-content; min-height: 2.75rem; margin-top: 1rem; display: inline-flex; align-items: center; gap: 1rem; border-bottom: 1px solid currentColor; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; }
+@media (max-width: 63.99rem) { .resultList { grid-template-columns: repeat(2, minmax(0, 1fr)); } .resultList a:nth-child(2n) { border-right: 0; } }
+@media (max-width: 47.99rem) {
+  .dialog { min-height: 100svh; padding: calc(var(--header-height-mobile) + 0.8rem) var(--page-gutter) max(1rem, env(safe-area-inset-bottom)); }
+  .searchRow { grid-template-columns: minmax(0, 1fr); }
+  .searchRow input { font-size: clamp(1.65rem, 8vw, 2.5rem); }
+  .searchRow button { justify-self: end; padding-left: 0; }
+  .resultList { grid-template-columns: 1fr; }
+  .resultList a { min-height: 6.8rem; border-right: 0; }
+}

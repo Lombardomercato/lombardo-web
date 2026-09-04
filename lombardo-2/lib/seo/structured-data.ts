@@ -64,7 +64,6 @@ export function productStructuredData(product: Product) {
     name: product.name,
     description: productSeoDescription(product),
     url,
-    sku: product.sku,
     ...(product.images.length
       ? { image: product.images.map((image) => image.src) }
       : {}),

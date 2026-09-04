@@ -20,10 +20,9 @@ test("el slogan final expresa la propuesta de Lombardo", () => {
   assert.doesNotMatch(stylesheet, /\.note \{\s*display:\s*none;/);
 });
 
-test("el cierre legal acredita a Runia Web y reserva los derechos", () => {
+test("el cierre legal reserva los derechos sin exponer proveedores internos", () => {
   assert.match(component, /Todos los derechos reservados/);
-  assert.match(component, /Developed by/);
-  assert.match(component, /https:\/\/web\.runia\.ar\//);
+  assert.doesNotMatch(component, /Developed by|Runia Web/);
 });
 
 test("el zócalo mantiene una escala fina y compacta también en mobile", () => {

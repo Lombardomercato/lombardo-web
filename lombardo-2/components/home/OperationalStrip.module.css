@@ -1,0 +1,7 @@
+.strip { padding: 0 var(--page-gutter); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--lombardo-blue); color: var(--neutral-paper); }
+.strip p { min-height: 5.2rem; padding: 0.9rem clamp(0.8rem, 2vw, 1.8rem); display: grid; align-content: center; gap: 0.25rem; border-right: 1px solid rgba(255, 253, 249, 0.26); }
+.strip p:first-child { padding-left: 0; }
+.strip p:last-child { border-right: 0; }
+.strip strong { font-size: 0.65rem; letter-spacing: 0.08em; }
+.strip span { color: rgba(255, 253, 249, 0.74); font-size: 0.8rem; }
+@media (max-width: 47.99rem) { .strip { grid-template-columns: 1fr; padding-block: 0.5rem; } .strip p, .strip p:first-child { min-height: 3.8rem; padding: 0.65rem 0; border-right: 0; border-bottom: 1px solid rgba(255, 253, 249, 0.22); } .strip p:last-child { border-bottom: 0; } }

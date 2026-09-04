@@ -80,6 +80,7 @@ export function GuideProductGrid({
                   <button
                     type="button"
                     disabled={!isAddable}
+                    aria-label={`Agregar: ${product.name}`}
                     onClick={() => {
                       trackCommerceEvent({ name: "guide_add_to_cart", guideSlug, productId: product.id });
                       addItem(product, 1);
@@ -96,7 +97,7 @@ export function GuideProductGrid({
       </div>
 
       <p className={styles.liveNote}>
-        Precios y elegibilidad se consultan en Runia. Si una botella deja de estar SAFE,
+        Precios y disponibilidad se actualizan al abrir la guía. Si una botella deja de estar disponible,
         desaparece de esta selección y ocupa su lugar otra disponible.
       </p>
     </section>

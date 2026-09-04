@@ -1,0 +1,23 @@
+.page { min-height: 100svh; padding-top: var(--header-height); overflow-x: hidden; background: var(--neutral-paper); color: var(--lombardo-blue); }
+.hero { min-height: min(48rem, 86svh); padding: clamp(4rem, 8vw, 8rem) var(--page-gutter); display: grid; align-content: space-between; gap: 2.5rem; background: var(--lombardo-green); }
+.hero > p, .nextStep > div:first-child > p { padding-top: 0.7rem; border-top: 1px solid currentColor; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; }
+.hero h1 { max-width: 11ch; font-family: var(--font-display); font-size: clamp(4rem, 9vw, 9.5rem); line-height: 0.78; letter-spacing: -0.06em; }
+.hero > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 2rem; border-top: 1px solid rgba(0, 58, 112, 0.36); padding-top: 1rem; }
+.hero > div > p { max-width: 46ch; font-size: clamp(1rem, 1.8vw, 1.25rem); line-height: 1.35; }
+.hero a, .actions a { min-height: 3.3rem; padding: 0.7rem 1rem; display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid currentColor; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; }
+.hero a { background: var(--lombardo-blue); color: var(--neutral-paper); }
+.options { padding: clamp(5rem, 9vw, 9rem) var(--page-gutter); }
+.options > h2 { max-width: 10ch; margin-bottom: clamp(2.5rem, 5vw, 5rem); font-family: var(--font-display); font-size: clamp(3rem, 6vw, 6.5rem); line-height: 0.84; letter-spacing: -0.05em; }
+.options > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid currentColor; }
+.options article { min-height: 19rem; padding: 1.25rem; display: flex; flex-direction: column; border-right: 1px solid rgba(0, 58, 112, 0.28); border-bottom: 1px solid currentColor; }
+.options article:last-child { border-right: 0; }
+.options article > span { font-size: 0.62rem; font-weight: 700; }
+.options h3 { margin-top: auto; font-family: var(--font-display); font-size: clamp(1.5rem, 2.4vw, 2.6rem); line-height: 0.9; }
+.options article p { margin-top: 1rem; line-height: 1.35; }
+.nextStep { padding: clamp(5rem, 9vw, 9rem) var(--page-gutter); display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 0.55fr); gap: 2rem clamp(2rem, 7vw, 8rem); background: var(--lombardo-blue); color: var(--neutral-paper); }
+.nextStep h2 { max-width: 11ch; margin-top: 1.2rem; font-family: var(--font-display); font-size: clamp(3rem, 6.5vw, 7rem); line-height: 0.82; letter-spacing: -0.05em; }
+.nextStep > p { align-self: end; max-width: 38ch; font-size: 1.05rem; line-height: 1.4; }
+.actions { grid-column: 2; display: grid; gap: 0.7rem; }
+.actions a:first-child { background: var(--lombardo-green); color: var(--lombardo-blue); border-color: var(--lombardo-green); }
+@media (max-width: 63.99rem) { .options > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } .options article:nth-child(2) { border-right: 0; } }
+@media (max-width: 47.99rem) { .page { padding-top: var(--header-height-mobile); } .hero { min-height: 38rem; padding-block: 3rem; } .hero h1 { font-size: clamp(3.2rem, 15vw, 4.7rem); } .hero > div, .nextStep { grid-template-columns: 1fr; } .hero a { width: 100%; } .options > div { grid-template-columns: 1fr; } .options article { min-height: 14rem; border-right: 0; } .actions { grid-column: 1; } }

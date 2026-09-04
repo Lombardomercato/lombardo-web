@@ -25,6 +25,6 @@ export async function POST(request: Request) {
       },
     });
   } catch {
-    return Response.json({ error: "RUNIA_CONTEXT_UNAVAILABLE" }, { status: 503 });
+    return Response.json({ error: "ASSISTANT_CONTEXT_UNAVAILABLE" }, { status: 503 });
   }
 }

@@ -123,7 +123,7 @@ export async function POST(request: Request) {
       route: "/api/quick-order/repeat",
     });
     return noStoreJson(
-      { error: "No pudimos revalidar ese pedido en Runia." },
+      { error: "No pudimos actualizar ese pedido." },
       { status: 503, headers: { "X-Request-ID": requestId } },
     );
   }

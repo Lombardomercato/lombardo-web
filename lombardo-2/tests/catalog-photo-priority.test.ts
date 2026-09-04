@@ -33,10 +33,9 @@ test("Runia mantiene una señal derivada e indexada de imagen pública", async (
   );
 });
 
-test("Home, guías, Cava y automatizaciones exigen productos con foto", async () => {
+test("Guías, Cava y automatizaciones exigen productos con foto", async () => {
   const files = await Promise.all(
     [
-      "../app/page.tsx",
       "../lib/seo/guide-products.ts",
       "../lib/server/automations/tasks.ts",
       "../lib/server/secret-cellar/secret-cellar-service.ts",
@@ -46,4 +45,16 @@ test("Home, guías, Cava y automatizaciones exigen productos con foto", async ()
   for (const source of files) {
     assert.match(source, /requireImage:\s*true/);
   }
+});
+
+test("Home no vuelve a introducir una selección arbitraria de productos", async () => {
+  const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const discovery = await readFile(
+    new URL("../components/home/CommercialDiscovery.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(home, /requireImage:\s*true/);
+  assert.doesNotMatch(discovery, /Algunas buenas ideas/i);
+  assert.doesNotMatch(discovery, /ProductCard/);
 });

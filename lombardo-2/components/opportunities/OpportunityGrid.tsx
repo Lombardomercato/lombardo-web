@@ -52,6 +52,7 @@ export function OpportunityGrid({ products, surface }: {
                 type="button"
                 disabled={!addable}
                 onClick={() => addItem(product)}
+                aria-label={`${getAddLabel(product.availability)}: ${product.name}`}
               >
                 {getAddLabel(product.availability)} <span aria-hidden="true">＋</span>
               </button>

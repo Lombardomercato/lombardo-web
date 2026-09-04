@@ -21,11 +21,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface ProductsPageProps {
-  searchParams: Promise<{ categoria?: string | string[] }>;
+  searchParams: Promise<{ categoria?: string | string[]; buscar?: string | string[] }>;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const [categories, pricingContext, { categoria }] = await Promise.all([
+  const [categories, pricingContext, { categoria, buscar }] = await Promise.all([
     commerceProvider.getCategories(),
     getCurrentCustomerPricingContext(),
     searchParams,
@@ -37,6 +37,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const initialPage = await commerceProvider.getProductPage(
     {
       categorySlug: initialCategory === "todos" ? undefined : initialCategory,
+      search: typeof buscar === "string" ? buscar : undefined,
     },
     pricingContext,
   );
@@ -48,6 +49,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       categories={categories}
       initialCategory={initialCategory}
       quickOrderAvailable={isQuickOrderPricingContext(pricingContext)}
+      initialQuery={typeof buscar === "string" ? buscar : ""}
     />
   );
 }

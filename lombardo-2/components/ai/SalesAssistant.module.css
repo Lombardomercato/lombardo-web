@@ -501,10 +501,7 @@
 
 @media (max-width: 47.99rem) {
   .launcher {
-    right: 0.75rem;
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
-    width: 3.5rem;
-    height: 3.5rem;
+    display: none;
   }
 
   .launcherIcon { width: 1.85rem; height: 1.85rem; }

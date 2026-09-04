@@ -49,7 +49,7 @@ export function CartPage() {
 
       {!isHydrated || isCatalogLoading ? (
         <p className={styles.loading} role="status">
-          ACTUALIZANDO TU CARRITO CON RUNIA…
+          ACTUALIZANDO TU CARRITO…
         </p>
       ) : hasCatalogError ? (
         <section className={styles.empty} role="alert">
@@ -134,6 +134,12 @@ export function CartPage() {
               <span>CONTINUAR CON EL PEDIDO</span>
               <span aria-hidden="true">→</span>
             </Link>
+
+            <div className={styles.deliveryInfo}>
+              <strong>ENVÍO SIN CARGO</strong>
+              <span>Rosario, Pueblo Esther, General Lagos y Alvear.</span>
+              <span>En Rosario, la entrega habitual es dentro de las 48 h. Otras zonas se coordinan.</span>
+            </div>
 
             <Link href="/productos">← CONTINUAR COMPRANDO</Link>
           </aside>

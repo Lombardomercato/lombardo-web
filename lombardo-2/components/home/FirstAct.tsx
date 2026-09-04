@@ -20,14 +20,14 @@ const situations = [
   },
   {
     label: "TENGO UN CUMPLEAÑOS.",
-    href: "/categorias/regalos",
+    href: "/guias/regalar-vino-sin-saber-de-vino",
     context: "Una caja. Cero dudas.",
     image: birthdayImage,
     alt: "Caja azul de cumpleaños con vino y productos gourmet sobre fondo rosa.",
   },
   {
     label: "QUIERO QUEDAR MUY BIEN.",
-    href: "/categorias/regalos",
+    href: "/guias/regalar-vino-sin-saber-de-vino",
     context: "La selección que hace el trabajo.",
     image: giftBoxImage,
     alt: "Caja de regalo azul abierta con vino y productos gourmet.",
@@ -58,6 +58,7 @@ export function FirstAct() {
   const [activeSituation, setActiveSituation] = useState(0);
   const [phase, setPhase] = useState<"hero" | "situations">("hero");
   const selectedSituation = situations[activeSituation];
+  const openAssistant = () => window.dispatchEvent(new CustomEvent("lombardo:assistant-open"));
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -117,25 +118,26 @@ export function FirstAct() {
             </h1>
 
             <p className={styles.intro}>
-              Vinos, regalos y cosas buenas.
-              <span>Rosario.</span>
+              Vinos, bebidas y cosas buenas.
+              <span>Comprá online con envío gratis en Rosario y zona.</span>
             </p>
 
             <div className={styles.actions}>
               <Link
                 className={styles.primaryAction}
-                href="#situaciones"
-                tabIndex={phase === "hero" ? 0 : -1}
-              >
-                Resolvémelo <span aria-hidden="true">→</span>
-              </Link>
-              <Link
-                className={styles.secondaryAction}
                 href="/productos"
                 tabIndex={phase === "hero" ? 0 : -1}
               >
-                Ver todo <span aria-hidden="true">→</span>
+                Ver catálogo <span aria-hidden="true">→</span>
               </Link>
+              <button
+                className={styles.secondaryAction}
+                tabIndex={phase === "hero" ? 0 : -1}
+                type="button"
+                onClick={openAssistant}
+              >
+                Que Lombardo me ayude <span aria-hidden="true">→</span>
+              </button>
             </div>
           </div>
 

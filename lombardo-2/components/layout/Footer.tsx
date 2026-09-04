@@ -63,12 +63,6 @@ export function Footer() {
 
         <div className={styles.legalRow}>
           <p>© {currentYear} Lombardo Mercato. Todos los derechos reservados.</p>
-          <p>
-            Developed by{" "}
-            <Link href="https://web.runia.ar/" target="_blank" rel="noreferrer">
-              Runia Web
-            </Link>
-          </p>
         </div>
       </div>
     </footer>

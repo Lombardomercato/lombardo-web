@@ -4,13 +4,14 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
-  availabilityLabels,
   canAddToCart,
   getAddLabel,
 } from "@/lib/commerce/availability";
@@ -29,6 +30,7 @@ interface CatalogExplorerProps {
   heroTitle?: readonly [string, string];
   heroDescription?: readonly [string, string];
   quickOrderAvailable?: boolean;
+  initialQuery?: string;
 }
 
 const DEFAULT_HERO_TITLE = ["TODO LO", "BUENO."] as const;
@@ -83,9 +85,7 @@ function ProductInfo({ product }: { product: Product }) {
         <h2>
           <Link href={`/productos/${product.slug}`}>{product.name}</Link>
         </h2>
-        <p className={styles.availability} data-status={product.availability}>
-          {availabilityLabels[product.availability]}
-        </p>
+        {product.opportunity ? <p className={styles.offerBadge}>OFERTA VIGENTE</p> : null}
       </div>
       <div className={styles.priceBlock}>
         <OpportunityPrice product={product} />
@@ -110,14 +110,22 @@ export function CatalogExplorer({
   heroTitle = DEFAULT_HERO_TITLE,
   heroDescription = DEFAULT_HERO_DESCRIPTION,
   quickOrderAvailable = false,
+  initialQuery = "",
 }: CatalogExplorerProps) {
-  const [query, setQuery] = useState("");
+  const router = useRouter();
+  const [query, setQuery] = useState(initialQuery);
   const category = initialCategory;
   const [mode, setMode] = useState<CatalogMode>("editorial");
   const [products, setProducts] = useState(initialPage.products);
   const [total, setTotal] = useState(initialPage.total);
   const [status, setStatus] = useState<CatalogStatus>("ready");
   const [retryRequest, setRetryRequest] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [brand, setBrand] = useState("todos");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [offersOnly, setOffersOnly] = useState(false);
+  const [sort, setSort] = useState("relevance");
   const debouncedQuery = useDebouncedValue(query, 300);
   const firstRequest = useRef(true);
   const activeQuery = `${category}\u0000${debouncedQuery.trim()}`;
@@ -206,6 +214,27 @@ export function CatalogExplorer({
   const filtering = status === "filtering";
   const loadingMore = status === "loading-more";
   const hasMore = products.length < total;
+  const brands = useMemo(() => Array.from(new Set(products.map((product) => product.brand.name).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es-AR")), [products]);
+  const visibleProducts = useMemo(() => {
+    const minimum = Number(minPrice);
+    const maximum = Number(maxPrice);
+    const filtered = products.filter((product) => {
+      if (brand !== "todos" && product.brand.name !== brand) return false;
+      if (minPrice && Number.isFinite(minimum) && product.price < minimum) return false;
+      if (maxPrice && Number.isFinite(maximum) && product.price > maximum) return false;
+      if (offersOnly && !product.opportunity) return false;
+      return true;
+    });
+    return [...filtered].sort((left, right) => {
+      if (sort === "price-asc") return left.price - right.price;
+      if (sort === "price-desc") return right.price - left.price;
+      if (sort === "name") return left.name.localeCompare(right.name, "es-AR");
+      if (sort === "offers") return Number(Boolean(right.opportunity)) - Number(Boolean(left.opportunity));
+      return 0;
+    });
+  }, [brand, maxPrice, minPrice, offersOnly, products, sort]);
+  const activeFilterCount = Number(brand !== "todos") + Number(Boolean(minPrice)) + Number(Boolean(maxPrice)) + Number(offersOnly);
+  const resetFilters = () => { setBrand("todos"); setMinPrice(""); setMaxPrice(""); setOffersOnly(false); };
 
   return (
     <main className={styles.catalogPage}>
@@ -246,7 +275,7 @@ export function CatalogExplorer({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Vino, marca, regalo..."
               />
-              <span aria-hidden="true">↗</span>
+              {query ? <button type="button" onClick={() => setQuery("")}>LIMPIAR</button> : <span aria-hidden="true">↗</span>}
             </div>
           </div>
 
@@ -290,18 +319,54 @@ export function CatalogExplorer({
           ))}
         </nav>
 
+        <div className={styles.mobileFilterBar}>
+          <button type="button" onClick={() => setFiltersOpen(true)}>FILTROS{activeFilterCount ? ` · ${activeFilterCount}` : ""}</button>
+          <label>
+            <span>ORDENAR</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)}>
+              <option value="relevance">RELEVANCIA</option>
+              <option value="price-asc">PRECIO: MENOR A MAYOR</option>
+              <option value="price-desc">PRECIO: MAYOR A MENOR</option>
+              <option value="name">NOMBRE</option>
+              <option value="offers">OFERTAS PRIMERO</option>
+            </select>
+          </label>
+        </div>
+
+        {filtersOpen ? <button className={styles.filterBackdrop} type="button" aria-label="Cerrar filtros" onClick={() => setFiltersOpen(false)} /> : null}
+        <aside className={`${styles.filtersPanel} ${filtersOpen ? styles.filtersPanelOpen : ""}`} aria-label="Filtros del catálogo">
+          <header><strong>FILTRAR PRODUCTOS</strong><button type="button" onClick={() => setFiltersOpen(false)}>CERRAR ×</button></header>
+          <label><span>CATEGORÍA</span><select value={category} onChange={(event) => router.push(event.target.value === "todos" ? "/productos" : `/categorias/${event.target.value}`)}><option value="todos">TODAS</option>{categories.map((item) => <option key={item.id} value={item.slug}>{item.name.toUpperCase()}</option>)}</select></label>
+          <label><span>MARCA / BODEGA</span><select value={brand} onChange={(event) => setBrand(event.target.value)}><option value="todos">TODAS LAS CARGADAS</option>{brands.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <div className={styles.priceFilters}><span>PRECIO</span><label><span className="sr-only">Precio mínimo</span><input type="number" min="0" inputMode="numeric" placeholder="DESDE" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} /></label><label><span className="sr-only">Precio máximo</span><input type="number" min="0" inputMode="numeric" placeholder="HASTA" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} /></label></div>
+          <label className={styles.checkFilter}><input type="checkbox" checked={offersOnly} onChange={(event) => setOffersOnly(event.target.checked)} /><span>SÓLO OFERTAS VIGENTES</span></label>
+          <label className={styles.desktopSort}><span>ORDENAR</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="relevance">RELEVANCIA</option><option value="price-asc">PRECIO: MENOR A MAYOR</option><option value="price-desc">PRECIO: MAYOR A MENOR</option><option value="name">NOMBRE</option><option value="offers">OFERTAS PRIMERO</option></select></label>
+          <footer><button type="button" onClick={resetFilters}>LIMPIAR FILTROS</button><button type="button" onClick={() => setFiltersOpen(false)}>VER {visibleProducts.length} PRODUCTOS</button></footer>
+        </aside>
+
+        {activeFilterCount || query || category !== "todos" ? (
+          <div className={styles.activeFilters} aria-label="Filtros activos">
+            {query ? <button type="button" onClick={() => setQuery("")}>BÚSQUEDA: {query} ×</button> : null}
+            {category !== "todos" ? <Link href="/productos">{categories.find((item) => item.slug === category)?.name ?? category} ×</Link> : null}
+            {brand !== "todos" ? <button type="button" onClick={() => setBrand("todos")}>{brand} ×</button> : null}
+            {minPrice ? <button type="button" onClick={() => setMinPrice("")}>DESDE ${Number(minPrice).toLocaleString("es-AR")} ×</button> : null}
+            {maxPrice ? <button type="button" onClick={() => setMaxPrice("")}>HASTA ${Number(maxPrice).toLocaleString("es-AR")} ×</button> : null}
+            {offersOnly ? <button type="button" onClick={() => setOffersOnly(false)}>OFERTAS ×</button> : null}
+          </div>
+        ) : null}
+
         <div className={styles.resultsHeading}>
           <h2 id="catalog-title">SELECCIÓN LOMBARDO</h2>
           <p aria-live="polite">
-            {filtering ? "BUSCANDO…" : `${total.toLocaleString("es-AR")} PRODUCTOS`}
+            {filtering ? "BUSCANDO…" : activeFilterCount ? `${visibleProducts.length} DE ${products.length} CARGADOS` : `${total.toLocaleString("es-AR")} PRODUCTOS`}
           </p>
         </div>
 
-        {products.length ? (
+        {visibleProducts.length ? (
           <div
             className={mode === "editorial" ? styles.editorialGrid : styles.listGrid}
           >
-            {products.map((product, index) => (
+            {visibleProducts.map((product, index) => (
               <article
                 key={product.id}
                 className={`${styles.product} ${
@@ -327,7 +392,7 @@ export function CatalogExplorer({
         ) : filtering ? (
           <div className={styles.catalogFeedback} role="status">
             <span>LOM</span>
-            <p>Estamos buscando en la selección de Runia.</p>
+            <p>Buscando opciones…</p>
           </div>
         ) : (
           <div className={styles.emptyState}>

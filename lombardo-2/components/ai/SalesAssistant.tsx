@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,18 +25,41 @@ const transport = new DefaultChatTransport<UIMessage>({ api: "/api/ai/chat" });
 export function SalesAssistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [slowResponse, setSlowResponse] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
   const [chatSessionId] = useState(() => crypto.randomUUID());
   const launcherRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { addItem, getItemCount } = useCart();
+  const pathname = usePathname();
   const { id: chatId, messages, sendMessage, status, error, clearError, stop } = useChat({
     id: chatSessionId,
     transport,
     onError: () => undefined,
   });
   const busy = status === "submitted" || status === "streaming";
+  const hideLauncher = ["/carrito", "/checkout", "/pedido-rapido", "/cava-secreta"].some((route) => pathname.startsWith(route));
+
+  useEffect(() => {
+    const openFromPage = () => {
+      setOpen(true);
+      trackAiEvent(chatId, "chat_open");
+    };
+    window.addEventListener("lombardo:assistant-open", openFromPage);
+    return () => window.removeEventListener("lombardo:assistant-open", openFromPage);
+  }, [chatId]);
+
+  useEffect(() => {
+    if (!busy) return;
+    const slowTimer = window.setTimeout(() => setSlowResponse(true), 5_000);
+    const timeoutTimer = window.setTimeout(() => {
+      stop();
+      setTimedOut(true);
+    }, 20_000);
+    return () => { window.clearTimeout(slowTimer); window.clearTimeout(timeoutTimer); };
+  }, [busy, stop]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,6 +117,8 @@ export function SalesAssistant() {
     const value = text.trim();
     if (!value || busy) return;
     clearError();
+    setTimedOut(false);
+    setSlowResponse(false);
     trackAiEvent(chatId, "chat_message", undefined, { length: value.length });
     void sendMessage({ text: value });
     setInput("");
@@ -100,7 +126,7 @@ export function SalesAssistant() {
 
   return (
     <>
-      <button
+      {!hideLauncher ? <button
         ref={launcherRef}
         className={styles.launcher}
         type="button"
@@ -115,8 +141,8 @@ export function SalesAssistant() {
           <path d="M13 11v7h5" />
         </svg>
         <span className="sr-only">Te ayudo a elegir</span>
-      </button>
-      {open ? <button className={styles.backdrop} type="button" onClick={close} aria-label="Cerrar asistente" /> : null}
+      </button> : null}
+      {open ? <div className={styles.backdrop} onClick={close} aria-hidden="true" /> : null}
       <section
         ref={panelRef}
         id="sales-assistant-panel"
@@ -130,7 +156,7 @@ export function SalesAssistant() {
           <div>
             <p>LOMBARDO / ASISTENTE DE COMPRA</p>
             <h2 id="sales-assistant-title">Te ayudo a elegir.</h2>
-            <span>Precios, stock y productos reales.</span>
+            <span>Opciones pensadas según tu ocasión y presupuesto.</span>
           </div>
           <button type="button" onClick={close} aria-label="Cerrar asistente">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -165,7 +191,8 @@ export function SalesAssistant() {
               />
             ))
           )}
-          {busy ? <p className={styles.thinking}>ESTOY BUSCANDO PRODUCTOS REALES…</p> : null}
+          {busy ? <p className={styles.thinking}>{slowResponse ? "ESTOY TARDANDO UN POCO MÁS DE LO NORMAL…" : "BUSCANDO OPCIONES…"}</p> : null}
+          {timedOut ? <div className={styles.error} role="status"><p>No pude completar la búsqueda esta vez. Probá de nuevo o seguí desde el catálogo.</p><Link href="/productos">VER PRODUCTOS</Link><button type="button" onClick={() => setTimedOut(false)}>ENTENDIDO</button></div> : null}
           {error ? (
             <div className={styles.error} role="alert">
               <p>No pude encontrarlo ahora. Probá buscarlo en el catálogo.</p>
@@ -215,7 +242,7 @@ export function SalesAssistant() {
         </form>
         <p className={styles.disclaimer}>
           <span aria-hidden="true" />
-          Productos y precios verificados con Runia.
+          Selección actualizada según disponibilidad y precio.
         </p>
       </section>
     </>
@@ -326,7 +353,7 @@ function ProductRecommendations({ products, reason, chatId, addItem }: {
               </div>
               <div className={styles.productActions}>
                 <Link href={`/productos/${product.slug}`} onClick={() => trackAiEvent(chatId, "product_click", product.id)}>VER PRODUCTO</Link>
-                <button type="button" disabled={Boolean(adding)} onClick={() => void add(product)}>
+                <button type="button" disabled={Boolean(adding)} onClick={() => void add(product)} aria-label={`Agregar: ${product.name}`}>
                   {adding === product.id ? "AGREGANDO…" : "AGREGAR"}
                 </button>
               </div>

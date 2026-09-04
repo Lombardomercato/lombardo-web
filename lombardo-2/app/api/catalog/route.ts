@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       {
         headers: {
           "Cache-Control": "private, no-store",
-          "Server-Timing": `catalog;dur=${requestTimeMs}, runia;dur=${page.queryTimeMs}`,
+          "Server-Timing": `catalog;dur=${requestTimeMs}, source;dur=${page.queryTimeMs}`,
           "X-Request-ID": requestId,
         },
       },
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
       route: "/api/catalog",
     });
     return NextResponse.json(
-      { error: "No pudimos actualizar el catálogo de Runia." },
+      { error: "No pudimos actualizar el catálogo." },
       {
         status: 503,
         headers: {

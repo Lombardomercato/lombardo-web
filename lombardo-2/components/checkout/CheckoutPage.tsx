@@ -364,10 +364,12 @@ function CheckoutField({
         id={inputId}
         name={name}
         aria-invalid={Boolean(error)}
+        aria-required={!optional}
+        required={!optional}
         aria-describedby={error ? errorId : undefined}
       />
       {error ? (
-        <p className={styles.fieldError} id={errorId}>
+        <p className={styles.fieldError} id={errorId} role="alert">
           {error}
         </p>
       ) : null}
@@ -401,6 +403,8 @@ function CheckoutSelect({
         id={inputId}
         name={name}
         aria-invalid={Boolean(error)}
+        aria-required="true"
+        required
         aria-describedby={error ? errorId : undefined}
       >
         {options.map((option) => (
@@ -410,7 +414,7 @@ function CheckoutSelect({
         ))}
       </select>
       {error ? (
-        <p className={styles.fieldError} id={errorId}>
+        <p className={styles.fieldError} id={errorId} role="alert">
           {error}
         </p>
       ) : null}
@@ -1004,6 +1008,12 @@ export function CheckoutPage({
         <h1>PREPARAMOS TU PEDIDO.</h1>
       </header>
 
+      <aside className={styles.operationalNotice} aria-label="Información de entrega y pago">
+        <p><strong>ENVÍO SIN CARGO</strong><span>Rosario, Pueblo Esther, General Lagos y Alvear.</span></p>
+        <p><strong>ENTREGA HABITUAL</strong><span>En Rosario, dentro de las 48 h. Otras zonas se coordinan.</span></p>
+        <p><strong>PAGO</strong><span>Online, transferencia o efectivo según coordinación.</span></p>
+      </aside>
+
       <form className={styles.checkoutForm} onSubmit={confirmOrder} noValidate>
         <div className={styles.formColumn}>
           {state.repositoryError ? (
@@ -1091,6 +1101,7 @@ export function CheckoutPage({
                   value="DELIVERY_ROSARIO"
                   checked={state.form.deliveryMethod === "DELIVERY_ROSARIO"}
                   onChange={() => setDeliveryMethod("DELIVERY_ROSARIO")}
+                  required
                 />
                 <span>ENVÍO</span>
                 <strong>A Rosario</strong>

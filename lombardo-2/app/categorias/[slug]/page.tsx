@@ -9,6 +9,7 @@ import { breadcrumbStructuredData } from "@/lib/seo/structured-data";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ buscar?: string | string[] }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -38,18 +39,22 @@ export async function generateMetadata({
   };
 }
 
-export default async function CategoryPage({ params }: CategoryPageProps) {
-  const [{ slug }, categories, pricingContext] = await Promise.all([
+export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
+  const [{ slug }, categories, pricingContext, { buscar }] = await Promise.all([
     params,
     commerceProvider.getCategories(),
     getCurrentCustomerPricingContext(),
+    searchParams,
   ]);
   const seoCategory = getSeoCategory(slug);
   const category = categories.find((item) => item.slug === slug);
   if (!seoCategory || !category) notFound();
 
   const initialPage = await commerceProvider.getProductPage(
-    { categorySlug: category.slug },
+    {
+      categorySlug: category.slug,
+      search: typeof buscar === "string" ? buscar : undefined,
+    },
     pricingContext,
   );
   if (!initialPage.total) notFound();
@@ -70,6 +75,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         initialCategory={category.slug}
         heroTitle={seoCategory.heroTitle}
         heroDescription={seoCategory.heroDescription}
+        initialQuery={typeof buscar === "string" ? buscar : ""}
       />
     </>
   );

@@ -1,6 +1,7 @@
 import type { Category, Product } from "../../types/commerce.ts";
 import type { CustomerPricingContext } from "../server/customers/types.ts";
 import { resolveCommercialPrice } from "../pricing/policy.ts";
+import { displayPresentation, displayProductName } from "./product-presentation.ts";
 
 interface CategoryRule {
   category: Category;
@@ -63,7 +64,7 @@ const CATEGORY_RULES: readonly CategoryRule[] = [
     ],
   },
   {
-    category: category("regalos", "Regalos y accesorios"),
+    category: category("regalos", "Accesorios"),
     prefixes: ["ACC", "BLO", "BOL"],
   },
 ] as const;
@@ -321,8 +322,9 @@ export function mapRuniaSupplierProduct(
   }
 
   const sku = row.supplier_sku.trim();
-  const name = row.name_raw.trim();
-  const inferredBrand = inferBrand(name);
+  const sourceName = row.name_raw.trim();
+  const name = displayProductName(sourceName);
+  const inferredBrand = inferBrand(sourceName);
   const brandName = editorialBrand(row) || inferredBrand.name;
   const brand = {
     id: `runia-brand-${slugify(brandName) || "vinros"}`,
@@ -330,7 +332,7 @@ export function mapRuniaSupplierProduct(
     name: brandName,
   };
   const productCategory = categoryForSupplierSku(sku);
-  const presentation = presentationFor(row);
+  const presentation = displayPresentation(presentationFor(row));
   assertPricingList(pricingContext);
   const resolvedPrice = resolveCommercialPrice(
     selectedPrice(row, pricingContext),
@@ -367,7 +369,7 @@ export function mapRuniaSupplierProduct(
     featured: false,
     situations: [],
     giftLevels: [],
-    tags: [name, sku, brand.name, productCategory.name, presentation],
+    tags: [sourceName, sku, brand.name, productCategory.name, presentation],
   };
 }
 

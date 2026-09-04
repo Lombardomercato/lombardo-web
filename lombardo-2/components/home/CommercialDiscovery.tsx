@@ -2,37 +2,31 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCart } from "@/components/cart/CartProvider";
-import { ProductVisual } from "@/components/product/ProductVisual";
-import { canAddToCart, getAddLabel } from "@/lib/commerce/availability";
-import { formatCurrency } from "@/lib/utils/format-currency";
-import type { Category, Product } from "@/types/commerce";
+import type { Category } from "@/types/commerce";
 import styles from "./CommercialDiscovery.module.css";
 
 const categoryCopy: Record<string, string> = {
   vinos: "Tintos, blancos, espumosos y esa botella que resuelve la mesa.",
   destilados: "Para el bar, para compartir o para regalar distinto.",
   gourmet: "Algo rico que convierte un detalle en un buen regalo.",
-  regalos: "Accesorios y presentaciones para entregar sin vueltas.",
+  cervezas: "Opciones para compartir, descubrir y tener siempre a mano.",
 };
 
 const categoryTone: Record<string, string> = {
   vinos: styles.wine,
   destilados: styles.spirits,
   gourmet: styles.gourmet,
-  regalos: styles.gifts,
+  cervezas: styles.gifts,
 };
 
 const categoryArtwork: Record<string, string> = {
   vinos: "/images/editorial/categories/vinos-v1.jpg",
   destilados: "/images/editorial/categories/destilados-v1.jpg",
   gourmet: "/images/editorial/categories/gourmet-v1.jpg",
-  regalos: "/images/editorial/categories/regalos-v1.jpg",
 };
 
 interface CommercialDiscoveryProps {
   categories: Category[];
-  products: Product[];
   catalogTotal: number | null;
 }
 
@@ -52,43 +46,8 @@ function CategoryEditorial({ categorySlug }: { categorySlug: string }) {
   );
 }
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
-  const { addItem } = useCart();
-  const addable = canAddToCart(product.availability);
-
-  return (
-    <article className={styles.productCard}>
-      <Link
-        className={styles.productVisual}
-        href={`/productos/${product.slug}`}
-        aria-label={`Ver ${product.name}`}
-      >
-        <ProductVisual product={product} priority={index < 2} />
-      </Link>
-      <div className={styles.productDetails}>
-        <p>{product.brand.name} · {product.presentation}</p>
-        <h3>
-          <Link href={`/productos/${product.slug}`}>{product.name}</Link>
-        </h3>
-        <div>
-          <strong>{formatCurrency(product.price)}</strong>
-          <button
-            type="button"
-            disabled={!addable}
-            onClick={() => addItem(product)}
-            aria-label={`${getAddLabel(product.availability)}: ${product.name}`}
-          >
-            {getAddLabel(product.availability)} <span aria-hidden="true">＋</span>
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 export function CommercialDiscovery({
   categories,
-  products,
   catalogTotal,
 }: CommercialDiscoveryProps) {
   const featuredCategories = categories.filter((category) =>
@@ -98,7 +57,7 @@ export function CommercialDiscovery({
   return (
     <div className={styles.discovery}>
       <section
-        id="experiencias"
+        id="categorias"
         className={styles.categories}
         aria-labelledby="categories-title"
       >
@@ -125,32 +84,6 @@ export function CommercialDiscovery({
             </Link>
           ))}
         </div>
-      </section>
-
-      <section className={styles.products} aria-labelledby="products-title">
-        <header className={styles.productHeader}>
-          <div>
-            <p>PARA ARRANCAR / 03</p>
-            <h2 id="products-title">ALGUNAS BUENAS IDEAS.</h2>
-          </div>
-          <p>
-            Productos reales de nuestra selección. Elegí uno o seguí explorando.
-          </p>
-        </header>
-
-        {products.length ? (
-          <div className={styles.productGrid}>
-            {products.map((product, index) => (
-              <ProductCard key={product.id} product={product} index={index} />
-            ))}
-          </div>
-        ) : (
-          <div className={styles.productsUnavailable}>
-            <p>La selección se está actualizando.</p>
-            <Link href="/productos">Entrar al catálogo →</Link>
-          </div>
-        )}
-
         <Link className={styles.catalogAction} href="/productos">
           {catalogTotal
             ? `Ver los ${catalogTotal.toLocaleString("es-AR")} productos`
@@ -165,7 +98,7 @@ export function CommercialDiscovery({
         <p>
           Armamos opciones para empresas, fechas especiales y entregas en Rosario.
         </p>
-        <Link href="#contacto">Hablemos →</Link>
+        <Link href="/empresas">VER OPCIONES PARA EMPRESAS →</Link>
       </section>
     </div>
   );

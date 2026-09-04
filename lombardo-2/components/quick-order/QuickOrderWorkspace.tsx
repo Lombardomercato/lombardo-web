@@ -260,7 +260,7 @@ export function QuickOrderWorkspace({
         <div className={styles.searchArea}>
           <div className={styles.searchBox}>
             <label id="quick-search-label" htmlFor="quick-order-search">
-              PRODUCTO, MARCA O SKU
+              PRODUCTO O MARCA
             </label>
             <div className={styles.searchInputRow}>
               <input
@@ -325,7 +325,7 @@ export function QuickOrderWorkspace({
             aria-live="polite"
           >
             {searchStatus === "searching"
-              ? "BUSCANDO EN RUNIA…"
+              ? "BUSCANDO OPCIONES…"
               : searchStatus === "error"
                 ? "NO PUDIMOS BUSCAR. REINTENTÁ."
                 : debouncedQuery
@@ -342,7 +342,6 @@ export function QuickOrderWorkspace({
                 <thead>
                   <tr>
                     <th scope="col">PRODUCTO</th>
-                    <th scope="col">SKU</th>
                     <th scope="col">PRESENTACIÓN</th>
                     <th scope="col">PÚBLICO</th>
                     <th scope="col">TU PRECIO</th>
@@ -360,7 +359,6 @@ export function QuickOrderWorkspace({
                           <strong>{product.name}</strong>
                           <span>{product.brand.name}</span>
                         </th>
-                        <td data-label="SKU"><code>{product.sku}</code></td>
                         <td data-label="PRESENTACIÓN">{product.presentation}</td>
                         <td data-label="PÚBLICO" className={styles.publicPrice}>
                           {entry.publicUnitPrice
@@ -373,7 +371,7 @@ export function QuickOrderWorkspace({
                         </td>
                         <td data-label="DISPONIBILIDAD">
                           <span className={styles.availability}>
-                            <i aria-hidden="true" /> POR ENCARGO
+                            <i aria-hidden="true" /> A CONFIRMAR
                           </span>
                         </td>
                         <td data-label="CANTIDAD">
@@ -422,12 +420,12 @@ export function QuickOrderWorkspace({
           ) : debouncedQuery && searchStatus === "ready" ? (
             <div className={styles.empty}>
               <strong>SIN RESULTADOS.</strong>
-              <p>Probá con otra parte del nombre, la marca o el SKU.</p>
+              <p>Probá con otra parte del nombre o la marca.</p>
             </div>
           ) : null}
 
           <p className={styles.availabilityNote}>
-            “Por encargo” significa producto SAFE y activo en la lista VINROS.
+            La disponibilidad se confirma antes de preparar el pedido.
             No expresa stock físico ni unidades por bulto.
           </p>
         </div>

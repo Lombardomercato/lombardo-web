@@ -119,7 +119,7 @@ export function CartDrawer() {
         {isCatalogLoading ? (
           <div className={styles.providerState} role="status">
             <span>ACTUALIZANDO</span>
-            <p>Estamos confirmando tu selección con Runia.</p>
+            <p>Estamos confirmando tu selección.</p>
           </div>
         ) : hasCatalogError ? (
           <div className={styles.providerState} role="alert">

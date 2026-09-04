@@ -30,7 +30,8 @@ body {
 
 body.menu-open,
 body.cart-open,
-body.assistant-open {
+body.assistant-open,
+body.search-open {
   overflow: hidden;
 }
 

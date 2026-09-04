@@ -75,7 +75,7 @@ export function ProductVisual({
       <strong>{product.name}</strong>
       <span className={styles.presentation}>{product.presentation}</span>
       <span className={styles.number} aria-hidden="true">
-        {product.sku.slice(-3)}
+        LOM
       </span>
     </div>
   );

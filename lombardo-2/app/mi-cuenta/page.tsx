@@ -127,7 +127,7 @@ export default async function MyAccountPage() {
               <p className={styles.sectionEyebrow}>Compra profesional</p>
               <h2 id="quick-order-title">CATÁLOGO O PEDIDO RÁPIDO.</h2>
               <p>
-                Buscá por nombre, marca o SKU y armá pedidos grandes sin recorrer fotos.
+                Buscá por nombre o marca y armá pedidos grandes sin recorrer fotos.
               </p>
             </div>
             <nav aria-label="Modo de compra B2B">

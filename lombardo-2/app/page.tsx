@@ -5,6 +5,8 @@ import { CommercialDiscovery } from "@/components/home/CommercialDiscovery";
 import { FirstAct } from "@/components/home/FirstAct";
 import { HomeGuides } from "@/components/home/HomeGuides";
 import { HomeOpportunities } from "@/components/home/HomeOpportunities";
+import { OperationalStrip } from "@/components/home/OperationalStrip";
+import { SecretCellarTeaser } from "@/components/home/SecretCellarTeaser";
 import { commerceProvider } from "@/lib/commerce";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { loadDailyHomeData } from "@/lib/server/automations/live-data";
@@ -33,41 +35,25 @@ const fallbackCategories: Category[] = [
   { id: "home-vinos", slug: "vinos", name: "Vinos" },
   { id: "home-destilados", slug: "destilados", name: "Destilados" },
   { id: "home-gourmet", slug: "gourmet", name: "Gourmet" },
-  { id: "home-regalos", slug: "regalos", name: "Regalos y accesorios" },
+  { id: "home-cervezas", slug: "cervezas", name: "Cervezas" },
 ];
 
 async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
-  const categorySlugs = ["vinos", "destilados", "gourmet", "regalos"];
-
   try {
-    const [categories, catalog, pages] = await Promise.all([
+    const [categories, catalog] = await Promise.all([
       commerceProvider.getCategories(),
       commerceProvider.getProductPage({ limit: 1 }, pricingContext),
-      Promise.all(
-        categorySlugs.map((categorySlug) =>
-          commerceProvider.getProductPage(
-            { categorySlug, limit: 2, requireImage: true },
-            pricingContext,
-          ),
-        ),
-      ),
     ]);
 
     const daily = await loadDailyHomeData(pricingContext, categories).catch(() => null);
 
     return {
       categories: daily?.categories ?? categories,
-      products:
-        daily?.products ??
-        pages
-          .flatMap((page) => page.products.filter((product) => product.images.length > 0).slice(0, 2))
-          .slice(0, 6),
       catalogTotal: catalog.total,
     };
   } catch {
     return {
       categories: fallbackCategories,
-      products: [],
       catalogTotal: null,
     };
   }
@@ -85,9 +71,11 @@ export default async function Home() {
       <JsonLd data={onlineStoreStructuredData()} />
       <main className={styles.home}>
         <FirstAct />
+        <OperationalStrip />
         <HomeOpportunities products={opportunities} />
         <CommercialDiscovery {...discovery} />
         <HomeGuides />
+        <SecretCellarTeaser />
       </main>
       <Footer />
     </>

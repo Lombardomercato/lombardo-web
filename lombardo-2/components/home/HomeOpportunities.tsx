@@ -11,9 +11,9 @@ export function HomeOpportunities({ products }: { products: Product[] }) {
       <header>
         <div>
           <p>SELECCIÓN VIGENTE / PRECIO REAL</p>
-          <h2 id="home-opportunities-title">OPORTUNIDADES.</h2>
+          <h2 id="home-opportunities-title">OFERTAS.</h2>
         </div>
-        <p>Botellas conocidas, elegidas cuando el precio acompaña de verdad.</p>
+        <p>Oportunidades: ofertas que realmente valen la pena.</p>
         <Link href="/oportunidades">VER TODAS →</Link>
       </header>
       <OpportunityGrid products={products} surface="home" />

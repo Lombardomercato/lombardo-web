@@ -20,10 +20,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const { addItem } = useCart();
   const isAddable = canAddToCart(product.availability);
   const isOpportunity = Boolean(product.opportunity);
-  const detailAddLabel =
-    product.availability === "AVAILABLE_NOW"
-      ? "AGREGAR AL CARRITO"
-      : getAddLabel(product.availability).toUpperCase();
+  const detailAddLabel = isAddable ? "AGREGAR AL CARRITO" : getAddLabel(product.availability).toUpperCase();
 
   useEffect(() => {
     trackCommerceEvent({ name: "view_item", productId: product.id });
@@ -41,7 +38,7 @@ export function ProductDetail({ product }: { product: Product }) {
     >
       <div className={styles.topline}>
         <Link href="/productos">← VOLVER AL CATÁLOGO</Link>
-        <span>FICHA / {product.sku.slice(-3)}</span>
+        <span>SELECCIÓN LOMBARDO</span>
       </div>
 
       <header className={styles.heading}>
@@ -54,8 +51,9 @@ export function ProductDetail({ product }: { product: Product }) {
           <ProductVisual product={product} variant="detail" priority />
           <div className={styles.visualFoot}>
             <span>{product.category.name}</span>
-            <span>{product.sku.replaceAll("-", " ")}</span>
+            <span>{product.presentation}</span>
           </div>
+          {product.category.slug === "vinos" && product.images.length ? <p className={styles.imageNote}>La imagen es ilustrativa. La añada puede variar; consultanos si necesitás una en particular.</p> : null}
         </div>
 
         <section className={styles.purchase} aria-labelledby="purchase-title">
@@ -85,6 +83,7 @@ export function ProductDetail({ product }: { product: Product }) {
               className={styles.addButton}
               type="button"
               disabled={!isAddable}
+              aria-label={`${detailAddLabel}: ${product.name}`}
               onClick={() => addItem(product, quantity)}
             >
               <span>{detailAddLabel}</span>
@@ -93,6 +92,7 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <div className={styles.productCopy}>
+            {product.availability === "SUPPLIER_AVAILABLE" ? <p>Confirmamos disponibilidad antes de preparar el pedido.</p> : null}
             {product.description ? <p>{product.description}</p> : null}
             <dl>
               <div>

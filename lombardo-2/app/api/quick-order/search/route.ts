@@ -78,7 +78,7 @@ export async function GET(request: Request) {
       route: "/api/quick-order/search",
     });
     return noStoreJson(
-      { error: "No pudimos buscar en el catálogo de Runia." },
+      { error: "No pudimos buscar en el catálogo." },
       { status: 503, headers: { "X-Request-ID": requestId } },
     );
   }

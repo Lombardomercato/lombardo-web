@@ -12,7 +12,8 @@ test("el menú mobile tiene una superficie propia a pantalla completa", () => {
   assert.match(headerCss, /\.mobilePanel\s*\{[\s\S]*position:\s*absolute/);
   assert.match(headerCss, /height:\s*calc\(100svh - var\(--header-height-mobile\)\)/);
   assert.match(headerCss, /background:\s*var\(--lombardo-blue\)/);
-  assert.match(headerCss, /\.mobileIntro\s*\{/);
+  assert.match(headerCss, /\.mobileCategories\s*\{/);
+  assert.match(headerCss, /\.mobileUtilities\s*\{/);
 });
 
 test("el precio editorial pertenece al flujo de la tarjeta", () => {

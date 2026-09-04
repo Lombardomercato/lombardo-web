@@ -70,14 +70,14 @@ export const SEO_CATEGORIES: readonly SeoCategory[] = [
   },
   {
     slug: "regalos",
-    name: "Regalos y accesorios",
-    title: "Regalos con vino online en Rosario",
+    name: "Accesorios",
+    title: "Accesorios para vinos y bebidas en Rosario",
     description:
-      "Regalos con vino y accesorios para comprar online en Rosario. Opciones para cumpleaños, clientes, equipos y ocasiones especiales.",
-    heroTitle: ["REGALOS", "ONLINE."],
+      "Accesorios y presentaciones individuales para vinos y bebidas disponibles para comprar online en Rosario.",
+    heroTitle: ["ACCESORIOS", "ONLINE."],
     heroDescription: [
-      "Opciones para entregar sin vueltas.",
-      "Para cumpleaños, clientes y ocasiones especiales.",
+      "Copas, bolsas, cajas y complementos.",
+      "La selección curada de regalos volverá en una próxima etapa.",
     ],
   },
 ] as const;

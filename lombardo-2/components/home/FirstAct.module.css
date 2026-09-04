@@ -152,6 +152,10 @@
   gap: 1rem;
   padding-inline: 1.35rem;
   border: 1px solid var(--lombardo-blue);
+  background: transparent;
+  color: var(--lombardo-blue);
+  cursor: pointer;
+  font-family: var(--font-body);
   font-size: var(--step--1);
   font-weight: 700;
   letter-spacing: 0.045em;
