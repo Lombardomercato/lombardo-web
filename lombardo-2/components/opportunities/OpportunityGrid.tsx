@@ -54,7 +54,10 @@ export function OpportunityGrid({ products, surface, recommendedProductId }: {
                   : `${product.brand.name} · ${product.presentation}`}
               </p>
               <h2><Link href={href}>{product.name}</Link></h2>
-              <OpportunityPrice product={product} />
+              <OpportunityPrice
+                product={product}
+                alignWithOpportunity={recommended && surface === "home"}
+              />
               <button
                 type="button"
                 disabled={!addable}

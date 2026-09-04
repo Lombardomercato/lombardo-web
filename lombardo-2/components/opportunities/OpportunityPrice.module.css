@@ -30,6 +30,11 @@
   line-height: 1;
 }
 
+.price[data-align="opportunity"] {
+  min-height: 5.12rem;
+  align-content: end;
+}
+
 .price[data-size="detail"] {
   justify-items: end;
   gap: 0.55rem;

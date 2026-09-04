@@ -2,15 +2,20 @@ import { formatCurrency } from "@/lib/utils/format-currency";
 import type { Product } from "@/types/commerce";
 import styles from "./OpportunityPrice.module.css";
 
-export function OpportunityPrice({ product, size = "card" }: {
+export function OpportunityPrice({ product, size = "card", alignWithOpportunity = false }: {
   product: Product;
   size?: "card" | "detail";
+  alignWithOpportunity?: boolean;
 }) {
   const referencePrice = product.opportunity?.referencePrice;
   const isOpportunity = referencePrice !== undefined && product.price < referencePrice;
 
   return (
-    <div className={styles.price} data-size={size}>
+    <div
+      className={styles.price}
+      data-align={alignWithOpportunity ? "opportunity" : undefined}
+      data-size={size}
+    >
       {isOpportunity ? (
         <>
           <span className={styles.badge}>OPORTUNIDAD</span>

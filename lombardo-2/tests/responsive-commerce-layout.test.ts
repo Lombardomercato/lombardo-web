@@ -6,6 +6,7 @@ const headerCss = readFileSync("components/layout/Header.module.css", "utf8");
 const catalogCss = readFileSync("components/catalog/CatalogExplorer.module.css", "utf8");
 const firstActCss = readFileSync("components/home/FirstAct.module.css", "utf8");
 const opportunitiesCss = readFileSync("components/opportunities/OpportunityGrid.module.css", "utf8");
+const opportunityPriceCss = readFileSync("components/opportunities/OpportunityPrice.module.css", "utf8");
 const homeOpportunitiesCss = readFileSync("components/home/HomeOpportunities.module.css", "utf8");
 const productVisualCss = readFileSync("components/product/ProductVisual.module.css", "utf8");
 const baseCss = readFileSync("styles/base.css", "utf8");
@@ -27,7 +28,8 @@ test("el precio editorial pertenece al flujo de la tarjeta", () => {
 
 test("la portada de Tienda mantiene el acento editorial unido al contenido", () => {
   assert.doesNotMatch(catalogCss, /\.catalogHero h1::after/);
-  assert.match(catalogCss, /\.catalogHero h1\s*\{[\s\S]*grid-column:\s*1 \/ 9/);
+  assert.match(catalogCss, /\.catalogHero h1\s*\{[\s\S]*grid-column:\s*1 \/ 9[\s\S]*width:\s*fit-content[\s\S]*justify-items:\s*center/);
+  assert.doesNotMatch(catalogCss, /\.catalogHero h1 span:last-child\s*\{[^}]*margin-left/);
   assert.match(catalogCss, /\.heroAside\s*\{[\s\S]*grid-column:\s*9 \/ 12/);
   assert.match(catalogCss, /min-height:\s*clamp\(28\.75rem, 32vw, 29\.25rem\)/);
   assert.match(catalogCss, /\.heroAside::before\s*\{[\s\S]*background:\s*var\(--lombardo-green\)/);
@@ -59,6 +61,7 @@ test("la landing limita el título editorial y usa tarjetas con lenguaje de cat�
   assert.match(opportunitiesCss, /\.grid\[data-surface="home"\]\s*\{[\s\S]*border:\s*0/);
   assert.match(opportunitiesCss, /\.grid\[data-surface="home"\] \.card[\s\S]*border-top:\s*1px solid/);
   assert.match(opportunitiesCss, /\.grid\[data-surface="home"\] \.details h2\s*\{[\s\S]*font-size:\s*clamp\(1\.35rem, 2vw, 2\.3rem\)/);
+  assert.match(opportunityPriceCss, /\.price\[data-align="opportunity"\]\s*\{[\s\S]*align-content:\s*end/);
 });
 
 test("la raíz impide scroll horizontal accidental", () => {

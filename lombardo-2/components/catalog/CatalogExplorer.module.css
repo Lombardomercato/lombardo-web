@@ -59,7 +59,10 @@
   position: relative;
   z-index: 1;
   grid-column: 1 / 9;
+  width: fit-content;
   align-self: center;
+  display: grid;
+  justify-items: center;
   font-family: var(--font-display);
   font-size: var(--type-page-title);
   font-weight: 700;
@@ -73,7 +76,6 @@
 }
 
 .catalogHero h1 span:last-child {
-  margin-left: 0.39em;
   color: var(--lombardo-red);
 }
 
@@ -849,10 +851,6 @@
     align-self: center;
     font-size: var(--type-page-title);
     line-height: 0.76;
-  }
-
-  .catalogHero h1 span:last-child {
-    margin-left: 0.17em;
   }
 
   .heroAside {
