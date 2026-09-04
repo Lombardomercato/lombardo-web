@@ -5,7 +5,7 @@
 }
 
 .catalogHero {
-  min-height: clamp(28.75rem, 36vw, 32.5rem);
+  min-height: clamp(28.75rem, 35vw, 31.5rem);
   padding: calc(var(--header-height) + 2rem) var(--page-gutter) 2.5rem;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -49,7 +49,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding-top: 0.8rem;
-  border-top: 1px solid currentColor;
+  border-top: 1px solid rgba(0, 58, 112, 0.62);
   font-size: var(--step--1);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -58,7 +58,7 @@
 .catalogHero h1 {
   position: relative;
   z-index: 1;
-  grid-column: 1 / 11;
+  grid-column: 1 / 9;
   align-self: center;
   font-family: var(--font-display);
   font-size: var(--type-page-title);
@@ -77,22 +77,13 @@
   color: var(--lombardo-red);
 }
 
-.catalogHero h1::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  right: -8vw;
-  bottom: -0.14em;
-  width: clamp(7rem, 14vw, 13rem);
-  aspect-ratio: 1;
-  background: var(--lombardo-green);
-}
-
 .heroAside {
-  grid-column: 10 / -1;
+  grid-column: 9 / 12;
+  justify-self: end;
+  width: 100%;
   align-self: end;
   padding-top: 1rem;
-  border-top: 1px solid currentColor;
+  border-top: 1px solid rgba(0, 58, 112, 0.5);
   display: grid;
   gap: 1rem;
   font-size: var(--step-0);
@@ -106,7 +97,7 @@
 }
 
 .catalogSection {
-  padding: clamp(4rem, 8vw, 8rem) var(--page-gutter) clamp(5rem, 10vw, 10rem);
+  padding: clamp(3.5rem, 6vw, 6rem) var(--page-gutter) clamp(5rem, 10vw, 10rem);
 }
 
 .controlsTop {
@@ -134,6 +125,15 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   border-bottom: 2px solid var(--lombardo-blue);
+  transition: border-color 160ms ease;
+}
+
+.searchField:focus-within label {
+  color: var(--lombardo-red);
+}
+
+.searchField:focus-within > div {
+  border-bottom-color: var(--lombardo-red);
 }
 
 .searchField input {
@@ -196,6 +196,7 @@
   font-weight: 700;
   letter-spacing: 0.055em;
   text-transform: uppercase;
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
 }
 
 .mobileFilterBar { display: none; }
@@ -225,6 +226,15 @@
   width: 100%; min-width: 0; min-height: 2.75rem; padding: 0.5rem 0.65rem;
   border: 1px solid rgba(0, 58, 112, 0.35); border-radius: 0; background: transparent;
   color: var(--lombardo-blue); font-family: var(--font-body); font-size: 0.68rem; font-weight: 700;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.filtersPanel select:hover,
+.priceFilters input:hover,
+.filtersPanel select:focus-visible,
+.priceFilters input:focus-visible {
+  border-color: var(--lombardo-blue);
+  background: rgba(0, 58, 112, 0.025);
 }
 
 .priceFilters { grid-template-columns: 1fr 1fr; }
@@ -244,8 +254,17 @@
   color: var(--lombardo-blue);
 }
 
+.modeSwitch button:hover,
+.modeSwitch button:focus-visible,
+.categoryBar a:hover,
+.categoryBar a:focus-visible {
+  border-color: var(--lombardo-blue);
+  color: var(--lombardo-blue);
+  background: rgba(0, 58, 112, 0.025);
+}
+
 .categoryBar {
-  margin-top: clamp(3rem, 7vw, 6rem);
+  margin-top: clamp(2.5rem, 5vw, 4.5rem);
   display: flex;
   align-items: center;
   border-top: 1px solid rgba(0, 58, 112, 0.28);
@@ -304,6 +323,11 @@
 
 .visualLink {
   display: block;
+}
+
+.visualLink:focus-visible {
+  outline: 2px solid var(--lombardo-red);
+  outline-offset: 0.25rem;
 }
 
 .editorialGrid .product {
@@ -610,6 +634,13 @@
   font-weight: 700;
   letter-spacing: 0.055em;
   text-transform: uppercase;
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.productInfo > button:hover:not(:disabled),
+.productInfo > button:focus-visible:not(:disabled) {
+  border-color: var(--lombardo-blue);
+  background: rgba(0, 58, 112, 0.045);
 }
 
 .productInfo > button:disabled {
@@ -777,6 +808,7 @@
 
   .heroAside {
     grid-column: 8 / -1;
+    justify-self: stretch;
   }
 
   .editorialGrid .product,
@@ -808,12 +840,6 @@
 
   .catalogHero h1 span:last-child {
     margin-left: 0.17em;
-  }
-
-  .catalogHero h1::after {
-    right: -16vw;
-    bottom: -0.8em;
-    width: 7rem;
   }
 
   .heroAside {

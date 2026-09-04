@@ -24,6 +24,13 @@ test("el precio editorial pertenece al flujo de la tarjeta", () => {
   assert.doesNotMatch(productVisualCss, /aspect-ratio:\s*4 \/ 5\.25/);
 });
 
+test("la portada de Tienda mantiene el acento editorial unido al contenido", () => {
+  assert.doesNotMatch(catalogCss, /\.catalogHero h1::after/);
+  assert.match(catalogCss, /\.catalogHero h1\s*\{[\s\S]*grid-column:\s*1 \/ 9/);
+  assert.match(catalogCss, /\.heroAside\s*\{[\s\S]*grid-column:\s*9 \/ 12/);
+  assert.match(catalogCss, /\.catalogSection\s*\{[\s\S]*padding:\s*clamp\(3\.5rem, 6vw, 6rem\)/);
+});
+
 test("Oportunidades evita cinco columnas frágiles y colapsa a una en mobile", () => {
   assert.match(opportunitiesCss, /grid-template-columns:\s*repeat\(12, minmax\(0, 1fr\)\)/);
   assert.match(opportunitiesCss, /\.card\s*\{[\s\S]*grid-column:\s*span 4/);
