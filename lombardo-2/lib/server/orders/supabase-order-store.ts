@@ -3,10 +3,12 @@ import type {
   DeliveryAddress,
   DeliveryCostMode,
   DeliveryMethod,
+  DeliveryService,
   InvoiceDetails,
   OrderChannelContext,
   OrderCurrency,
   OrderDraft,
+  OrderPaymentProof,
   OrderItemSnapshot,
   OrderStatus,
   PaymentMethod,
@@ -54,6 +56,7 @@ interface OrderRow {
   total: number;
   currency: OrderCurrency;
   delivery_method: DeliveryMethod;
+  delivery_service?: DeliveryService;
   delivery_address: DeliveryAddress | null;
   delivery_cost_mode: DeliveryCostMode;
   order_status: OrderStatus;
@@ -84,6 +87,28 @@ interface OrderRow {
 interface AppliedPaymentEventRow {
   duplicate: boolean;
   order_record: OrderRow;
+}
+
+interface PaymentProofRow {
+  id: string;
+  order_id: string | number;
+  conversation_session_id: string;
+  source_url: string;
+  mime_type: string;
+  review_status: OrderPaymentProof["reviewStatus"];
+  created_at: string;
+}
+
+function mapPaymentProof(row: PaymentProofRow): OrderPaymentProof {
+  return {
+    id: row.id,
+    orderId: String(row.order_id),
+    conversationSessionId: row.conversation_session_id,
+    sourceUrl: row.source_url,
+    mimeType: row.mime_type,
+    reviewStatus: row.review_status,
+    createdAt: row.created_at,
+  };
 }
 
 interface PromotionOrderResultRow {
@@ -128,6 +153,7 @@ function mapOrder(row: OrderRow): OrderDraft {
     deliveryMethod: usesAdminManagement
       ? row.management_delivery_method ?? row.delivery_method
       : row.delivery_method,
+    deliveryService: row.delivery_service ?? "standard",
     deliveryAddress: (usesAdminManagement
       ? row.management_delivery_address
       : row.delivery_address) ?? undefined,
@@ -269,6 +295,7 @@ export class SupabaseOrderStore implements RuniaOrderStore {
       total: record.total,
       currency: record.currency,
       delivery_method: record.deliveryMethod,
+      delivery_service: record.deliveryService ?? "standard",
       delivery_address: record.deliveryAddress ?? null,
       delivery_cost_mode: record.deliveryCostMode,
       order_status: record.orderStatus,
@@ -306,7 +333,23 @@ export class SupabaseOrderStore implements RuniaOrderStore {
       if (!result?.order_record) {
         throw new ServerOrderError("CREATE_FAILED", "Runia no devolvió el pedido creado.", { status: 502 });
       }
-      return { order: mapOrder(result.order_record), reused: result.reused };
+      let order = mapOrder(result.order_record);
+      if (!result.reused && order.deliveryService !== (record.deliveryService ?? "standard")) {
+        const deliveryResponse = await this.request(
+          this.ordersPath({ tenant_id: `eq.${record.tenantId}`, id: `eq.${order.id}` }),
+          {
+            method: "PATCH",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ delivery_service: record.deliveryService ?? "standard" }),
+          },
+        );
+        if (!deliveryResponse.ok) {
+          return this.readFailure(deliveryResponse, "No pudimos guardar el tipo de envío.");
+        }
+        const deliveryRows = (await deliveryResponse.json()) as OrderRow[];
+        if (deliveryRows[0]) order = mapOrder(deliveryRows[0]);
+      }
+      return { order, reused: result.reused };
     }
     const rows = Array.isArray(responsePayload) ? responsePayload as OrderRow[] : [responsePayload as OrderRow];
     if (!rows[0]) {
@@ -341,6 +384,52 @@ export class SupabaseOrderStore implements RuniaOrderStore {
     }
     const rows = (await response.json()) as OrderRow[];
     return rows[0] ? mapOrder(rows[0]) : null;
+  }
+
+  async getByConversationSession(tenantId: string, sessionId: string) {
+    const response = await this.request(
+      this.ordersPath({
+        tenant_id: `eq.${tenantId}`,
+        order_source: "eq.whatsapp",
+        "channel_context->>conversationSessionId": `eq.${sessionId}`,
+        order: "created_at.desc",
+        limit: "1",
+      }),
+    );
+    if (!response.ok) {
+      return this.readFailure(response, "No pudimos consultar el pedido de la conversación.");
+    }
+    const rows = (await response.json()) as OrderRow[];
+    return rows[0] ? mapOrder(rows[0]) : null;
+  }
+
+  async registerPaymentProof(input: {
+    tenantId: string;
+    orderId: string;
+    conversationSessionId: string;
+    sourceUrl: string;
+    mimeType: string;
+  }) {
+    const response = await this.request("commerce_order_payment_proofs?on_conflict=tenant_id,order_id,source_url&select=*", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify({
+        tenant_id: input.tenantId,
+        order_id: input.orderId,
+        conversation_session_id: input.conversationSessionId,
+        source_url: input.sourceUrl,
+        mime_type: input.mimeType,
+        review_status: "pending_review",
+      }),
+    });
+    if (!response.ok) {
+      return this.readFailure(response, "No pudimos asociar el comprobante al pedido.");
+    }
+    const rows = (await response.json()) as PaymentProofRow[];
+    if (!rows[0]) {
+      throw new ServerOrderError("CREATE_FAILED", "Runia no devolvió el comprobante asociado.", { status: 502 });
+    }
+    return mapPaymentProof(rows[0]);
   }
 
   async savePaymentPreference(

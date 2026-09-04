@@ -145,6 +145,14 @@ export function parseCreateOrderInput(value: unknown): CreateOrderInput {
     invalidRequest("Elegí una zona de envío disponible.");
   }
 
+  const deliveryService = value.deliveryService ?? "standard";
+  if (deliveryService !== "standard" && deliveryService !== "priority") {
+    invalidRequest("Elegí un tipo de envío válido.");
+  }
+  if (deliveryService === "priority" && deliveryMethod !== "DELIVERY_ROSARIO") {
+    invalidRequest("El envío prioritario está disponible únicamente en Rosario.");
+  }
+
   const deliveryAddress = parseDeliveryAddress(value.deliveryAddress);
   if (!isDeliveryCityAllowed(deliveryMethod, deliveryAddress.city)) {
     invalidRequest("La localidad no corresponde a la zona de envío elegida.");
@@ -161,6 +169,7 @@ export function parseCreateOrderInput(value: unknown): CreateOrderInput {
     items,
     customer: parseCustomer(value.customer),
     deliveryMethod,
+    deliveryService,
     deliveryAddress,
     couponCode: couponCode?.toLocaleUpperCase("en-US"),
   };

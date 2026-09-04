@@ -9,11 +9,13 @@ import type {
   CheckoutCustomer,
   DeliveryAddress,
   DeliveryMethod,
+  DeliveryService,
 } from "@/types/checkout";
 
 export interface CheckoutFormValues {
   customer: CheckoutCustomer;
   deliveryMethod: DeliveryMethod;
+  deliveryService: DeliveryService;
   deliveryAddress: DeliveryAddress;
 }
 
@@ -44,6 +46,7 @@ export const emptyCheckoutForm: CheckoutFormValues = {
     dni: "",
   },
   deliveryMethod: "DELIVERY_ROSARIO",
+  deliveryService: "standard",
   deliveryAddress: {
     street: "",
     number: "",
@@ -102,6 +105,9 @@ export function validateCheckoutForm(values: CheckoutFormValues) {
       errors.city = `Elegí una de estas localidades: ${deliveryCities(values.deliveryMethod).join(", ")}.`;
     }
     if (!address.province.trim()) errors.province = "Ingresá la provincia.";
+  }
+  if (values.deliveryService === "priority" && values.deliveryMethod !== "DELIVERY_ROSARIO") {
+    errors.city = "El envío prioritario está disponible únicamente en Rosario.";
   }
 
   return {

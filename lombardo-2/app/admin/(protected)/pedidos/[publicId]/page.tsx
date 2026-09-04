@@ -160,7 +160,7 @@ export default async function AdminOrderDetailPage({
               <div className={styles.detailField}><span className={styles.fieldLabel}>WHATSAPP</span><p>{order.customer.whatsapp}</p></div>
               <div className={styles.detailField}><span className={styles.fieldLabel}>EMAIL</span><p>{order.customer.email}</p></div>
               {order.customer.dni ? <div className={styles.detailField}><span className={styles.fieldLabel}>DNI</span><p>{order.customer.dni}</p></div> : null}
-              <div className={styles.detailField}><span className={styles.fieldLabel}>MODALIDAD</span><p>{DELIVERY_LABELS[order.deliveryMethod]}</p></div>
+              <div className={styles.detailField}><span className={styles.fieldLabel}>MODALIDAD</span><p>{DELIVERY_LABELS[order.deliveryMethod]} · {order.deliveryService === "priority" ? "PRIORITARIO EN EL DÍA" : "ESTÁNDAR"}</p></div>
               <div className={styles.detailField}><span className={styles.fieldLabel}>COSTO DE ENVÍO</span><p>{formatCurrency(order.deliveryCost)} · {DELIVERY_COST_SOURCE_LABELS[order.deliveryCostSource]}</p></div>
             </div>
             {order.deliveryAddress ? (
@@ -189,6 +189,7 @@ export default async function AdminOrderDetailPage({
               <div className={styles.detailField}><span className={styles.fieldLabel}>FORMA DE PAGO</span><p>{PAYMENT_METHOD_LABELS[order.paymentMethod]}</p></div>
               <div className={styles.detailField}><span className={styles.fieldLabel}>ORIGEN</span><p>{order.orderSource === "admin_manual" ? "PEDIDO MANUAL" : order.orderSource === "whatsapp" ? "WHATSAPP" : "TIENDA ONLINE"}</p></div>
               {order.channelContext?.conversationSessionId ? <div className={styles.detailField}><span className={styles.fieldLabel}>SESIÓN RUNIA</span><p>{order.channelContext.conversationSessionId}</p></div> : null}
+              {order.paymentProofs?.some((proof) => proof.reviewStatus === "pending_review") ? <div className={styles.detailField}><span className={styles.fieldLabel}>COMPROBANTE</span><p>REVISAR COMPROBANTE</p></div> : null}
               {order.hasManagementOverride ? <div className={styles.detailField}><span className={styles.fieldLabel}>GESTIÓN</span><p>EDITADO · REV. {order.managementRevision}</p></div> : null}
             <div className={styles.detailField}><span className={styles.fieldLabel}>CREADO</span><p>{formatAdminDate(order.createdAt)}</p></div>
             <div className={styles.detailField}><span className={styles.fieldLabel}>ACTUALIZADO</span><p>{formatAdminDate(order.fulfillmentUpdatedAt)}</p></div>
@@ -226,6 +227,7 @@ export default async function AdminOrderDetailPage({
           {order.managementNotes ? <div className={styles.managementNote}><span className={styles.fieldLabel}>NOTAS INTERNAS</span><p>{order.managementNotes}</p></div> : null}
           {order.customerNotes ? <div className={styles.managementNote}><span className={styles.fieldLabel}>OBSERVACIONES DEL CLIENTE</span><p>{order.customerNotes}</p></div> : null}
           {order.invoiceDetails ? <div className={styles.managementNote}><span className={styles.fieldLabel}>FACTURA A</span><p>{order.invoiceDetails.businessName} · CUIT {order.invoiceDetails.cuit}{order.invoiceDetails.taxCondition ? ` · ${order.invoiceDetails.taxCondition}` : ""}</p></div> : null}
+          {order.paymentProofs?.length ? <div className={styles.managementNote}><span className={styles.fieldLabel}>COMPROBANTES DE TRANSFERENCIA</span>{order.paymentProofs.map((proof) => <p key={proof.id}><a href={proof.sourceUrl} target="_blank" rel="noreferrer">ABRIR COMPROBANTE</a> · {proof.reviewStatus === "pending_review" ? "REVISAR" : proof.reviewStatus.toUpperCase()}</p>)}</div> : null}
           <OrderActions order={order} />
         </aside>
       </div>

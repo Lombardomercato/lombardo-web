@@ -198,7 +198,15 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       });
     }
 
-    const deliveryQuote = this.deliveryPricing.getQuote(input.deliveryMethod);
+    const deliveryService = input.deliveryService ?? "standard";
+    if (deliveryService === "priority" && input.deliveryMethod !== "DELIVERY_ROSARIO") {
+      throw new ServerOrderError(
+        "INVALID_REQUEST",
+        "El envío prioritario está disponible únicamente en Rosario.",
+        { status: 422 },
+      );
+    }
+    const deliveryQuote = this.deliveryPricing.getQuote(input.deliveryMethod, deliveryService);
     const baseSubtotal = roundCurrency(validation.items.reduce(
       (sum, item) => sum + item.lineBaseTotal,
       0,
@@ -295,6 +303,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       items,
       customer: input.customer,
       deliveryMethod: input.deliveryMethod,
+      deliveryService,
       deliveryAddress:
         requiresDeliveryAddress(input.deliveryMethod)
           ? input.deliveryAddress
@@ -354,6 +363,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod,
       deliveryMethod: order.deliveryMethod,
+      deliveryService: order.deliveryService ?? "standard",
       deliveryCostMode: order.deliveryCostMode,
       total: order.total,
       currency: order.currency,

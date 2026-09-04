@@ -10,6 +10,7 @@ export type DeliveryMethod =
   | "DELIVERY_ROSARIO"
   | "DELIVERY_SOUTH";
 export type DeliveryCostMode = "FREE" | "FLAT_RATE" | "TO_BE_CONFIRMED";
+export type DeliveryService = "standard" | "priority";
 export type OrderStatus = "pending_payment" | "confirmed" | "cancelled";
 export type PaymentStatus =
   | "pending"
@@ -74,6 +75,7 @@ export interface CreateOrderInput {
   items: CheckoutItemInput[];
   customer: CheckoutCustomer;
   deliveryMethod: DeliveryMethod;
+  deliveryService?: DeliveryService;
   deliveryAddress?: DeliveryAddress;
   couponCode?: string;
   paymentMethod?: PaymentMethod;
@@ -132,6 +134,7 @@ export interface CheckoutDraft {
   items: OrderItemSnapshot[];
   customer: CheckoutCustomer;
   deliveryMethod: DeliveryMethod;
+  deliveryService?: DeliveryService;
   deliveryAddress?: DeliveryAddress;
   deliveryCostMode: DeliveryCostMode;
   baseSubtotal: number;
@@ -184,12 +187,23 @@ export interface PublicOrderStatus {
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
   deliveryMethod: DeliveryMethod;
+  deliveryService: DeliveryService;
   deliveryCostMode: DeliveryCostMode;
   total: number;
   currency: OrderCurrency;
   paymentCheckoutUrl?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OrderPaymentProof {
+  id: string;
+  orderId: string;
+  conversationSessionId: string;
+  sourceUrl: string;
+  mimeType: string;
+  reviewStatus: "pending_review" | "approved" | "rejected";
+  createdAt: string;
 }
 
 export interface WhatsAppCoordinationResult {

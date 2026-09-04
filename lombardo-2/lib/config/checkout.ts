@@ -2,6 +2,7 @@ import type {
   DeliveryCostMode,
   DeliveryMethod,
   DeliveryQuote,
+  DeliveryService,
 } from "@/types/checkout";
 
 const configuredDeliveryMode = process.env.NEXT_PUBLIC_DELIVERY_COST_MODE?.trim();
@@ -30,7 +31,15 @@ export const CHECKOUT_CONFIG = {
   },
 } as const;
 
-export function getDeliveryQuote(method: DeliveryMethod): DeliveryQuote {
+export function getDeliveryQuote(
+  method: DeliveryMethod,
+  service: DeliveryService = "standard",
+): DeliveryQuote {
+  if (service === "priority") {
+    return method === "DELIVERY_ROSARIO"
+      ? { mode: "FLAT_RATE", amount: 10_000, label: "Envío prioritario · en el día" }
+      : { mode: "TO_BE_CONFIRMED", amount: 0, label: "No disponible" };
+  }
   // PICKUP only remains for previously created orders.
   if (method === "PICKUP") {
     return { mode: "FREE", amount: 0, label: "Sin costo" };

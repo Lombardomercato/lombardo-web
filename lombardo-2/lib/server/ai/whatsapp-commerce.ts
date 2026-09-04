@@ -33,6 +33,7 @@ const cartSchema = z.object({
 }).strict();
 
 const deliveryMethodSchema = z.enum(["PICKUP", "DELIVERY_ROSARIO", "DELIVERY_SOUTH"]);
+const deliveryServiceSchema = z.enum(["standard", "priority"]);
 const paymentMethodSchema = z.enum(["mercado_pago", "bank_transfer", "cash"]);
 
 const checkoutSchema = z.object({
@@ -42,6 +43,7 @@ const checkoutSchema = z.object({
   email: z.string().trim().max(254).optional(),
   city: z.string().trim().max(100).optional(),
   deliveryMethod: deliveryMethodSchema.optional(),
+  deliveryService: deliveryServiceSchema.optional(),
   street: z.string().trim().max(160).optional(),
   number: z.string().trim().max(30).optional(),
   floorApartment: z.string().trim().max(80).optional(),
@@ -73,6 +75,8 @@ export const whatsappCommerceOperationSchema = z.enum([
   "manage_whatsapp_cart",
   "update_whatsapp_checkout",
   "confirm_whatsapp_order",
+  "register_whatsapp_payment_proof",
+  "get_whatsapp_order_status",
 ]);
 
 export type WhatsAppCommerceOperation = z.infer<typeof whatsappCommerceOperationSchema>;
@@ -92,6 +96,7 @@ export const whatsappCommerceInputSchemas = {
     email: z.string().trim().max(254).optional(),
     city: z.string().trim().max(100).optional(),
     deliveryMethod: deliveryMethodSchema.optional(),
+    deliveryService: deliveryServiceSchema.optional(),
     street: z.string().trim().max(160).optional(),
     number: z.string().trim().max(30).optional(),
     floorApartment: z.string().trim().max(80).optional(),
@@ -111,6 +116,11 @@ export const whatsappCommerceInputSchemas = {
     checkout: checkoutInputSchema,
     confirmed: z.literal(true),
   }).strict(),
+  register_whatsapp_payment_proof: z.object({
+    attachmentUrl: z.string().url().max(2_000),
+    mimeType: z.string().trim().max(120),
+  }).strict(),
+  get_whatsapp_order_status: z.object({}).strict(),
 } as const;
 
 export interface WhatsAppCommerceContext {
@@ -133,6 +143,14 @@ export async function executeWhatsAppCommerceOperation(
   if (operation === "update_whatsapp_checkout") {
     const input = whatsappCommerceInputSchemas.update_whatsapp_checkout.parse(rawInput);
     return updateCheckout(context, input);
+  }
+  if (operation === "register_whatsapp_payment_proof") {
+    const input = whatsappCommerceInputSchemas.register_whatsapp_payment_proof.parse(rawInput);
+    return registerPaymentProof(context, input);
+  }
+  if (operation === "get_whatsapp_order_status") {
+    whatsappCommerceInputSchemas.get_whatsapp_order_status.parse(rawInput);
+    return getOrderStatus(context);
   }
   const input = whatsappCommerceInputSchemas.confirm_whatsapp_order.parse(rawInput);
   return confirmOrder(context, input.cart, input.checkout);
@@ -254,6 +272,10 @@ function updateCheckout(
     ...updates,
   }));
   if (checkout.city && !checkout.deliveryMethod) checkout.deliveryMethod = deliveryForCity(checkout.city);
+  checkout.deliveryService ||= "standard";
+  if (checkout.deliveryService === "priority" && checkout.deliveryMethod !== "DELIVERY_ROSARIO") {
+    throw new Error("PRIORITY_DELIVERY_ONLY_ROSARIO");
+  }
   if (checkout.deliveryMethod && checkout.deliveryMethod !== "PICKUP") checkout.province ||= "Santa Fe";
   return {
     status: "updated",
@@ -299,6 +321,7 @@ async function confirmOrder(
     })),
     customer,
     deliveryMethod,
+    deliveryService: checkout.deliveryService ?? "standard",
     deliveryAddress: requiresDeliveryAddress(deliveryMethod) ? {
       street: checkout.street!,
       number: checkout.number!,
@@ -337,6 +360,8 @@ async function confirmOrder(
       totalFormatted: formatCurrency(result.order.total),
       currency: result.order.currency,
       deliveryMethod: result.order.deliveryMethod,
+      deliveryService: result.order.deliveryService,
+      deliveryCost: result.order.deliveryCost,
       paymentMethod: result.order.paymentMethod,
       paymentStatus: result.order.paymentStatus,
       pricingPolicy: result.order.pricingPolicy,
@@ -344,7 +369,75 @@ async function confirmOrder(
     },
     paymentLink: result.payment?.checkoutUrl ?? null,
     paymentError: result.paymentError?.message ?? null,
+    trackingLink: trackingLink(result.order.publicId),
   };
+}
+
+async function registerPaymentProof(
+  context: WhatsAppCommerceContext,
+  input: z.infer<typeof whatsappCommerceInputSchemas.register_whatsapp_payment_proof>,
+) {
+  const url = new URL(input.attachmentUrl);
+  if (url.protocol !== "https:") throw new Error("WHATSAPP_PAYMENT_PROOF_URL_INVALID");
+  if (!(input.mimeType.startsWith("image/") || input.mimeType === "application/pdf")) {
+    throw new Error("WHATSAPP_PAYMENT_PROOF_TYPE_INVALID");
+  }
+  const { tenantId, store } = createCheckoutCoordinator(context.pricing);
+  const order = await store.getByConversationSession(tenantId, context.sessionId);
+  if (!order) throw new Error("WHATSAPP_ORDER_NOT_FOUND");
+  if (order.paymentMethod !== "bank_transfer" || order.paymentStatus !== "pending") {
+    throw new Error("WHATSAPP_PAYMENT_PROOF_NOT_APPLICABLE");
+  }
+  const proof = await store.registerPaymentProof({
+    tenantId,
+    orderId: order.id,
+    conversationSessionId: context.sessionId,
+    sourceUrl: url.toString(),
+    mimeType: input.mimeType,
+  });
+  return {
+    status: "proof_pending_review",
+    reviewLabel: "REVISAR COMPROBANTE",
+    paymentStatus: order.paymentStatus,
+    proofId: proof.id,
+    order: {
+      publicId: order.publicId,
+      displayId: order.publicId.slice(0, 8).toUpperCase(),
+    },
+    trackingLink: trackingLink(order.publicId),
+    handoffRequired: true,
+    handoffReason: "REVISAR COMPROBANTE",
+  };
+}
+
+async function getOrderStatus(context: WhatsAppCommerceContext) {
+  const { tenantId, store } = createCheckoutCoordinator(context.pricing);
+  const order = await store.getByConversationSession(tenantId, context.sessionId);
+  if (!order) return { status: "not_found" };
+  return {
+    status: "found",
+    order: {
+      publicId: order.publicId,
+      displayId: order.publicId.slice(0, 8).toUpperCase(),
+      orderStatus: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      total: order.total,
+      totalFormatted: formatCurrency(order.total),
+    },
+    trackingLink: trackingLink(order.publicId),
+  };
+}
+
+function trackingLink(publicId: string) {
+  const configured = process.env.APP_URL?.trim();
+  try {
+    const url = new URL(configured || "https://www.lombardomercato.com");
+    if (url.protocol !== "https:") throw new Error("invalid origin");
+    return new URL(`/pedido/${encodeURIComponent(publicId)}`, url.origin).toString();
+  } catch {
+    return `https://www.lombardomercato.com/pedido/${encodeURIComponent(publicId)}`;
+  }
 }
 
 function nextMissingField(checkout: z.infer<typeof checkoutSchema>) {

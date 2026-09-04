@@ -2,6 +2,7 @@ import type {
   DeliveryCostMode,
   DeliveryMethod,
   DeliveryQuote,
+  DeliveryService,
 } from "../../../types/checkout.ts";
 import type { ServerDeliveryPricing } from "./order-dependencies.ts";
 
@@ -19,7 +20,13 @@ function readFlatRate() {
 }
 
 export class EnvironmentDeliveryPricing implements ServerDeliveryPricing {
-  getQuote(method: DeliveryMethod): DeliveryQuote {
+  getQuote(method: DeliveryMethod, service: DeliveryService = "standard"): DeliveryQuote {
+    if (service === "priority") {
+      if (method !== "DELIVERY_ROSARIO") {
+        throw new Error("PRIORITY_DELIVERY_ONLY_ROSARIO");
+      }
+      return { mode: "FLAT_RATE", amount: 10_000, label: "Envío prioritario · en el día" };
+    }
     if (method === "PICKUP") {
       return { mode: "FREE", amount: 0, label: "Sin costo" };
     }

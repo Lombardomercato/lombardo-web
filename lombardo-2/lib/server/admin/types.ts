@@ -10,6 +10,8 @@ import type {
   OrderSource,
   OrderChannelContext,
   InvoiceDetails,
+  DeliveryService,
+  OrderPaymentProof,
 } from "../../../types/checkout";
 import type { OrderNotification } from "../notifications/types";
 import type {
@@ -61,6 +63,7 @@ export interface AdminOrder {
   commerceTotal: number;
   currency: OrderCurrency;
   deliveryMethod: DeliveryMethod;
+  deliveryService: DeliveryService;
   deliveryAddress?: DeliveryAddress;
   orderStatus: OrderStatus;
   paymentStatus: PaymentStatus;
@@ -90,6 +93,7 @@ export interface AdminOrder {
   newOrderNotification?: OrderNotification;
   customerOrderConfirmation?: OrderNotification;
   customerStatusNotifications?: OrderNotification[];
+  paymentProofs?: OrderPaymentProof[];
 }
 
 export interface AdminOrderManagementInput {

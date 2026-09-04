@@ -44,7 +44,7 @@ import type {
 import styles from "./CheckoutPage.module.css";
 
 const SESSION_STORAGE_KEY = "lombardo-checkout-session-v1";
-const SESSION_STORAGE_VERSION = 4;
+const SESSION_STORAGE_VERSION = 5;
 
 export interface CheckoutCustomerDefaults {
   name: string;
@@ -92,6 +92,7 @@ type CheckoutAction =
       value: string;
     }
   | { type: "set-delivery-method"; method: ActiveDeliveryMethod }
+  | { type: "set-delivery-service"; service: "standard" | "priority" }
   | { type: "validation-error"; errors: CheckoutErrors }
   | { type: "submitting" }
   | { type: "retrying-payment" }
@@ -142,6 +143,7 @@ const cloneEmptyForm = (
     deliveryMethod:
       (defaultAddress && deliveryMethodForCity(defaultAddress.city)) ||
       emptyCheckoutForm.deliveryMethod,
+    deliveryService: "standard",
     deliveryAddress: defaultAddress
       ? { ...emptyCheckoutForm.deliveryAddress, ...defaultAddress }
       : { ...emptyCheckoutForm.deliveryAddress },
@@ -207,6 +209,9 @@ function checkoutReducer(
         form: {
           ...state.form,
           deliveryMethod: action.method,
+          deliveryService: action.method === "DELIVERY_ROSARIO"
+            ? state.form.deliveryService
+            : "standard",
           deliveryAddress: {
             ...state.form.deliveryAddress,
             city: defaultDeliveryCity(action.method),
@@ -215,6 +220,15 @@ function checkoutReducer(
         errors: {},
         repositoryError: "",
         announcement: `Seleccionaste ${deliveryMethodLabel(action.method).toLocaleLowerCase("es-AR")}.`,
+      };
+    case "set-delivery-service":
+      return {
+        ...state,
+        form: { ...state.form, deliveryService: action.service },
+        repositoryError: "",
+        announcement: action.service === "priority"
+          ? "Seleccionaste envío prioritario en el día por $10.000."
+          : "Seleccionaste envío estándar gratis.",
       };
     case "validation-error":
       return {
@@ -641,7 +655,10 @@ export function CheckoutPage({
   const pricingContextKey = items.length
     ? getCartPricingContextKey(items)
     : expectedPricingContextKey;
-  const deliveryQuote = getDeliveryQuote(state.form.deliveryMethod);
+  const deliveryQuote = getDeliveryQuote(
+    state.form.deliveryMethod,
+    state.form.deliveryService,
+  );
   const total = finalSubtotal + deliveryQuote.amount;
 
   useEffect(() => {
@@ -784,6 +801,9 @@ export function CheckoutPage({
     const form = {
       ...state.form,
       deliveryMethod: method,
+      deliveryService: method === "DELIVERY_ROSARIO"
+        ? state.form.deliveryService
+        : "standard",
       deliveryAddress: {
         ...state.form.deliveryAddress,
         city: defaultDeliveryCity(method),
@@ -792,6 +812,13 @@ export function CheckoutPage({
     dispatch({ type: "set-delivery-method", method });
     persistForm(form);
     trackCommerceEvent({ name: "add_shipping_info", method });
+  };
+
+  const setDeliveryService = (service: "standard" | "priority") => {
+    const form = { ...state.form, deliveryService: service };
+    dispatch({ type: "set-delivery-service", service });
+    persistForm(form);
+    trackCommerceEvent({ name: "add_shipping_info", method: state.form.deliveryMethod });
   };
 
   const normalizeWhatsAppField = () => {
@@ -820,6 +847,7 @@ export function CheckoutPage({
     })),
     customer: form.customer,
     deliveryMethod: form.deliveryMethod,
+    deliveryService: form.deliveryService,
     deliveryAddress:
       requiresDeliveryAddress(form.deliveryMethod)
         ? form.deliveryAddress
@@ -1122,6 +1150,35 @@ export function CheckoutPage({
                 <strong>A Pueblo Esther, Lagos o Alvear</strong>
               </label>
             </fieldset>
+
+            {state.form.deliveryMethod === "DELIVERY_ROSARIO" ? (
+              <fieldset className={styles.deliveryMethods} role="radiogroup" aria-required="true">
+                <legend className="sr-only">Tipo de envío en Rosario</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="deliveryService"
+                    value="standard"
+                    checked={state.form.deliveryService === "standard"}
+                    onChange={() => setDeliveryService("standard")}
+                    required
+                  />
+                  <span>ESTÁNDAR</span>
+                  <strong>Gratis</strong>
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="deliveryService"
+                    value="priority"
+                    checked={state.form.deliveryService === "priority"}
+                    onChange={() => setDeliveryService("priority")}
+                  />
+                  <span>PRIORITARIO</span>
+                  <strong>En el día · {formatCurrency(10_000)}</strong>
+                </label>
+              </fieldset>
+            ) : null}
 
             {isActiveDeliveryMethod(state.form.deliveryMethod) ? (
               <>

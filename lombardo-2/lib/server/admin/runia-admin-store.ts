@@ -22,6 +22,8 @@ import type {
   OrderSource,
   OrderChannelContext,
   InvoiceDetails,
+  DeliveryService,
+  OrderPaymentProof,
 } from "../../../types/checkout";
 import type {
   AdminCustomer,
@@ -114,6 +116,7 @@ interface OrderRow {
   management_updated_at?: string | null;
   currency: OrderCurrency;
   delivery_method: DeliveryMethod;
+  delivery_service?: DeliveryService;
   delivery_address: DeliveryAddress | null;
   order_status: OrderStatus;
   payment_status: PaymentStatus;
@@ -371,6 +374,16 @@ interface NotificationRow {
   updated_at: string;
 }
 
+interface PaymentProofRow {
+  id: string;
+  order_id: string | number;
+  conversation_session_id: string;
+  source_url: string;
+  mime_type: string;
+  review_status: OrderPaymentProof["reviewStatus"];
+  created_at: string;
+}
+
 function mapNotification(row: NotificationRow): OrderNotification {
   return {
     id: String(row.id),
@@ -422,6 +435,7 @@ const ORDER_SELECT = [
   "management_updated_at",
   "currency",
   "delivery_method",
+  "delivery_service",
   "delivery_address",
   "order_status",
   "payment_status",
@@ -480,6 +494,7 @@ function mapOrder(row: OrderRow): AdminOrder {
     commerceTotal: Number(row.total),
     currency: row.currency,
     deliveryMethod: row.management_delivery_method ?? row.delivery_method,
+    deliveryService: row.delivery_service ?? "standard",
     deliveryAddress: (hasManagementOverride
       ? row.management_delivery_address
       : row.delivery_address) ?? undefined,
@@ -902,6 +917,17 @@ export class RuniaAdminStore {
       `commerce_order_notifications?${notificationSearch}`,
       "No pudimos cargar el estado de la notificación.",
     );
+    const proofSearch = new URLSearchParams({
+      select: "id,order_id,conversation_session_id,source_url,mime_type,review_status,created_at",
+      tenant_id: `eq.${this.tenantId}`,
+      order_id: `eq.${order.id}`,
+      order: "created_at.desc",
+      limit: "10",
+    });
+    const proofResult = await this.rows<PaymentProofRow>(
+      `commerce_order_payment_proofs?${proofSearch}`,
+      "No pudimos cargar los comprobantes del pedido.",
+    );
     const newOrderNotification = notificationResult.rows.find(
       (notification) => notification.kind === "new_order",
     );
@@ -921,6 +947,15 @@ export class RuniaAdminStore {
         ? mapNotification(customerOrderConfirmation)
         : undefined,
       customerStatusNotifications,
+      paymentProofs: proofResult.rows.map((proof) => ({
+        id: proof.id,
+        orderId: String(proof.order_id),
+        conversationSessionId: proof.conversation_session_id,
+        sourceUrl: proof.source_url,
+        mimeType: proof.mime_type,
+        reviewStatus: proof.review_status,
+        createdAt: proof.created_at,
+      })),
     };
   }
 

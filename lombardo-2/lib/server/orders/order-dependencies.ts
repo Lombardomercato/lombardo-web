@@ -2,6 +2,7 @@ import type {
   CheckoutDraft,
   CreateOrderInput,
   DeliveryMethod,
+  DeliveryService,
   DeliveryQuote,
   OrderDraft,
   PaymentMethod,
@@ -16,7 +17,7 @@ export interface ServerProductSource {
 }
 
 export interface ServerDeliveryPricing {
-  getQuote(method: DeliveryMethod): DeliveryQuote;
+  getQuote(method: DeliveryMethod, service?: DeliveryService): DeliveryQuote;
 }
 
 export interface NewOrderRecord extends CheckoutDraft {
