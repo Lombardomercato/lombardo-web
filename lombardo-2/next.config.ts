@@ -75,22 +75,17 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/empresas.html",
-        destination: "/guias/regalos-empresariales-rosario",
-        permanent: true,
-      },
-      {
-        source: "/empresas",
-        destination: "/guias/regalos-empresariales-rosario",
+        destination: "/empresas",
         permanent: true,
       },
       {
         source: "/archive/empresas.html",
-        destination: "/guias/regalos-empresariales-rosario",
+        destination: "/empresas",
         permanent: true,
       },
       {
         source: "/pages/empresas",
-        destination: "/guias/regalos-empresariales-rosario",
+        destination: "/empresas",
         permanent: true,
       },
     ];
