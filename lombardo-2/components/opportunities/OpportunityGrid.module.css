@@ -154,6 +154,14 @@
   background: transparent;
 }
 
+.grid[data-surface="home"] .card[data-kind="recommendation"] {
+  border-top-color: var(--lombardo-red);
+}
+
+.grid[data-surface="home"] .card[data-kind="recommendation"] .details > p {
+  color: var(--lombardo-red);
+}
+
 .grid[data-surface="home"] .card::before {
   content: attr(data-index);
   position: absolute;

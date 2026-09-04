@@ -138,14 +138,14 @@
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: clamp(1rem, 2vw, 2.25rem);
+  gap: 0;
   padding-right: clamp(0rem, 2vw, 2rem);
   animation: content-in 350ms 880ms both ease-out;
 }
 
 .primaryAction,
 .secondaryAction {
-  min-height: 3.25rem;
+  min-height: 3.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -160,12 +160,19 @@
   font-weight: 700;
   letter-spacing: 0.045em;
   text-transform: uppercase;
-  transition: background-color 160ms ease, color 160ms ease;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease;
 }
 
 .primaryAction {
   background: var(--lombardo-blue);
   color: var(--neutral-paper);
+}
+
+.secondaryAction {
+  border-left: 0;
+  background: rgba(255, 253, 249, 0.96);
 }
 
 .primaryAction:hover {
@@ -176,6 +183,14 @@
 .secondaryAction:hover {
   background: var(--lombardo-blue);
   color: var(--neutral-paper);
+}
+
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--lombardo-red);
+  outline-offset: 3px;
 }
 
 .scrollCue {
@@ -620,10 +635,12 @@
 
   .primaryAction,
   .secondaryAction {
-    min-height: 3rem;
-    padding-inline: 0.7rem;
+    min-height: 3.25rem;
+    padding-inline: 0.55rem;
     gap: 0.45rem;
-    font-size: 0.68rem;
+    font-size: 0.62rem;
+    line-height: 1.15;
+    white-space: normal;
   }
 
   .productStage {

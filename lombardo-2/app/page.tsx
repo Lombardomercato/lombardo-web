@@ -8,6 +8,7 @@ import { HomeOpportunities } from "@/components/home/HomeOpportunities";
 import { OperationalStrip } from "@/components/home/OperationalStrip";
 import { SecretCellarTeaser } from "@/components/home/SecretCellarTeaser";
 import { commerceProvider } from "@/lib/commerce";
+import { canAddToCart } from "@/lib/commerce/availability";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { loadDailyHomeData } from "@/lib/server/automations/live-data";
 import type { CustomerPricingContext } from "@/lib/server/customers/types";
@@ -42,7 +43,7 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
   try {
     const [categories, catalog] = await Promise.all([
       commerceProvider.getCategories(),
-      commerceProvider.getProductPage({ limit: 1 }, pricingContext),
+      commerceProvider.getProductPage({ limit: 12 }, pricingContext),
     ]);
 
     const daily = await loadDailyHomeData(pricingContext, categories).catch(() => null);
@@ -50,11 +51,13 @@ async function loadCommercialDiscovery(pricingContext: CustomerPricingContext) {
     return {
       categories: daily?.categories ?? categories,
       catalogTotal: catalog.total,
+      featuredProducts: daily?.products.length ? daily.products : catalog.products,
     };
   } catch {
     return {
       categories: fallbackCategories,
       catalogTotal: null,
+      featuredProducts: [],
     };
   }
 }
@@ -65,6 +68,17 @@ export default async function Home() {
     loadCommercialDiscovery(pricingContext),
     commerceProvider.getActiveOpportunities(6, pricingContext).catch(() => []),
   ]);
+  const opportunityIds = new Set(opportunities.map((product) => product.id));
+  const recommendation = opportunities.length === 5
+    ? discovery.featuredProducts.find((product) =>
+        !opportunityIds.has(product.id) &&
+        !product.opportunity &&
+        product.images.length > 0 &&
+        canAddToCart(product.availability))
+    : undefined;
+  const homeOpportunities = recommendation
+    ? [...opportunities, recommendation]
+    : opportunities;
 
   return (
     <>
@@ -72,8 +86,14 @@ export default async function Home() {
       <main className={styles.home}>
         <FirstAct />
         <OperationalStrip />
-        <HomeOpportunities products={opportunities} />
-        <CommercialDiscovery {...discovery} />
+        <HomeOpportunities
+          products={homeOpportunities}
+          recommendedProductId={recommendation?.id}
+        />
+        <CommercialDiscovery
+          categories={discovery.categories}
+          catalogTotal={discovery.catalogTotal}
+        />
         <HomeGuides />
         <SecretCellarTeaser />
       </main>

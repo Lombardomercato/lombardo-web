@@ -57,4 +57,7 @@ test("Home no vuelve a introducir una selección arbitraria de productos", async
   assert.doesNotMatch(home, /requireImage:\s*true/);
   assert.doesNotMatch(discovery, /Algunas buenas ideas/i);
   assert.doesNotMatch(discovery, /ProductCard/);
+  assert.match(home, /discovery\.featuredProducts\.find/);
+  assert.match(home, /opportunities\.length === 5/);
+  assert.match(home, /!product\.opportunity/);
 });

@@ -5,7 +5,7 @@
 }
 
 .catalogHero {
-  min-height: clamp(28.75rem, 35vw, 31.5rem);
+  min-height: clamp(28.75rem, 32vw, 29.25rem);
   padding: calc(var(--header-height) + 2rem) var(--page-gutter) 2.5rem;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -78,10 +78,13 @@
 }
 
 .heroAside {
+  position: relative;
   grid-column: 9 / 12;
   justify-self: end;
   width: 100%;
   align-self: end;
+  margin-bottom: 0.65rem;
+  padding-left: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(0, 58, 112, 0.5);
   display: grid;
@@ -91,13 +94,23 @@
   line-height: 1.15;
 }
 
+.heroAside::before {
+  content: "";
+  position: absolute;
+  top: 1rem;
+  left: 0;
+  width: 0.34rem;
+  height: 3.75rem;
+  background: var(--lombardo-green);
+}
+
 .heroAside p:last-child {
   max-width: 20rem;
   font-weight: 400;
 }
 
 .catalogSection {
-  padding: clamp(3.5rem, 6vw, 6rem) var(--page-gutter) clamp(5rem, 10vw, 10rem);
+  padding: clamp(3rem, 4.75vw, 4.75rem) var(--page-gutter) clamp(5rem, 10vw, 10rem);
 }
 
 .controlsTop {
@@ -844,7 +857,13 @@
 
   .heroAside {
     grid-column: 1 / 10;
+    margin-bottom: 0;
+    padding-left: 0;
     font-size: 0.92rem;
+  }
+
+  .heroAside::before {
+    display: none;
   }
 
   .heroAside p:last-child {

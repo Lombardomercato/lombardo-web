@@ -4,6 +4,7 @@ import test from "node:test";
 
 const headerCss = readFileSync("components/layout/Header.module.css", "utf8");
 const catalogCss = readFileSync("components/catalog/CatalogExplorer.module.css", "utf8");
+const firstActCss = readFileSync("components/home/FirstAct.module.css", "utf8");
 const opportunitiesCss = readFileSync("components/opportunities/OpportunityGrid.module.css", "utf8");
 const homeOpportunitiesCss = readFileSync("components/home/HomeOpportunities.module.css", "utf8");
 const productVisualCss = readFileSync("components/product/ProductVisual.module.css", "utf8");
@@ -28,7 +29,15 @@ test("la portada de Tienda mantiene el acento editorial unido al contenido", () 
   assert.doesNotMatch(catalogCss, /\.catalogHero h1::after/);
   assert.match(catalogCss, /\.catalogHero h1\s*\{[\s\S]*grid-column:\s*1 \/ 9/);
   assert.match(catalogCss, /\.heroAside\s*\{[\s\S]*grid-column:\s*9 \/ 12/);
-  assert.match(catalogCss, /\.catalogSection\s*\{[\s\S]*padding:\s*clamp\(3\.5rem, 6vw, 6rem\)/);
+  assert.match(catalogCss, /min-height:\s*clamp\(28\.75rem, 32vw, 29\.25rem\)/);
+  assert.match(catalogCss, /\.heroAside::before\s*\{[\s\S]*background:\s*var\(--lombardo-green\)/);
+  assert.match(catalogCss, /\.catalogSection\s*\{[\s\S]*padding:\s*clamp\(3rem, 4\.75vw, 4\.75rem\)/);
+});
+
+test("los CTA del primer acto forman un grupo legible sobre la fotografía", () => {
+  assert.match(firstActCss, /\.actions\s*\{[\s\S]*gap:\s*0/);
+  assert.match(firstActCss, /\.secondaryAction\s*\{[\s\S]*background:\s*rgba\(255, 253, 249, 0\.96\)/);
+  assert.match(firstActCss, /\.secondaryAction\s*\{[\s\S]*border-left:\s*0/);
 });
 
 test("Oportunidades evita cinco columnas frágiles y colapsa a una en mobile", () => {
