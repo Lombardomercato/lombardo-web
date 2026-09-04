@@ -16,6 +16,9 @@ export interface BackgroundRemovalResult extends RawRgbaImage {
   confidence: "high" | "medium" | "low";
 }
 
+const CONSERVATIVE_BACKGROUND_THRESHOLD = 28;
+const MAX_AGGRESSIVE_FOREGROUND_LOSS = 0.08;
+
 const pixelOffset = (x: number, y: number, width: number) =>
   (y * width + x) * 4;
 
@@ -61,9 +64,9 @@ function estimateBackground(data: Uint8Array, offsets: number[]) {
  * Removes only background pixels connected to an image edge. White labels and
  * highlights enclosed by the product are therefore preserved.
  */
-export function removeEdgeConnectedBackground(
+function removeBackgroundAtThreshold(
   image: RawRgbaImage,
-  threshold = 52,
+  threshold: number,
 ): BackgroundRemovalResult {
   const { width, height } = image;
   const data = new Uint8Array(image.data);
@@ -142,6 +145,44 @@ export function removeEdgeConnectedBackground(
     edgeCoverage,
     backgroundColor,
     confidence,
+  };
+}
+
+function visibleAlphaMass(image: RawRgbaImage, minimumAlpha = 18) {
+  let mass = 0;
+  for (let offset = 3; offset < image.data.length; offset += 4) {
+    if (image.data[offset] >= minimumAlpha) mass += image.data[offset];
+  }
+  return mass;
+}
+
+/**
+ * Removes edge-connected background while protecting light glass, highlights,
+ * white labels and other product details. When the normal pass would erase
+ * materially more foreground than a conservative pass, the conservative
+ * result is returned with low confidence so it cannot be auto-published.
+ */
+export function removeEdgeConnectedBackground(
+  image: RawRgbaImage,
+  threshold = 52,
+): BackgroundRemovalResult {
+  const aggressive = removeBackgroundAtThreshold(image, threshold);
+  if (threshold <= CONSERVATIVE_BACKGROUND_THRESHOLD) return aggressive;
+
+  const conservative = removeBackgroundAtThreshold(
+    image,
+    CONSERVATIVE_BACKGROUND_THRESHOLD,
+  );
+  const conservativeForeground = visibleAlphaMass(conservative);
+  const aggressiveForeground = visibleAlphaMass(aggressive);
+  const foregroundLoss = conservativeForeground > 0
+    ? (conservativeForeground - aggressiveForeground) / conservativeForeground
+    : 0;
+
+  if (foregroundLoss <= MAX_AGGRESSIVE_FOREGROUND_LOSS) return aggressive;
+  return {
+    ...conservative,
+    confidence: "low",
   };
 }
 
