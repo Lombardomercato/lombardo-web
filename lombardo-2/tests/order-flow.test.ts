@@ -1180,7 +1180,8 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
     "11111111-1111-4111-8111-111111111111",
   );
   assert.equal(page.products[0]?.sku, "VIN001B");
-  assert.equal(page.products[0]?.name, "BODEGA RUNIA Malbec x 750 c.c.");
+  assert.equal(page.products[0]?.name, "BODEGA RUNIA Malbec");
+  assert.ok(page.products[0]?.tags.includes("BODEGA RUNIA Malbec x 750 c.c."));
   assert.equal(page.products[0]?.brand.name, "BODEGA RUNIA");
   assert.equal(page.products[0]?.category.name, "Vinos");
   assert.equal(page.products[0]?.presentation, "750 ml");

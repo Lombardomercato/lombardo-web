@@ -45,10 +45,11 @@ export function displayProductName(rawName: string) {
   const wasUppercase = rawName === rawName.toLocaleUpperCase("es-AR");
   const compact = rawName
     .replace(/\s+/g, " ")
+    .replace(/\b(\d+)\s+(\d)\s*(?:LT|LTS|L)\b/gi, "$1,$2 L")
     .replace(/\s*[-–—|/]\s*(?:CAJA|PACK)?\s*[Xx]?\s*\d+\s*(?:B|BOT(?:ELLAS?)?|U|UN(?:IDADES?)?)\.?$/i, "")
     .replace(/\s+[Xx]\s*\d+\s*(?:B|BOT(?:ELLAS?)?|U|UN(?:IDADES?)?)\.?$/i, "")
-    .replace(/\s+[Xx]\s*\d+(?:[.,]\d+)?\s*(?:CC|ML|LT|LTS|L)\b.*$/i, "")
-    .replace(/\b(\d+(?:[.,]\d+)?)\s*(CC|ML)\b/gi, (_, amount: string, unit: string) => `${amount} ${unit.toLocaleLowerCase("es-AR")}`)
+    .replace(/\s+[Xx]\s*\d+(?:[.,]\d+)?\s*(?:C\.?\s*C\.?|ML|LT|LTS|L)\.?\s*$/i, "")
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*(C\.?\s*C\.?|ML)\.?(?=\s|$|[),–—-])/gi, (_, amount: string, unit: string) => `${amount} ${unit.toLocaleUpperCase("es-AR").startsWith("C") ? "cc" : "ml"}`)
     .replace(/\b(\d+(?:[.,]\d+)?)\s*(LT|LTS)\b/gi, (_, amount: string) => `${amount} L`)
     .trim();
 
@@ -63,7 +64,8 @@ export function displayProductName(rawName: string) {
 export function displayPresentation(rawPresentation: string) {
   return rawPresentation
     .replace(/\s+/g, " ")
-    .replace(/\b(\d+(?:[.,]\d+)?)\s*(CC|ML)\b/gi, (_, amount: string, unit: string) => `${amount} ${unit.toLocaleLowerCase("es-AR")}`)
+    .replace(/\b(\d+)\s+(\d)\s*(?:LT|LTS|L)\b/gi, "$1,$2 L")
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*(C\.?\s*C\.?|ML)\.?(?=\s|$|[),–—-])/gi, (_, amount: string, unit: string) => `${amount} ${unit.toLocaleUpperCase("es-AR").startsWith("C") ? "cc" : "ml"}`)
     .replace(/\b(\d+(?:[.,]\d+)?)\s*(LT|LTS)\b/gi, (_, amount: string) => `${amount} L`)
     .replace(/\bUNIDADES\b/gi, "unidades")
     .replace(/\bUNIDAD\b/gi, "unidad")
