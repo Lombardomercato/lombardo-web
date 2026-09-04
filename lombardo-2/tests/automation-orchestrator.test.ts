@@ -89,20 +89,16 @@ test("fuente caída falla cerrado, conserva fallback estable y alerta", async ()
   assert.deepEqual(alerts.sent, ["daily_featured"]);
 });
 
-test("Cava fallida activa fallback anterior sin marcar productos como nuevos", async () => {
+test("Cava fallida queda auditada como error y alerta sin clonar el desafío anterior", async () => {
   const store = new MemoryStore();
   const alerts = new MemoryAlerter();
   const orchestrator = new AutomationOrchestrator(store, tasks({
-    daily_cava: async () => ({
-      status: "warning",
-      summary: { fallback: true, challengeId: "previous" },
-      warnings: ["Fallback anterior"],
-    }),
+    daily_cava: async () => { throw new Error("CHALLENGE_GENERATION_FAILED"); },
   }), alerts, fixedNow);
   const result = await orchestrator.run({ type: "daily_cava", trigger: "schedule" });
-  assert.equal(result.status, "warning");
-  assert.equal(result.summary.fallback, true);
-  assert.equal(alerts.sent.length, 0);
+  assert.equal(result.status, "failed");
+  assert.deepEqual(result.summary, { retainedStableFallback: false });
+  assert.deepEqual(alerts.sent, ["daily_cava"]);
 });
 
 test("destacados sin candidatos conservan la selección estable", async () => {

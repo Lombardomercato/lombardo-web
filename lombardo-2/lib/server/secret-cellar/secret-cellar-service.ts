@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
+import { addCalendarDays, argentinaDate } from "@/lib/automations/date";
 import { commerceProvider } from "@/lib/commerce";
 import { generateSecretCellarChallenge } from "@/lib/secret-cellar/generator";
 import type {
@@ -27,23 +28,6 @@ export class SecretCellarInputError extends Error {
   }
 }
 
-function argentinaDate(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Argentina/Cordoba",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value.year}-${value.month}-${value.day}`;
-}
-
-function addDays(date: string, days: number) {
-  const value = new Date(`${date}T12:00:00Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
-}
-
 function normalizeGuestContact(kind: "EMAIL" | "WHATSAPP", raw: string) {
   if (kind === "EMAIL") {
     const value = raw.trim().toLocaleLowerCase("en-US").slice(0, 254);
@@ -67,11 +51,14 @@ function normalizeGuestContact(kind: "EMAIL" | "WHATSAPP", raw: string) {
 export class SecretCellarService {
   private readonly store: SecretCellarStore;
   private readonly tenantSlug: string;
+  private readonly now: () => Date;
 
   constructor(options?: {
     store?: SecretCellarStore;
     tenantSlug?: string;
+    now?: () => Date;
   }) {
+    this.now = options?.now ?? (() => new Date());
     if (options?.store && options.tenantSlug) {
       this.tenantSlug = options.tenantSlug;
       this.store = options.store;
@@ -112,48 +99,43 @@ export class SecretCellarService {
   }
 
   private async generate(date: string, generatedBy: "DAILY_ENGINE" | "ADMIN_NEXT_REGENERATION") {
-    const [tenantId, settings, configuredExclusions, recentProducts, products] = await Promise.all([
+    const [tenantId, settings, configuredExclusions, recentSecretProducts, products] = await Promise.all([
       this.store.tenantId(),
       this.store.getSettings(),
       this.store.exclusionIds(),
-      this.store.recentChallengeProductIds(date),
+      this.store.recentSecretProductIds(date, 30),
       this.loadEligibleProducts(date),
     ]);
-    const excludedProductIds = new Set([...configuredExclusions, ...recentProducts]);
     const challenge = generateSecretCellarChallenge({
       tenantId,
       date,
       products,
-      excludedProductIds,
+      excludedProductIds: configuredExclusions,
+      blockedSecretProductIds: recentSecretProducts,
       settings,
       generatedBy,
+      currentDate: argentinaDate(this.now()),
     });
     const created = await this.store.createChallenge(challenge);
     if (!created) throw new Error("Runia no devolvió el desafío creado.");
     return created;
   }
 
-  async ensureChallenge(date = argentinaDate()) {
+  async ensureChallenge(date = argentinaDate(this.now())) {
     return (await this.store.getChallenge(date)) ?? this.generate(date, "DAILY_ENGINE");
   }
 
-  async ensureChallengeWithFallback(date = argentinaDate()) {
+  async ensureDailyChallenge(date = argentinaDate(this.now())) {
     const existing = await this.store.getChallenge(date);
-    if (existing) return { challenge: existing, fallback: existing.generatedBy === "DAILY_FALLBACK" };
-    try {
-      return { challenge: await this.generate(date, "DAILY_ENGINE"), fallback: false };
-    } catch (generationError) {
-      const fallback = await this.store.cloneLatestChallenge(date);
-      if (!fallback) throw generationError;
-      return { challenge: fallback, fallback: true };
-    }
+    if (existing) return existing;
+    return this.generate(date, "DAILY_ENGINE");
   }
 
   async getPublicExperience(): Promise<SecretCellarPublicExperience> {
     const settings = await this.store.getSettings();
     if (!settings.enabled) return { enabled: false };
     const [challenge, pricingContext] = await Promise.all([
-      this.ensureChallengeWithFallback().then((result) => result.challenge),
+      this.ensureDailyChallenge(),
       getCurrentCustomerPricingContext(),
     ]);
     return {
@@ -223,14 +205,14 @@ export class SecretCellarService {
     const secret = challenge?.candidates.find(
       (candidate) => candidate.id === challenge.secretProductId,
     );
-    if (!challenge || challenge.date !== argentinaDate() || !secret) {
+    if (!challenge || challenge.date !== argentinaDate(this.now()) || !secret) {
       throw new SecretCellarInputError("La cava ya cambió de desafío.", 409);
     }
     return { ...result, secret };
   }
 
   async regenerateNextChallenge() {
-    const nextDate = addDays(argentinaDate(), 1);
+    const nextDate = addCalendarDays(argentinaDate(this.now()), 1);
     await this.store.deleteScheduledChallenge(nextDate);
     return this.generate(nextDate, "ADMIN_NEXT_REGENERATION");
   }
@@ -258,13 +240,16 @@ export class SecretCellarService {
   }
 
   async getAdminDashboard(): Promise<SecretCellarAdminDashboard> {
-    const today = argentinaDate();
-    const tomorrow = addDays(today, 1);
+    const today = argentinaDate(this.now());
+    const yesterday = addCalendarDays(today, -1);
+    const tomorrow = addCalendarDays(today, 1);
     const settings = await this.store.getSettings();
     const current = (await this.store.getChallenge(today)) ??
       (settings.enabled ? await this.generate(today, "DAILY_ENGINE") : undefined);
-    const [next, exclusions, attempts] = await Promise.all([
+    const [next, previous, history, exclusions, attempts] = await Promise.all([
       this.store.getChallenge(tomorrow),
+      this.store.getChallenge(yesterday),
+      this.store.listChallenges(32),
       this.store.listExclusions(),
       current ? this.store.listAttempts(current.id) : Promise.resolve([]),
     ]);
@@ -274,7 +259,9 @@ export class SecretCellarService {
     return {
       settings,
       current,
+      yesterday: previous ?? undefined,
       next: next ?? undefined,
+      history,
       attempts,
       exclusions,
       participants: attempts.length,

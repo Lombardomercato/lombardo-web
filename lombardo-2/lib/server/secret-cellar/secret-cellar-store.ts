@@ -7,6 +7,7 @@ import type {
   SecretCellarExclusion,
   SecretCellarSettings,
 } from "@/lib/secret-cellar/types";
+import { argentinaDate } from "@/lib/automations/date";
 
 interface StoreOptions {
   url: string;
@@ -67,17 +68,6 @@ export class SecretCellarStoreError extends Error {
   }
 }
 
-function currentArgentinaDate() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Argentina/Cordoba",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value.year}-${value.month}-${value.day}`;
-}
-
 function mapSettings(row: SettingsRow): SecretCellarSettings {
   return {
     enabled: row.enabled,
@@ -93,7 +83,7 @@ function mapChallenge(row: ChallengeRow): SecretCellarChallenge {
     id: row.id,
     tenantId: row.tenant_id,
     date: row.challenge_date,
-    status: row.challenge_date === currentArgentinaDate() ? "ACTIVE" : row.status,
+    status: row.challenge_date === argentinaDate() ? "ACTIVE" : row.status,
     secretProductId: row.secret_product_id,
     candidates: row.candidates,
     clues: row.clues,
@@ -244,38 +234,34 @@ export class SecretCellarStore {
     return row ? mapChallenge(row) : null;
   }
 
-  async recentChallengeProductIds(beforeDate: string, days = 14) {
+  async recentSecretProductIds(beforeDate: string, challenges = 30) {
     const tenantId = await this.tenantId();
-    const threshold = new Date(`${beforeDate}T12:00:00Z`);
-    threshold.setUTCDate(threshold.getUTCDate() - days);
     const search = new URLSearchParams({
-      select: "candidates",
+      select: "secret_product_id",
       tenant_id: `eq.${tenantId}`,
-      challenge_date: `gte.${threshold.toISOString().slice(0, 10)}`,
-      "challenge_date.lt": beforeDate,
       order: "challenge_date.desc",
-      limit: String(days),
+      limit: String(challenges),
     });
-    const rows = await this.rows<{ candidates: SecretCellarChallenge["candidates"] }>(
+    search.set("challenge_date", `lt.${beforeDate}`);
+    const rows = await this.rows<{ secret_product_id: string }>(
       `secret_cellar_challenges?${search}`,
       "No pudimos revisar los desafíos recientes.",
     );
-    return new Set(rows.flatMap((row) => row.candidates.map((candidate) => candidate.id)));
+    return new Set(rows.map((row) => row.secret_product_id));
   }
 
-  async cloneLatestChallenge(date: string) {
-    const response = await this.request("rpc/lombardo_clone_latest_secret_cellar_challenge", {
-      method: "POST",
-      body: JSON.stringify({
-        p_tenant_id: await this.tenantId(),
-        p_challenge_date: date,
-      }),
+  async listChallenges(limit = 32) {
+    const tenantId = await this.tenantId();
+    const search = new URLSearchParams({
+      select: "id,tenant_id,challenge_date,status,secret_product_id,candidates,clues,reward_percentage,reward_valid_hours,generated_by,created_at",
+      tenant_id: `eq.${tenantId}`,
+      order: "challenge_date.desc,created_at.desc",
+      limit: String(Math.min(Math.max(limit, 1), 100)),
     });
-    if (!response.ok) {
-      throw new SecretCellarStoreError("No pudimos activar el fallback de la cava.", response.status);
-    }
-    const id = (await response.json()) as string | null;
-    return id ? this.getChallenge(date) : null;
+    return (await this.rows<ChallengeRow>(
+      `secret_cellar_challenges?${search}`,
+      "No pudimos cargar el historial de la cava.",
+    )).map(mapChallenge);
   }
 
   async createChallenge(

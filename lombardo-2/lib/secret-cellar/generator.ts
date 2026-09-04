@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { ARGENTINA_TIME_ZONE } from "../automations/date.ts";
 import type { Product } from "@/types/commerce";
 import type {
   SecretCellarCandidate,
@@ -61,6 +62,7 @@ function priceClue(secret: SecretCellarCandidate): SecretCellarClue {
   return {
     id: "price",
     source: "PRICE",
+    productId: secret.id,
     text: `Mi precio retail de hoy no llega a $${threshold.toLocaleString("es-AR")}.`,
   };
 }
@@ -75,6 +77,7 @@ function tokenClue(
     return {
       id: "name-token",
       source: "NAME_TOKEN",
+      productId: secret.id,
       text: `En mi nombre aparece “${present}”.`,
     };
   }
@@ -90,6 +93,7 @@ function tokenClue(
     ? {
         id: "name-token",
         source: "NAME_TOKEN",
+        productId: secret.id,
         text: `En mi nombre no aparece “${absent}”.`,
       }
     : null;
@@ -106,12 +110,14 @@ function cluesFor(
     {
       id: "category",
       source: "CATEGORY",
+      productId: secret.id,
       text: `Estoy en la familia de ${secret.categoryName.toLocaleLowerCase("es-AR")}.`,
     },
     priceClue(secret),
     {
       id: "presentation",
       source: "PRESENTATION",
+      productId: secret.id,
       text: `Mi presentación registrada es ${secret.presentation}.`,
     },
   ];
@@ -120,12 +126,14 @@ function cluesFor(
   clues.push({
     id: "brand-initial",
     source: "BRAND_INITIAL",
+    productId: secret.id,
     text: `Mi marca empieza con “${brandInitial}”.`,
   });
   if (clues.length < count) {
     clues.push({
       id: "name-initial",
       source: "NAME_INITIAL",
+      productId: secret.id,
       text: `Mi nombre empieza con “${nameInitial}”.`,
     });
   }
@@ -138,9 +146,11 @@ export function generateSecretCellarChallenge(input: {
   date: string;
   products: Product[];
   excludedProductIds: Set<string>;
+  blockedSecretProductIds?: ReadonlySet<string>;
   settings: SecretCellarSettings;
   generatedBy: SecretCellarChallenge["generatedBy"];
   createdAt?: string;
+  currentDate?: string;
 }): Omit<SecretCellarChallenge, "id"> & { id?: string } {
   const eligible = input.products.filter(
     (product) =>
@@ -155,7 +165,13 @@ export function generateSecretCellarChallenge(input: {
   }
 
   const seed = `${input.tenantId}:${input.date}`;
-  const secretProduct = ranked(eligible, `${seed}:secret`)[0];
+  const secretPool = eligible.filter(
+    (product) => !input.blockedSecretProductIds?.has(product.id),
+  );
+  const secretProduct = ranked(
+    secretPool.length ? secretPool : eligible,
+    `${seed}:secret`,
+  )[0];
   const coherentPool = eligible.filter(
     (product) =>
       product.id !== secretProduct.id &&
@@ -179,7 +195,7 @@ export function generateSecretCellarChallenge(input: {
   );
   const secret = candidateFromProduct(secretProduct);
   const todayParts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Argentina/Cordoba",
+    timeZone: ARGENTINA_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -187,7 +203,7 @@ export function generateSecretCellarChallenge(input: {
   const todayValue = Object.fromEntries(
     todayParts.map((part) => [part.type, part.value]),
   );
-  const today = `${todayValue.year}-${todayValue.month}-${todayValue.day}`;
+  const today = input.currentDate ?? `${todayValue.year}-${todayValue.month}-${todayValue.day}`;
 
   return {
     id: input.id,

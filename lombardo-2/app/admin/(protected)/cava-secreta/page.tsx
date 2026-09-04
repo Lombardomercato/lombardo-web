@@ -27,6 +27,9 @@ export default async function AdminSecretCellarPage({
   const nextSecret = dashboard.next?.candidates.find(
     (candidate) => candidate.id === dashboard.next?.secretProductId,
   );
+  const yesterdaySecret = dashboard.yesterday?.candidates.find(
+    (candidate) => candidate.id === dashboard.yesterday?.secretProductId,
+  );
 
   return (
     <>
@@ -47,6 +50,17 @@ export default async function AdminSecretCellarPage({
         <article className={adminStyles.metricCard}><span>CUPONES</span><strong>{dashboard.couponsIssued}</strong></article>
         <article className={adminStyles.metricCard}><span>CONVERSIONES</span><strong>{dashboard.converted}</strong></article>
         <article className={adminStyles.metricCard}><span>ESTADO</span><strong>{dashboard.settings.enabled ? "ON" : "OFF"}</strong></article>
+      </section>
+
+      <section className={adminStyles.section}>
+        <div className={adminStyles.sectionTitle}><h2>AYER</h2><span>{dashboard.yesterday?.date ?? "SIN REGISTRO"}</span></div>
+        <div className={styles.nextChallenge}>
+          <div>
+            <strong>{yesterdaySecret?.name ?? "No hubo desafío registrado."}</strong>
+            <p>{dashboard.yesterday ? `${dashboard.yesterday.generatedBy} · ${dashboard.yesterday.id}` : "—"}</p>
+          </div>
+          <span>{dashboard.yesterday?.status ?? "—"}</span>
+        </div>
       </section>
 
       <section className={adminStyles.section}>
@@ -99,6 +113,29 @@ export default async function AdminSecretCellarPage({
           </div>
           {canEdit ? <form action={regenerateNextSecretCellarAction}><button type="submit">REGENERAR MAÑANA →</button></form> : null}
         </div>
+      </section>
+
+      <section className={adminStyles.section}>
+        <div className={adminStyles.sectionTitle}><h2>HISTORIAL</h2><span>ÚLTIMOS {dashboard.history.length}</span></div>
+        {dashboard.history.length ? (
+          <div className={styles.historyList}>
+            {dashboard.history.map((challenge) => {
+              const secret = challenge.candidates.find(
+                (candidate) => candidate.id === challenge.secretProductId,
+              );
+              return (
+                <div key={challenge.id}>
+                  <strong>{challenge.date}</strong>
+                  <span>{secret?.name ?? challenge.secretProductId}</span>
+                  <small>{challenge.generatedBy}</small>
+                  <small>{challenge.status}</small>
+                  <small>{formatAdminDate(challenge.createdAt)}</small>
+                  <code>{challenge.id}</code>
+                </div>
+              );
+            })}
+          </div>
+        ) : <p className={adminStyles.emptyState}>Todavía no hay historial.</p>}
       </section>
 
       <section className={adminStyles.section}>

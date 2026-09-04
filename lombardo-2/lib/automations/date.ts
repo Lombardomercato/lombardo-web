@@ -1,4 +1,4 @@
-const ARGENTINA_TIME_ZONE = "America/Argentina/Cordoba";
+export const ARGENTINA_TIME_ZONE = "America/Argentina/Buenos_Aires";
 
 export function argentinaDate(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
