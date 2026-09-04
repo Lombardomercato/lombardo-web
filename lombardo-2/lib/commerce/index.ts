@@ -97,7 +97,7 @@ const cachedProductPage = unstable_cache(
       },
       cachePricingContext(basePriceType, policy, discountPercent),
     ),
-  ["runia-real-catalog-page-v3"],
+  ["runia-real-catalog-page-v4"],
   { revalidate: 300, tags: ["runia-real-catalog"] },
 );
 
@@ -112,7 +112,7 @@ const cachedProductsByIds = unstable_cache(
       ids.split(","),
       cachePricingContext(basePriceType, policy, discountPercent),
     ),
-  ["runia-real-catalog-products-by-id-v2"],
+  ["runia-real-catalog-products-by-id-v3"],
   { revalidate: 300, tags: ["runia-real-catalog"] },
 );
 
@@ -127,7 +127,7 @@ const cachedProductBySlug = unstable_cache(
       slug,
       cachePricingContext(basePriceType, policy, discountPercent),
     ),
-  ["runia-real-catalog-product-by-slug-v2"],
+  ["runia-real-catalog-product-by-slug-v3"],
   { revalidate: 300, tags: ["runia-real-catalog"] },
 );
 
@@ -148,7 +148,7 @@ const cachedActiveOpportunities = unstable_cache(
       limit,
       cachePricingContext(basePriceType, policy, discountPercent),
     ),
-  ["runia-active-opportunities-v1"],
+  ["runia-active-opportunities-v2"],
   { revalidate: 300, tags: ["runia-real-catalog", "lombardo-opportunities"] },
 );
 
