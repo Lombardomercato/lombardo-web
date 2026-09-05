@@ -28,7 +28,8 @@ test("el precio editorial pertenece al flujo de la tarjeta", () => {
 
 test("la portada de Tienda mantiene el acento editorial unido al contenido", () => {
   assert.doesNotMatch(catalogCss, /\.catalogHero h1::after/);
-  assert.match(catalogCss, /\.catalogHero h1\s*\{[\s\S]*grid-column:\s*1 \/ 9[\s\S]*width:\s*fit-content[\s\S]*justify-items:\s*center/);
+  assert.match(catalogCss, /\.catalogHero\s*\{[\s\S]*grid-template-rows:\s*auto 1fr auto/);
+  assert.match(catalogCss, /\.catalogHero h1\s*\{[\s\S]*grid-column:\s*1 \/ 9[\s\S]*width:\s*fit-content[\s\S]*align-self:\s*center[\s\S]*font-size:\s*clamp\(4\.875rem, 7\.2vw, 6\.5rem\)/);
   assert.doesNotMatch(catalogCss, /\.catalogHero h1 span:last-child\s*\{[^}]*margin-left/);
   assert.match(catalogCss, /\.heroAside\s*\{[\s\S]*grid-column:\s*9 \/ 12/);
   assert.match(catalogCss, /min-height:\s*clamp\(28\.75rem, 32vw, 29\.25rem\)/);
