@@ -66,9 +66,14 @@ export const metadata: Metadata = {
   description: SITE.description,
   applicationName: "LOMBARDO.",
   formatDetection: { email: false, address: false, telephone: false },
-  verification: process.env.GOOGLE_SITE_VERIFICATION
-    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
-    : undefined,
+  verification: {
+    ...(process.env.GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+      : {}),
+    other: {
+      "facebook-domain-verification": "jpz4l0eta06wl2it956hjx1r8d2ggn",
+    },
+  },
   robots:
     process.env.VERCEL_ENV === "production"
       ? {
