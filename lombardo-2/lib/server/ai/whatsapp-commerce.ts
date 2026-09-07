@@ -12,6 +12,7 @@ import type { VerifiedWhatsAppCustomer } from "@/lib/server/customers/whatsapp-p
 import type { CheckoutCustomer, CreateOrderInput, DeliveryMethod, InvoiceDetails } from "@/types/checkout";
 import type { Product } from "@/types/commerce";
 import {
+  bottleUnits,
   resolveVolumeTierProducts,
   wholesaleTierPricingContext,
 } from "@/lib/pricing/volume-tier";
@@ -28,6 +29,7 @@ const cartLineSchema = z.object({
   effectiveUnitPrice: z.number().positive(),
   lineTotal: z.number().positive(),
   pricingPolicy: z.enum(["RETAIL", "WHOLESALE", "BUSINESS", "CUSTOM_DISCOUNT"]).default("RETAIL"),
+  wholesaleBottleUnits: z.number().int().nonnegative().default(0),
 }).strict();
 
 const cartSchema = z.object({
@@ -35,6 +37,9 @@ const cartSchema = z.object({
   total: z.number().nonnegative().default(0),
   currency: z.literal("ARS").default("ARS"),
   pricingPolicy: z.enum(["RETAIL", "WHOLESALE", "BUSINESS", "CUSTOM_DISCOUNT"]).default("RETAIL"),
+  wholesaleBottleCount: z.number().int().nonnegative().default(0),
+  wholesaleUpsellMentioned: z.boolean().default(false),
+  wholesaleUpsellDeclined: z.boolean().default(false),
 }).strict();
 
 const deliveryMethodSchema = z.enum(["PICKUP", "DELIVERY_ROSARIO", "DELIVERY_SOUTH"]);
@@ -88,7 +93,7 @@ export type WhatsAppCommerceOperation = z.infer<typeof whatsappCommerceOperation
 
 export const whatsappCommerceInputSchemas = {
   manage_whatsapp_cart: z.object({
-    action: z.enum(["add", "remove", "set_quantity", "summary", "clear"]),
+    action: z.enum(["add", "remove", "set_quantity", "summary", "clear", "decline_wholesale_upsell"]),
     cart: cartInputSchema.optional(),
     productId: z.string().uuid().optional(),
     query: z.string().trim().max(500).optional(),
@@ -165,9 +170,17 @@ async function manageCart(
   pricing: CustomerPricingContext,
   input: z.infer<typeof whatsappCommerceInputSchemas.manage_whatsapp_cart>,
 ) {
-  if (input.action === "clear") return cartResult("updated", [], pricing);
+  if (input.action === "clear") return cartResult("updated", [], pricing, input.cart);
   const current = await repriceCart(input.cart?.items ?? [], pricing);
-  if (input.action === "summary") return cartResult("summary", current, pricing);
+  if (input.action === "summary") return cartResult("summary", current, pricing, input.cart);
+  if (input.action === "decline_wholesale_upsell") {
+    const previous = input.cart ?? cartSchema.parse({});
+    return cartResult("updated", current, pricing, {
+      ...previous,
+      wholesaleUpsellMentioned: true,
+      wholesaleUpsellDeclined: true,
+    });
+  }
 
   if (input.action === "remove") {
     if (!input.productId) throw new Error("WHATSAPP_CART_PRODUCT_REQUIRED");
@@ -175,7 +188,7 @@ async function manageCart(
       current.filter((line) => line.productId !== input.productId),
       pricing,
     );
-    return cartResult("updated", next, pricing);
+    return cartResult("updated", next, pricing, input.cart);
   }
   if (input.action === "set_quantity") {
     if (!input.productId || !input.quantity) throw new Error("WHATSAPP_CART_QUANTITY_REQUIRED");
@@ -183,7 +196,7 @@ async function manageCart(
     const next = await repriceCart(current.map((line) => line.productId === input.productId
       ? { ...line, quantity: input.quantity!, lineTotal: round(line.effectiveUnitPrice * input.quantity!) }
       : line), pricing);
-    return cartResult("updated", next, pricing);
+    return cartResult("updated", next, pricing, input.cart);
   }
 
   const candidates = input.productId
@@ -191,10 +204,10 @@ async function manageCart(
     : input.query
       ? await searchCatalog({ query: input.query, limit: 5, pricing })
       : [];
-  if (!candidates.length) return { ...cartResult("not_found", current, pricing), alternatives: [] };
+  if (!candidates.length) return { ...cartResult("not_found", current, pricing, input.cart), alternatives: [] };
   if (!input.productId && candidates.length > 1) {
     return {
-      ...cartResult("needs_selection", current, pricing),
+      ...cartResult("needs_selection", current, pricing, input.cart),
       alternatives: candidates.slice(0, 5).map(productChoice),
     };
   }
@@ -206,7 +219,7 @@ async function manageCart(
   assertAvailable(product, nextQuantity);
   const next = current.filter((line) => line.productId !== product.id);
   next.push(toCartLine(product, nextQuantity));
-  return cartResult("updated", await repriceCart(next, pricing), pricing);
+  return cartResult("updated", await repriceCart(next, pricing), pricing, input.cart);
 }
 
 async function repriceCart(
@@ -258,6 +271,7 @@ function toCartLine(product: Product, quantity: number) {
     effectiveUnitPrice: product.price,
     lineTotal: round(product.price * quantity),
     pricingPolicy: product.pricingPolicy,
+    wholesaleBottleUnits: bottleUnits(product, quantity),
   };
 }
 
@@ -272,7 +286,24 @@ function productChoice(product: Product) {
   };
 }
 
-function cartResult(status: string, items: ReturnType<typeof toCartLine>[], pricing: CustomerPricingContext) {
+function cartResult(
+  status: string,
+  items: ReturnType<typeof toCartLine>[],
+  pricing: CustomerPricingContext,
+  previous?: z.infer<typeof cartSchema>,
+) {
+  const bottleCount = items.reduce(
+    (total, item) => total + item.wholesaleBottleUnits,
+    0,
+  );
+  const canMention = bottleCount >= 2 && bottleCount <= 5
+    && pricing.policy !== "WHOLESALE"
+    && pricing.policy !== "BUSINESS"
+    && !previous?.wholesaleUpsellMentioned
+    && !previous?.wholesaleUpsellDeclined;
+  const commercialSuggestion = canMention
+    ? wholesaleConversationSuggestion(bottleCount)
+    : null;
   return {
     status,
     cart: {
@@ -282,8 +313,23 @@ function cartResult(status: string, items: ReturnType<typeof toCartLine>[], pric
       pricingPolicy: items.some((item) => item.pricingPolicy === "WHOLESALE")
         ? "WHOLESALE" as const
         : pricing.policy,
+      wholesaleBottleCount: bottleCount,
+      wholesaleUpsellMentioned: Boolean(previous?.wholesaleUpsellMentioned || canMention),
+      wholesaleUpsellDeclined: Boolean(previous?.wholesaleUpsellDeclined),
     },
+    commercialSuggestion,
   };
+}
+
+function wholesaleConversationSuggestion(count: number) {
+  const missing = 6 - count;
+  if (count === 5) {
+    return "Con una más ya te aplicamos precio mayorista. Si querés, te busco alguna que vaya con lo que elegiste.";
+  }
+  if (count === 4) {
+    return "Vas llevando 4. Si querés sumar 2 más, ya te queda precio mayorista. Pueden ser surtidas.";
+  }
+  return `Llevás ${count}. Con ${missing} más accedés a precio mayorista; pueden ser surtidas.`;
 }
 
 function updateCheckout(

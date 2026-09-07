@@ -11,7 +11,7 @@ export interface ProductQuantity {
 }
 
 export function bottleUnits(product: Product, quantity: number) {
-  if (!BOTTLE_CATEGORIES.has(product.category.slug)) return 0;
+  if (!BOTTLE_CATEGORIES.has(product.category.slug) || !product.wholesaleEligible) return 0;
   const pack = product.presentation.match(
     /(?:\bx\s*|\b)(\d{1,2})\s*(?:botellas?|unidades?)\b/i,
   );
@@ -53,24 +53,44 @@ export async function resolveVolumeTierProducts(input: {
   loadWholesale: (productIds: string[]) => Promise<Product[]>;
 }) {
   const { products, quantities, pricingContext } = input;
-  if (
-    pricingContext.policy !== "RETAIL" ||
-    !qualifiesForWholesaleBottleTier(products, quantities)
-  ) {
-    return { products, applied: false };
+  if (!["RETAIL", "CUSTOM_DISCOUNT"].includes(pricingContext.policy)) {
+    return { products, applied: false, bottleCount: 0 };
   }
 
-  const eligibleIds = products
+  const candidateIds = products
     .filter((product) => BOTTLE_CATEGORIES.has(product.category.slug))
     .map((product) => product.id);
-  const wholesale = await input.loadWholesale(eligibleIds);
+  const wholesale = await input.loadWholesale(candidateIds);
   const wholesaleById = new Map(wholesale.map((product) => [product.id, product]));
+  const eligibleProducts = products.map((product) => ({
+    ...product,
+    wholesaleEligible:
+      BOTTLE_CATEGORIES.has(product.category.slug) && wholesaleById.has(product.id),
+    automaticWholesale: false,
+  }));
+  const quantityById = new Map(
+    quantities.map((item) => [item.productId, item.quantity]),
+  );
+  const bottleCount = eligibleProducts.reduce(
+    (total, product) => total + bottleUnits(product, quantityById.get(product.id) ?? 0),
+    0,
+  );
+  if (bottleCount < WHOLESALE_BOTTLE_MINIMUM) {
+    return { products: eligibleProducts, applied: false, bottleCount };
+  }
+
   let applied = false;
-  const resolved = products.map((product) => {
+  const resolved = eligibleProducts.map((product) => {
     const candidate = wholesaleById.get(product.id);
     if (!candidate || candidate.price >= product.price) return product;
     applied = true;
-    return { ...candidate, pricingContextKey: pricingContext.contextKey };
+    return {
+      ...candidate,
+      pricingContextKey: pricingContext.contextKey,
+      wholesaleEligible: true,
+      automaticWholesale: true,
+      compareAtPrice: product.price,
+    };
   });
-  return { products: resolved, applied };
+  return { products: resolved, applied, bottleCount };
 }

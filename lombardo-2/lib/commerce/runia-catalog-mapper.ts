@@ -106,6 +106,10 @@ export interface RuniaSupplierProductRow {
     | Array<{ price_type: string; current_price: number | string }>
     | { price_type: string; current_price: number | string }
     | null;
+  wholesale_prices?:
+    | Array<{ price_type: string; current_price: number | string }>
+    | { price_type: string; current_price: number | string }
+    | null;
   lombardo_prices?:
     | Array<{
         id?: string;
@@ -306,6 +310,18 @@ function assertPricingList(pricingContext: CustomerPricingContext) {
   }
 }
 
+function hasWholesalePrice(row: RuniaSupplierProductRow) {
+  const prices = Array.isArray(row.wholesale_prices)
+    ? row.wholesale_prices
+    : row.wholesale_prices
+      ? [row.wholesale_prices]
+      : [];
+  return prices.some((price) => {
+    const value = Number(price.current_price);
+    return price.price_type === "wholesale" && Number.isFinite(value) && value > 0;
+  });
+}
+
 export function mapRuniaSupplierProduct(
   row: RuniaSupplierProductRow,
   pricingContext: CustomerPricingContext,
@@ -356,6 +372,10 @@ export function mapRuniaSupplierProduct(
     pricingPolicy: resolvedPrice.pricingPolicy,
     discountPercent: resolvedPrice.discountPercent,
     pricingContextKey: pricingContext.contextKey,
+    wholesaleEligible:
+      (productCategory.slug === "vinos" || productCategory.slug === "destilados") &&
+      hasWholesalePrice(row),
+    automaticWholesale: false,
     compareAtPrice:
       pricingContext.policy === "CUSTOM_DISCOUNT" &&
       resolvedPrice.finalUnitPrice < resolvedPrice.baseUnitPrice

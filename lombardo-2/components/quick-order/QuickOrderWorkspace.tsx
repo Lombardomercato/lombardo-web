@@ -292,7 +292,7 @@ export function QuickOrderWorkspace({
           </div>
 
           {latestOrder ? (
-            <section className={styles.repeatOrder} aria-labelledby="repeat-title">
+            <section className={styles.repeatOrder} id="ultimo-pedido" aria-labelledby="repeat-title">
               <div>
                 <p id="repeat-title">ÚLTIMO PEDIDO · #{latestOrder.displayId}</p>
                 <span>

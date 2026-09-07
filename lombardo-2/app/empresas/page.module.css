@@ -5,7 +5,9 @@
 .hero > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 2rem; border-top: 1px solid rgba(0, 58, 112, 0.36); padding-top: 1rem; }
 .hero > div > p { max-width: 46ch; font-size: clamp(1rem, 1.8vw, 1.25rem); line-height: 1.35; }
 .hero a, .actions a { min-height: 3.3rem; padding: 0.7rem 1rem; display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid currentColor; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; }
-.hero a { background: var(--lombardo-blue); color: var(--neutral-paper); }
+.heroActions { display: grid; grid-template-columns: 1fr 1fr; }
+.heroActions a:first-child { background: var(--lombardo-blue); color: var(--neutral-paper); }
+.heroActions a + a { border-left: 0; }
 .options { padding: clamp(5rem, 9vw, 9rem) var(--page-gutter); }
 .options > h2 { max-width: 10ch; margin-bottom: clamp(2.5rem, 5vw, 5rem); font-family: var(--font-display); font-size: var(--type-section-title); line-height: 0.84; letter-spacing: -0.05em; }
 .options > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid currentColor; }
@@ -20,4 +22,4 @@
 .actions { grid-column: 2; display: grid; gap: 0.7rem; }
 .actions a:first-child { background: var(--lombardo-green); color: var(--lombardo-blue); border-color: var(--lombardo-green); }
 @media (max-width: 63.99rem) { .options > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } .options article:nth-child(2) { border-right: 0; } }
-@media (max-width: 47.99rem) { .page { padding-top: var(--header-height-mobile); } .hero { min-height: 36rem; padding-block: 2.5rem; } .hero h1 { font-size: var(--type-page-title); } .hero > div, .nextStep { grid-template-columns: 1fr; } .hero a { width: 100%; } .options > div { grid-template-columns: 1fr; } .options article { min-height: 14rem; border-right: 0; } .actions { grid-column: 1; } }
+@media (max-width: 47.99rem) { .page { padding-top: var(--header-height-mobile); } .hero { min-height: 36rem; padding-block: 2.5rem; } .hero h1 { font-size: var(--type-page-title); } .hero > div, .nextStep { grid-template-columns: 1fr; } .heroActions { grid-template-columns: 1fr; } .heroActions a { width: 100%; } .heroActions a + a { border-top: 0; border-left: 1px solid currentColor; } .options > div { grid-template-columns: 1fr; } .options article { min-height: 14rem; border-right: 0; } .actions { grid-column: 1; } }

@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { trackCommerceEvent } from "@/lib/analytics/commerce-events";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { WholesaleProgress } from "@/components/wholesale/WholesaleProgress";
 import { QuantityControl } from "./QuantityControl";
 import { useCart } from "./CartProvider";
 import styles from "./CartDrawer.module.css";
@@ -171,6 +172,7 @@ export function CartDrawer() {
             </div>
 
             <footer className={styles.summary}>
+              <WholesaleProgress items={items} compact />
               <div>
                 <span>{String(itemCount).padStart(2, "0")} UNIDADES</span>
                 <span>SUBTOTAL</span>

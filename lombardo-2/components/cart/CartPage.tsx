@@ -9,6 +9,8 @@ import { useCart } from "./CartProvider";
 import { QuantityControl } from "./QuantityControl";
 import styles from "./CartPage.module.css";
 import { CouponForm } from "@/components/promotions/CouponForm";
+import { WholesaleProgress } from "@/components/wholesale/WholesaleProgress";
+import { WholesaleRecommendations } from "@/components/wholesale/WholesaleRecommendations";
 
 export function CartPage() {
   const {
@@ -111,10 +113,12 @@ export function CartPage() {
                 </div>
               </article>
             ))}
+            <WholesaleRecommendations />
           </section>
 
           <aside className={styles.orderSummary} aria-labelledby="summary-title">
             <p id="summary-title">RESUMEN</p>
+            <WholesaleProgress items={items} compact />
             <div>
               <span>{itemCount} {itemCount === 1 ? "unidad" : "unidades"}</span>
               <span>{formatCurrency(subtotal)}</span>

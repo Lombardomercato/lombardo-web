@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 
 import { CustomerDefaultAddressForm } from "@/components/customer/CustomerDefaultAddressForm";
 import { CustomerLogoutForm } from "@/components/customer/CustomerLogoutForm";
+import {
+  CommercialPageView,
+  TrackedCommercialLink,
+} from "@/components/analytics/CommercialJourney";
 import styles from "@/components/customer/CustomerAccount.module.css";
 import { requireCurrentCustomerAccount } from "@/lib/server/customers/customer-auth";
 import { getCurrentCustomerAccountData } from "@/lib/server/customers/customer-data";
@@ -28,10 +32,10 @@ const ACCOUNT_LABELS: Record<CustomerAccountType, string> = {
 };
 
 const POLICY_LABELS: Record<CustomerPricingPolicy, string> = {
-  RETAIL: "Precio minorista",
-  WHOLESALE: "Precio mayorista",
-  BUSINESS: "Precio negocio",
-  CUSTOM_DISCOUNT: "Descuento personalizado",
+  RETAIL: "Precio tienda",
+  WHOLESALE: "Tu precio mayorista",
+  BUSINESS: "Tu precio negocio",
+  CUSTOM_DISCOUNT: "Precio tienda con beneficio",
 };
 
 const ORDER_LABELS: Record<OrderStatus, string> = {
@@ -71,10 +75,17 @@ export default async function MyAccountPage() {
   if (!data) redirect("/login?next=%2Fmi-cuenta");
 
   const { account, defaultAddress, orders } = data;
+  const isProfessional = account.accountType === "WHOLESALE" || account.accountType === "BUSINESS";
 
   return (
     <main className={styles.page}>
       <div className={styles.inner}>
+        {isProfessional ? (
+          <CommercialPageView
+            name="portal_negocios_opened"
+            accountType={account.accountType as "WHOLESALE" | "BUSINESS"}
+          />
+        ) : null}
         <header className={styles.header}>
           <div>
             <p className={styles.eyebrow}>Mi cuenta</p>
@@ -83,7 +94,7 @@ export default async function MyAccountPage() {
           <CustomerLogoutForm />
         </header>
 
-        <dl className={styles.profile} aria-label="Datos de la cuenta">
+        <dl className={styles.profile} id="datos-de-cuenta" aria-label="Datos de la cuenta">
           <div className={styles.field}>
             <dt>Email</dt>
             <dd>{account.email || "Sin informar"}</dd>
@@ -121,23 +132,43 @@ export default async function MyAccountPage() {
           <CustomerDefaultAddressForm address={defaultAddress} />
         </section>
 
-        {account.accountType === "WHOLESALE" || account.accountType === "BUSINESS" ? (
+        {isProfessional ? (
           <section className={styles.quickOrderAccess} aria-labelledby="quick-order-title">
             <div>
-              <p className={styles.sectionEyebrow}>Compra profesional</p>
-              <h2 id="quick-order-title">CATÁLOGO O PEDIDO RÁPIDO.</h2>
+              <p className={styles.sectionEyebrow}>Tu espacio de compra</p>
+              <h2 id="quick-order-title">PORTAL NEGOCIOS.</h2>
               <p>
-                Buscá por nombre o marca y armá pedidos grandes sin recorrer fotos.
+                Tus precios ya están activos. Comprá rápido, repetí un pedido o revisá tu historial.
               </p>
             </div>
             <nav aria-label="Modo de compra B2B">
-              <Link href="/productos">CATÁLOGO</Link>
-              <Link href="/pedido-rapido">PEDIDO RÁPIDO →</Link>
+              <TrackedCommercialLink
+                href="/pedido-rapido"
+                event={{ name: "pedido_rapido_opened", accountType: account.accountType as "WHOLESALE" | "BUSINESS" }}
+              >PEDIDO RÁPIDO →</TrackedCommercialLink>
+              <Link href="/productos">MIS PRECIOS</Link>
+              <Link href="/pedido-rapido#ultimo-pedido">REPETIR PEDIDO</Link>
+              <Link href="#mis-pedidos">MIS PEDIDOS</Link>
+              <Link href="#datos-de-cuenta">DATOS DE CUENTA</Link>
             </nav>
           </section>
-        ) : null}
+        ) : (
+          <section className={styles.retailBusinessCta} aria-labelledby="retail-business-title">
+            <div>
+              <p className={styles.sectionEyebrow}>¿Comprás seguido o tenés un negocio?</p>
+              <h2 id="retail-business-title">HAY UNA FORMA DE COMPRA PARA VOS.</h2>
+            </div>
+            <p>
+              Con 6 botellas surtidas accedés a precio mayorista. Si comprás habitualmente o revendés, podemos habilitarte una cuenta.
+            </p>
+            <TrackedCommercialLink
+              href="/empresas"
+              event={{ name: "business_account_requested", source: "mi_cuenta" }}
+            >CONOCER OPCIONES →</TrackedCommercialLink>
+          </section>
+        )}
 
-        <section className={styles.orders} aria-labelledby="orders-title">
+        <section className={styles.orders} id="mis-pedidos" aria-labelledby="orders-title">
           <p className={styles.sectionEyebrow}>Historial</p>
           <h2 className={styles.sectionTitle} id="orders-title">
             Pedidos anteriores

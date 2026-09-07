@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Footer } from "@/components/layout/Footer";
+import { TrackedCommercialLink } from "@/components/analytics/CommercialJourney";
 import { SITE_CONTACT } from "@/lib/config/site";
 import styles from "./page.module.css";
 
@@ -11,8 +12,8 @@ export const metadata: Metadata = {
 };
 
 const options = [
-  ["01", "COMPRAS POR CANTIDAD", "Resolvé vinos, bebidas y productos gourmet para eventos, equipos o consumo de oficina."],
-  ["02", "NEGOCIOS Y REVENTA", "Consultá condiciones mayoristas o Business según tu actividad y volumen."],
+  ["01", "MAYORISTA", "Desde 6 botellas. Pueden ser surtidas y el mejor precio válido se aplica automáticamente."],
+  ["02", "NEGOCIOS", "Para comercios, bares, restaurantes, kioscos, vinotecas y reventa con cuenta verificada."],
   ["03", "REGALOS CORPORATIVOS", "Armamos una selección a medida según cantidad, presupuesto, ocasión y entregas."],
   ["04", "FACTURA A", "Prepará la compra con los datos fiscales de tu empresa desde el primer contacto."],
 ] as const;
@@ -23,11 +24,19 @@ export default function EmpresasPage() {
     <>
       <main className={styles.page}>
         <header className={styles.hero}>
-          <p>LOMBARDO PARA EMPRESAS</p>
-          <h1>QUEDAR BIEN, TAMBIÉN EN CANTIDAD.</h1>
+          <p>LOMBARDO MAYORISTA + NEGOCIOS</p>
+          <h1>COMPRAR MÁS. SIN DAR MÁS VUELTAS.</h1>
           <div>
-            <p>Contanos cuántas unidades necesitás, para quiénes y con qué presupuesto. Te respondemos con opciones concretas.</p>
-            <Link href={contactHref} target={SITE_CONTACT.whatsappUrl ? "_blank" : undefined} rel={SITE_CONTACT.whatsappUrl ? "noreferrer" : undefined}>HABLAR POR WHATSAPP <span aria-hidden="true">→</span></Link>
+            <p>Con 6 botellas surtidas ya accedés a precio mayorista. Si comprás para reventa, te habilitamos precios específicos de Negocio.</p>
+            <div className={styles.heroActions}>
+              <TrackedCommercialLink
+                href={contactHref}
+                target={SITE_CONTACT.whatsappUrl ? "_blank" : undefined}
+                rel={SITE_CONTACT.whatsappUrl ? "noreferrer" : undefined}
+                event={{ name: "business_account_requested", source: "empresas" }}
+              >SOLICITAR CUENTA <span aria-hidden="true">→</span></TrackedCommercialLink>
+              <Link href="/login?next=%2Fmi-cuenta">YA TENGO CUENTA → INGRESAR</Link>
+            </div>
           </div>
         </header>
 
@@ -42,7 +51,13 @@ export default function EmpresasPage() {
           <div><p>PARA EMPEZAR</p><h2>CANTIDAD + PRESUPUESTO + FECHA.</h2></div>
           <p>Con esos tres datos podemos orientar la selección sin hacerte perder tiempo. La disponibilidad se confirma antes de preparar el pedido.</p>
           <div className={styles.actions}>
-            <Link href={contactHref} target={SITE_CONTACT.whatsappUrl ? "_blank" : undefined} rel={SITE_CONTACT.whatsappUrl ? "noreferrer" : undefined}>PEDIR UNA PROPUESTA →</Link>
+            <TrackedCommercialLink
+              href={contactHref}
+              target={SITE_CONTACT.whatsappUrl ? "_blank" : undefined}
+              rel={SITE_CONTACT.whatsappUrl ? "noreferrer" : undefined}
+              event={{ name: "business_account_requested", source: "empresas" }}
+            >SOLICITAR CUENTA →</TrackedCommercialLink>
+            <Link href="/login?next=%2Fmi-cuenta">YA TENGO CUENTA → INGRESAR</Link>
             <Link href="/guias/regalos-empresariales-rosario">LEER LA GUÍA PARA EMPRESAS</Link>
           </div>
         </section>

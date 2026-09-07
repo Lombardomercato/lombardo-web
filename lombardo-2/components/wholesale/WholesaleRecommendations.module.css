@@ -1,0 +1,100 @@
+.recommendations {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid currentColor;
+}
+
+.heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.75fr);
+  gap: 0.55rem 2rem;
+  align-items: end;
+}
+
+.heading p {
+  grid-column: 1 / -1;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.heading h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.heading span {
+  color: var(--neutral-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--neutral-line);
+}
+
+.grid article {
+  min-width: 0;
+  padding: 0.8rem;
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.8rem;
+  background: var(--neutral-paper);
+}
+
+.grid article > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+}
+
+.grid p {
+  color: var(--neutral-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.grid h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.grid strong {
+  font-family: var(--font-functional);
+  font-size: 0.76rem;
+}
+
+.grid button {
+  width: fit-content;
+  margin-top: 0.25rem;
+  padding: 0 0 0.15rem;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+@media (max-width: 47.99rem) {
+  .heading,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid article {
+    grid-template-columns: 4.8rem minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,67 @@
+.progress {
+  padding: 1rem;
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid currentColor;
+  color: inherit;
+}
+
+.progress[data-active="true"] {
+  background: var(--lombardo-green);
+  color: var(--lombardo-blue);
+  border-color: var(--lombardo-green);
+}
+
+.topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.075em;
+}
+
+.topline a {
+  padding-bottom: 0.12rem;
+  border-bottom: 1px solid currentColor;
+}
+
+.dots {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.dots span {
+  height: 0.24rem;
+  background: currentColor;
+  opacity: 0.22;
+}
+
+.dots span[data-filled="true"] {
+  opacity: 1;
+}
+
+.progress p {
+  max-width: 42ch;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.progress small {
+  font-size: 0.68rem;
+  line-height: 1.35;
+  opacity: 0.72;
+}
+
+.progress[data-compact="true"] {
+  padding: 0.8rem 0;
+  border-width: 1px 0 0;
+}
+
+.progress[data-compact="true"][data-active="true"] {
+  padding-inline: 0.8rem;
+  border: 0;
+}

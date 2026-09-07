@@ -272,11 +272,12 @@ export class RuniaCommerceProvider
   ) {
     return new URLSearchParams({
       select:
-        `runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),lombardo_prices:lombardo_selling_prices(id,price_type,current_price,version,active),opportunities:lombardo_product_opportunities${requireOpportunity ? "!inner" : ""}(selling_price_id,reference_price,opportunity,opportunity_start,opportunity_review_at),editorial:supplier_product_editorial(brand_name)`,
+        `runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),wholesale_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(id,price_type,current_price,version,active),opportunities:lombardo_product_opportunities${requireOpportunity ? "!inner" : ""}(selling_price_id,reference_price,opportunity,opportunity_start,opportunity_review_at),editorial:supplier_product_editorial(brand_name)`,
       supplier_id: `eq.${supplierId}`,
       eligibility_status: "eq.safe",
       active: "is.true",
       "retail_prices.price_type": `eq.${pricingContext.basePriceType}`,
+      "wholesale_prices.price_type": "eq.wholesale",
       "lombardo_prices.price_type": "eq.retail",
       "lombardo_prices.active": "is.true",
       ...(requireOpportunity ? {
@@ -293,12 +294,13 @@ export class RuniaCommerceProvider
   ) {
     return new URLSearchParams({
       select:
-        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),public_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(id,price_type,current_price,version,active),opportunities:lombardo_product_opportunities(selling_price_id,reference_price,opportunity,opportunity_start,opportunity_review_at),editorial:supplier_product_editorial(brand_name)",
+        "runia_product_id:id,supplier_sku,name_raw,presentation_raw,normalized_presentation,active,eligibility_status,retail_prices:supplier_prices!inner(price_type,current_price),public_prices:supplier_prices(price_type,current_price),wholesale_prices:supplier_prices(price_type,current_price),lombardo_prices:lombardo_selling_prices(id,price_type,current_price,version,active),opportunities:lombardo_product_opportunities(selling_price_id,reference_price,opportunity,opportunity_start,opportunity_review_at),editorial:supplier_product_editorial(brand_name)",
       supplier_id: `eq.${supplierId}`,
       eligibility_status: "eq.safe",
       active: "is.true",
       "retail_prices.price_type": `eq.${pricingContext.basePriceType}`,
       "public_prices.price_type": "eq.retail",
+      "wholesale_prices.price_type": "eq.wholesale",
       "lombardo_prices.price_type": "eq.retail",
       "lombardo_prices.active": "is.true",
     });

@@ -16,7 +16,15 @@ export type CommerceEvent =
   | { name: "guide_product_click"; guideSlug: string; productId: string }
   | { name: "guide_add_to_cart"; guideSlug: string; productId: string }
   | { name: "guide_share"; guideSlug: string; channel: "native" | "copy" }
-  | { name: "guide_related_click"; guideSlug: string; relatedSlug: string };
+  | { name: "guide_related_click"; guideSlug: string; relatedSlug: string }
+  | { name: "wholesale_progress_seen"; bottleCount: number }
+  | { name: "wholesale_progress_clicked"; bottleCount: number }
+  | { name: "wholesale_threshold_reached"; bottleCount: number }
+  | { name: "wholesale_price_applied"; bottleCount: number }
+  | { name: "wholesale_recommendation_clicked"; bottleCount: number; productId: string }
+  | { name: "portal_negocios_opened"; accountType: "WHOLESALE" | "BUSINESS" }
+  | { name: "pedido_rapido_opened"; accountType: "WHOLESALE" | "BUSINESS" }
+  | { name: "business_account_requested"; source: "empresas" | "mi_cuenta" };
 
 export function trackCommerceEvent(event: CommerceEvent) {
   if (typeof window === "undefined") return;

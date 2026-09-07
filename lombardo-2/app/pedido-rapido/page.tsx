@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { QuickOrderWorkspace } from "@/components/quick-order/QuickOrderWorkspace";
+import { CommercialPageView } from "@/components/analytics/CommercialJourney";
 import styles from "@/components/quick-order/QuickOrderWorkspace.module.css";
 import { resolveQuickOrderAccess } from "@/lib/quick-order/types";
 import { getCurrentCustomerAccessState } from "@/lib/server/customers/customer-auth";
@@ -59,10 +60,16 @@ export default async function QuickOrderPage() {
 
   const latestOrder = await getLatestRepeatableOrder(access.account);
   return (
-    <QuickOrderWorkspace
-      accountName={access.account.name}
-      accountType={access.account.accountType}
-      latestOrder={latestOrder}
-    />
+    <>
+      <CommercialPageView
+        name="pedido_rapido_opened"
+        accountType={access.account.accountType}
+      />
+      <QuickOrderWorkspace
+        accountName={access.account.name}
+        accountType={access.account.accountType}
+        latestOrder={latestOrder}
+      />
+    </>
   );
 }

@@ -467,10 +467,13 @@ test("desde 6 botellas el servidor aplica precio mayorista aunque el carrito lle
     items: [{ productId: retail.id, quantity: 6, expectedUnitPrice: retail.price }],
   }));
 
-  assert.equal(result.order.pricingPolicy, "WHOLESALE");
+  assert.equal(result.order.pricingPolicy, "RETAIL");
   assert.equal(result.order.items[0]?.catalogUnitPrice, 10_000);
+  assert.equal(result.order.items[0]?.baseUnitPrice, 10_000);
   assert.equal(result.order.items[0]?.pricingPolicy, "WHOLESALE");
   assert.equal(result.order.items[0]?.unitPrice, 8_500);
+  assert.equal(result.order.baseSubtotal, 60_000);
+  assert.equal(result.order.pricingDiscountAmount, 9_000);
   assert.equal(result.order.total, 51_000);
 });
 
@@ -1205,6 +1208,7 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
             active: true,
             eligibility_status: "safe",
             retail_prices: [{ price_type: "retail", current_price: 17_500 }],
+            wholesale_prices: [{ price_type: "wholesale", current_price: 15_000 }],
           },
         ],
         { headers: { "Content-Range": "0-0/3265" } },
@@ -1221,6 +1225,7 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
   assert.match(requestedUrls[1] ?? "", /\/rest\/v1\/supplier_products\?/);
   assert.match(requestedUrls[1] ?? "", /eligibility_status=eq\.safe/);
   assert.match(requestedUrls[1] ?? "", /retail_prices\.price_type=eq\.retail/);
+  assert.match(requestedUrls[1] ?? "", /wholesale_prices\.price_type=eq\.wholesale/);
   assert.equal(
     new URL(requestedUrls[1] ?? "https://invalid").searchParams.get("order"),
     "has_public_media.desc,normalized_name.asc,id.asc",
@@ -1234,6 +1239,7 @@ test("RuniaCommerceProvider pagina directamente los supplier_products SAFE", asy
     "11111111-1111-4111-8111-111111111111",
   );
   assert.equal(page.products[0]?.sku, "VIN001B");
+  assert.equal(page.products[0]?.wholesaleEligible, true);
   assert.equal(page.products[0]?.name, "BODEGA RUNIA Malbec");
   assert.ok(page.products[0]?.tags.includes("BODEGA RUNIA Malbec x 750 c.c."));
   assert.equal(page.products[0]?.brand.name, "BODEGA RUNIA");

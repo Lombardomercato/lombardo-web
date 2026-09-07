@@ -13,6 +13,7 @@ import {
 } from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { trackCommerceEvent } from "@/lib/analytics/commerce-events";
+import { WholesaleProgress } from "@/components/wholesale/WholesaleProgress";
 import {
   emptyCheckoutForm,
   normalizeWhatsApp,
@@ -1269,6 +1270,7 @@ export function CheckoutPage({
             <span>03</span>
             <h2 id="checkout-summary-title">RESUMEN</h2>
           </div>
+          <WholesaleProgress items={items} compact checkout />
           <div className={styles.summaryItems}>
             {items.map(({ product, quantity }) => (
               <div key={product.id}>

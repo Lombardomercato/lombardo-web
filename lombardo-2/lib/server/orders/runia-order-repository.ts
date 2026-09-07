@@ -55,14 +55,10 @@ export class RuniaOrderRepository implements ServerOrderRepository {
   }
 
   private matchesPricingIdentity(order: OrderDraft) {
-    const automaticWholesale =
-      this.pricingContext.policy === "RETAIL" &&
-      order.pricingPolicy === "WHOLESALE" &&
-      order.items.some((item) => item.pricingPolicy === "WHOLESALE");
     return (
       (order.customerAccountId ?? null) ===
         (this.pricingContext.customerAccountId ?? null) &&
-      (order.pricingPolicy === this.pricingContext.policy || automaticWholesale) &&
+      order.pricingPolicy === this.pricingContext.policy &&
       order.discountPercent === this.pricingContext.discountPercent
     );
   }
@@ -157,6 +153,12 @@ export class RuniaOrderRepository implements ServerOrderRepository {
         });
       }
       const retailUnitPrice = retailProductMap.get(product.id)?.price ?? product.price;
+      const automaticWholesale =
+        product.pricingPolicy === "WHOLESALE" &&
+        this.pricingContext.policy !== "WHOLESALE";
+      const snapshotBaseUnitPrice = automaticWholesale
+        ? retailUnitPrice
+        : product.basePrice;
       snapshots.push({
         productId: product.id,
         sourceProductId: product.sourceProductId,
@@ -164,20 +166,20 @@ export class RuniaOrderRepository implements ServerOrderRepository {
         name: product.name,
         categorySlug: product.category.slug,
         catalogUnitPrice: retailUnitPrice,
-        baseUnitPrice: product.basePrice,
+        baseUnitPrice: snapshotBaseUnitPrice,
         priceType: product.priceType,
         pricingPolicy: product.pricingPolicy,
         discountPercent: product.discountPercent,
-        discountAmount: roundCurrency(product.basePrice - product.price),
+        discountAmount: roundCurrency(snapshotBaseUnitPrice - product.price),
         commercialUnitPrice: product.price,
-        policyDiscountAmount: roundCurrency(product.basePrice - product.price),
+        policyDiscountAmount: roundCurrency(snapshotBaseUnitPrice - product.price),
         couponDiscountAmount: 0,
         finalUnitPrice: product.price,
         unitPrice: product.price,
         quantity: item.quantity,
-        lineBaseTotal: roundCurrency(product.basePrice * item.quantity),
+        lineBaseTotal: roundCurrency(snapshotBaseUnitPrice * item.quantity),
         lineDiscount: roundCurrency(
-          (product.basePrice - product.price) * item.quantity,
+          (snapshotBaseUnitPrice - product.price) * item.quantity,
         ),
         lineCommercialTotal: roundCurrency(product.price * item.quantity),
         lineCouponDiscount: 0,
@@ -260,11 +262,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
     ));
     let items = validation.items;
     const commercialSubtotal = subtotal;
-    const orderPricingPolicy =
-      this.pricingContext.policy === "RETAIL" &&
-      validation.items.some((item) => item.pricingPolicy === "WHOLESALE")
-        ? "WHOLESALE"
-        : this.pricingContext.policy;
+    const orderPricingPolicy = this.pricingContext.policy;
     let couponDiscountAmount = 0;
     let promotionId: string | undefined;
     let couponCode: string | undefined;

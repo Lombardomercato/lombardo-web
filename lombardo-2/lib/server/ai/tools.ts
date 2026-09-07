@@ -12,6 +12,7 @@ import type { Product } from "@/types/commerce";
 import type { AiAuditStore } from "./audit-store";
 import type { AiSalesConfiguration } from "./config";
 import type { SalesProduct } from "./types";
+import { classifyCommercialIntent } from "./topic";
 
 export interface SalesToolsContext {
   configuration: AiSalesConfiguration;
@@ -138,6 +139,22 @@ export async function executeCommerceOperation(
 ): Promise<unknown> {
   if (operation === "search_products") {
     const input = commerceOperationInputSchemas.search_products.parse(rawInput);
+    const commercialIntent = classifyCommercialIntent(input.query);
+    if (commercialIntent === "catalog") {
+      return {
+        kind: "catalog" as const,
+        href: "https://www.lombardomercato.com/productos",
+        message: "Sí, obvio. Te paso el catálogo actualizado. Ahí tenés productos y precios vigentes. Si llevás 6 botellas o más, pueden ser surtidas, accedés a precio mayorista.",
+      };
+    }
+    if (commercialIntent === "business") {
+      return {
+        kind: "business_account" as const,
+        href: "https://www.lombardomercato.com/empresas",
+        message: "Para negocios tenemos precios específicos de reventa. La cuenta se habilita después de verificar los datos del comercio.",
+        requiresVerification: true,
+      };
+    }
     const products = await searchCatalog({ ...input, pricing: context.pricing });
     return {
       kind: "products" as const,

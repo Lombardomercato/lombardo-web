@@ -13,6 +13,7 @@ import {
 import type { Product } from "@/types/commerce";
 import { ProductVisual } from "./ProductVisual";
 import { OpportunityPrice } from "@/components/opportunities/OpportunityPrice";
+import { publicPriceLabel } from "@/lib/pricing/volume-tier-ui";
 import styles from "./ProductDetail.module.css";
 
 export function ProductDetail({ product }: { product: Product }) {
@@ -67,8 +68,15 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <div className={styles.price} id="purchase-title">
+            <span className={styles.priceLabel}>{publicPriceLabel(product)}</span>
             <OpportunityPrice product={product} size="detail" />
           </div>
+
+          {product.wholesaleEligible && product.pricingPolicy !== "BUSINESS" && product.pricingPolicy !== "WHOLESALE" ? (
+            <p className={styles.wholesaleNote}>
+              Llevando 6 botellas surtidas accedés a precio mayorista.
+            </p>
+          ) : null}
 
           <div className={styles.purchaseActions}>
             <div className={styles.quantityRow}>

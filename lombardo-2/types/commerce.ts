@@ -59,6 +59,10 @@ export interface Product {
   discountPercent: number;
   /** Changes whenever the authenticated pricing identity changes. */
   pricingContextKey: string;
+  /** True only when Runia has a valid wholesale price for this bottled beverage. */
+  wholesaleEligible?: boolean;
+  /** True only when this response selected wholesale by the six-bottle rule. */
+  automaticWholesale?: boolean;
   compareAtPrice?: number;
   opportunity?: {
     referencePrice: number;

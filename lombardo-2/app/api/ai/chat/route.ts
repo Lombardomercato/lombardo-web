@@ -6,7 +6,7 @@ import { AiAuditStore } from "@/lib/server/ai/audit-store";
 import { readAiSalesConfiguration } from "@/lib/server/ai/config";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
 import { readJsonBody } from "@/lib/server/request-body";
-import { classifyTopic } from "@/lib/server/ai/topic";
+import { classifyCommercialIntent, classifyTopic } from "@/lib/server/ai/topic";
 import { buildProductComparison, priorProductIds } from "@/lib/server/ai/comparison";
 import { commerceProvider } from "@/lib/commerce";
 
@@ -74,6 +74,18 @@ export async function POST(request: Request) {
       topic: classifyTopic(latestUserText),
       metadata: { lengthBucket: lengthBucket(latestUserText.length) },
     }).catch(() => undefined);
+
+    const commercialIntent = classifyCommercialIntent(latestUserText);
+    if (commercialIntent === "catalog") {
+      return textStreamResponse(
+        "Sí, obvio. Te paso el catálogo actualizado: https://www.lombardomercato.com/productos\n\nAhí tenés productos y precios vigentes. Si llevás 6 botellas o más, pueden ser surtidas, accedés a precio mayorista.",
+      );
+    }
+    if (commercialIntent === "business") {
+      return textStreamResponse(
+        "Perfecto. Para negocios tenemos precios específicos de reventa. La cuenta requiere verificación: podés solicitarla en https://www.lombardomercato.com/empresas",
+      );
+    }
 
     const comparisonIds = priorProductIds(body.messages, latestUserText);
     if (comparisonIds.length >= 2) {
