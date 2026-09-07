@@ -11,9 +11,13 @@ import type {
   OrderStatus,
 } from "../../../types/checkout.ts";
 import type { Product } from "../../../types/commerce.ts";
+import type { CustomerPricingContext } from "../customers/types.ts";
 
 export interface ServerProductSource {
-  getProductsByIds(productIds: string[]): Promise<Product[]>;
+  getProductsByIds(
+    productIds: string[],
+    pricingContext?: CustomerPricingContext,
+  ): Promise<Product[]>;
 }
 
 export interface ServerDeliveryPricing {

@@ -6,6 +6,10 @@ import {
 } from "@/lib/commerce";
 import { getRequestId, logCommerceError } from "@/lib/server/dev-commerce-logger";
 import { getCurrentCustomerPricingContext } from "@/lib/server/customers/customer-auth";
+import {
+  resolveVolumeTierProducts,
+  wholesaleTierPricingContext,
+} from "@/lib/pricing/volume-tier";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +21,39 @@ export async function GET(request: Request) {
     ?.split(",")
     .map((id) => id.trim())
     .filter(Boolean);
+  const quantityById = new Map(
+    (searchParams.get("quantities") ?? "")
+      .split(",")
+      .flatMap((entry) => {
+        const separator = entry.lastIndexOf(":");
+        const productId = entry.slice(0, separator);
+        const quantity = Number(entry.slice(separator + 1));
+        return ids?.includes(productId) && Number.isInteger(quantity) && quantity > 0 && quantity <= 99
+          ? [[productId, quantity] as const]
+          : [];
+      }),
+  );
 
   try {
     const startedAt = performance.now();
     const pricingContext = await getCurrentCustomerPricingContext();
     if (ids?.length) {
-      const products = await commerceProvider.getProductsByIds(
+      const baseProducts = await commerceProvider.getProductsByIds(
         ids.slice(0, 99),
         pricingContext,
       );
+      const { products } = await resolveVolumeTierProducts({
+        products: baseProducts,
+        quantities: ids.map((productId) => ({
+          productId,
+          quantity: quantityById.get(productId) ?? 0,
+        })),
+        pricingContext,
+        loadWholesale: (productIds) => commerceProvider.getProductsByIds(
+          productIds,
+          wholesaleTierPricingContext(pricingContext),
+        ),
+      });
       const requestTimeMs = Math.round((performance.now() - startedAt) * 10) / 10;
       return NextResponse.json(
         { products, requestTimeMs },

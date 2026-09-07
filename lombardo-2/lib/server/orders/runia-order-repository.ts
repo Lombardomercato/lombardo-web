@@ -15,11 +15,18 @@ import type {
   ServerProductSource,
 } from "./order-dependencies.ts";
 import { ServerOrderError } from "./server-order-error.ts";
-import type { CustomerPricingContext } from "../customers/types.ts";
+import {
+  retailPricingContext,
+  type CustomerPricingContext,
+} from "../customers/types.ts";
 import { roundCurrency } from "../../pricing/policy.ts";
 import type { PromotionValidator } from "../promotions/promotion-service.ts";
 import { normalizePromotionCode } from "../../promotions/engine.ts";
 import { requiresDeliveryAddress } from "../../checkout/delivery-methods.ts";
+import {
+  resolveVolumeTierProducts,
+  wholesaleTierPricingContext,
+} from "../../pricing/volume-tier.ts";
 
 interface RuniaOrderRepositoryOptions {
   tenantId: string;
@@ -48,10 +55,14 @@ export class RuniaOrderRepository implements ServerOrderRepository {
   }
 
   private matchesPricingIdentity(order: OrderDraft) {
+    const automaticWholesale =
+      this.pricingContext.policy === "RETAIL" &&
+      order.pricingPolicy === "WHOLESALE" &&
+      order.items.some((item) => item.pricingPolicy === "WHOLESALE");
     return (
       (order.customerAccountId ?? null) ===
         (this.pricingContext.customerAccountId ?? null) &&
-      order.pricingPolicy === this.pricingContext.policy &&
+      (order.pricingPolicy === this.pricingContext.policy || automaticWholesale) &&
       order.discountPercent === this.pricingContext.discountPercent
     );
   }
@@ -76,9 +87,30 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       };
     }
 
-    const products = await this.productSource.getProductsByIds(
-      input.items.map((item) => item.productId),
+    const requestedIds = input.items.map((item) => item.productId);
+    const baseProducts = await this.productSource.getProductsByIds(
+      requestedIds,
+      this.pricingContext,
     );
+    const tier = await resolveVolumeTierProducts({
+      products: baseProducts,
+      quantities: input.items,
+      pricingContext: this.pricingContext,
+      loadWholesale: (productIds) => this.productSource.getProductsByIds(
+        productIds,
+        wholesaleTierPricingContext(this.pricingContext),
+      ),
+    });
+    const products = tier.products;
+    const retailProducts = this.pricingContext.basePriceType === "retail"
+      ? baseProducts
+      : await this.productSource.getProductsByIds(requestedIds, {
+          ...retailPricingContext(this.pricingContext.tenantSlug),
+          tenantRecordId: this.pricingContext.tenantRecordId,
+          contextKey: this.pricingContext.contextKey,
+        });
+    const baseProductMap = new Map(baseProducts.map((product) => [product.id, product]));
+    const retailProductMap = new Map(retailProducts.map((product) => [product.id, product]));
     const productMap = new Map(products.map((product) => [product.id, product]));
     const snapshots: OrderItemSnapshot[] = [];
     const priceChanges: PriceChange[] = [];
@@ -112,7 +144,11 @@ export class RuniaOrderRepository implements ServerOrderRepository {
           message: `No tenemos la cantidad solicitada de ${product.name}.`,
         };
       }
-      if (product.price !== item.expectedUnitPrice) {
+      const submittedProduct = baseProductMap.get(item.productId);
+      if (
+        product.price !== item.expectedUnitPrice &&
+        submittedProduct?.price !== item.expectedUnitPrice
+      ) {
         priceChanges.push({
           productId: product.id,
           name: product.name,
@@ -120,12 +156,14 @@ export class RuniaOrderRepository implements ServerOrderRepository {
           currentUnitPrice: product.price,
         });
       }
+      const retailUnitPrice = retailProductMap.get(product.id)?.price ?? product.price;
       snapshots.push({
         productId: product.id,
         sourceProductId: product.sourceProductId,
         sku: product.sku,
         name: product.name,
         categorySlug: product.category.slug,
+        catalogUnitPrice: retailUnitPrice,
         baseUnitPrice: product.basePrice,
         priceType: product.priceType,
         pricingPolicy: product.pricingPolicy,
@@ -174,6 +212,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
         productId: item.productId,
         categorySlug: item.categorySlug ?? "",
         quantity: item.quantity,
+        retailUnitPrice: item.catalogUnitPrice ?? item.baseUnitPrice,
         commercialUnitPrice: item.commercialUnitPrice ?? item.unitPrice,
       })),
     });
@@ -221,6 +260,11 @@ export class RuniaOrderRepository implements ServerOrderRepository {
     ));
     let items = validation.items;
     const commercialSubtotal = subtotal;
+    const orderPricingPolicy =
+      this.pricingContext.policy === "RETAIL" &&
+      validation.items.some((item) => item.pricingPolicy === "WHOLESALE")
+        ? "WHOLESALE"
+        : this.pricingContext.policy;
     let couponDiscountAmount = 0;
     let promotionId: string | undefined;
     let couponCode: string | undefined;
@@ -239,6 +283,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
           productId: item.productId,
           categorySlug: item.categorySlug ?? "",
           quantity: item.quantity,
+          retailUnitPrice: item.catalogUnitPrice ?? item.baseUnitPrice,
           commercialUnitPrice: item.commercialUnitPrice ?? item.unitPrice,
         })),
       });
@@ -292,7 +337,7 @@ export class RuniaOrderRepository implements ServerOrderRepository {
       tenantId: this.tenantId,
       tenantRecordId: this.pricingContext.tenantRecordId,
       customerAccountId: this.pricingContext.customerAccountId,
-      pricingPolicy: this.pricingContext.policy,
+      pricingPolicy: orderPricingPolicy,
       discountPercent: this.pricingContext.discountPercent,
       checkoutSessionId: input.checkoutSessionId,
       idempotencyKey: input.idempotencyKey,

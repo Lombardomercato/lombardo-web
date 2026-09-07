@@ -314,6 +314,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => state.items.map((item) => item.product.id).sort().join(","),
     [state.items],
   );
+  const productQuantities = useMemo(
+    () => state.items
+      .map((item) => `${item.product.id}:${item.quantity}`)
+      .sort()
+      .join(","),
+    [state.items],
+  );
 
   useEffect(() => {
     if (!state.hydrated) return;
@@ -324,10 +331,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const controller = new AbortController();
     dispatch({ type: "catalog-loading" });
-    void fetch(`/api/catalog?ids=${encodeURIComponent(productIds)}`, {
+    void fetch(
+      `/api/catalog?ids=${encodeURIComponent(productIds)}&quantities=${encodeURIComponent(productQuantities)}`,
+      {
       signal: controller.signal,
       cache: "no-store",
-    })
+      },
+    )
       .then(async (response) => {
         if (!response.ok) throw new Error("catalog unavailable");
         return (await response.json()) as { products: Product[] };
@@ -345,7 +355,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
     return () => controller.abort();
-  }, [pathname, productIds, state.catalogRequest, state.hydrated]);
+  }, [pathname, productIds, productQuantities, state.catalogRequest, state.hydrated]);
 
   const addItem = useCallback((
     product: Product,

@@ -77,7 +77,9 @@ export function parseAdminPromotionInput(form: FormData): AdminPromotionInput {
     maxUsesPerCustomer: positiveInteger(form, "maxUsesPerCustomer"),
     appliesTo: appliesTo as AdminPromotionInput["appliesTo"],
     customerScope: customerScope as AdminPromotionInput["customerScope"],
-    stackable: form.get("stackable") === "on",
+    // Lombardo promotions are always quoted from retail and never stack with
+    // an account or volume price. The engine applies only the better result.
+    stackable: false,
     firstOrderOnly: form.get("firstOrderOnly") === "on",
     productIds: appliesTo === "PRODUCTS" ? productIds : [],
     categorySlugs: appliesTo === "CATEGORIES" ? categorySlugs : [],

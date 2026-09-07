@@ -35,9 +35,8 @@ export function PromotionAdminForm({ promotion }: { promotion?: AdminPromotion }
       {appliesTo === "CATEGORIES" ? <label><span>Categorías</span><textarea name="categorySlugs" required defaultValue={promotion?.categorySlugs.join(", ")} placeholder="vinos, destilados" /></label> : <input type="hidden" name="categorySlugs" value="" />}
       <label><span>Scope de clientes</span><select name="customerScope" value={customerScope} onChange={(event) => setCustomerScope(event.target.value as PromotionCustomerScope)}><option value="ALL">Todos</option><option value="RETAIL">Retail</option><option value="WHOLESALE">Wholesale</option><option value="BUSINESS">Business</option><option value="CUSTOM">Custom discount</option><option value="SPECIFIC_CUSTOMERS">Clientes específicos</option></select></label>
       {customerScope === "SPECIFIC_CUSTOMERS" ? <label><span>IDs de clientes</span><textarea name="customerAccountIds" required defaultValue={promotion?.customerAccountIds.join(", ")} placeholder="UUID separados por coma" /></label> : <input type="hidden" name="customerAccountIds" value="" />}
-      <label className={styles.checkboxField}><input name="stackable" type="checkbox" defaultChecked={promotion?.stackable} /><span>Acumulable con precios especiales</span></label>
       <label className={styles.checkboxField}><input name="firstOrderOnly" type="checkbox" defaultChecked={promotion?.firstOrderOnly} /><span>Sólo primera compra</span></label>
-      <div className={styles.customerFormNote}>El cupón se valida de nuevo en el servidor al crear la orden. Los cambios no alteran pedidos anteriores.</div>
+      <div className={styles.customerFormNote}>El cupón se calcula sobre precio consumidor final y nunca se acumula con precios especiales: se conserva el precio más conveniente. Se valida de nuevo en el servidor al crear la orden.</div>
       <button className={styles.primaryButton} type="submit">{promotion ? "GUARDAR PROMOCIÓN" : "CREAR PROMOCIÓN"}</button>
     </form>
   );

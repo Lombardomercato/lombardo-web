@@ -124,6 +124,29 @@ class FakeProductSource implements ServerProductSource {
   }
 }
 
+class PricingAwareProductSource implements ServerProductSource {
+  private readonly retailProducts: Product[];
+  private readonly wholesaleProducts: Product[];
+
+  constructor(
+    retailProducts: Product[],
+    wholesaleProducts: Product[],
+  ) {
+    this.retailProducts = retailProducts;
+    this.wholesaleProducts = wholesaleProducts;
+  }
+
+  async getProductsByIds(
+    productIds: string[],
+    pricingContext?: CustomerPricingContext,
+  ) {
+    const products = pricingContext?.policy === "WHOLESALE"
+      ? this.wholesaleProducts
+      : this.retailProducts;
+    return products.filter((item) => productIds.includes(item.id));
+  }
+}
+
 class FreeDelivery implements ServerDeliveryPricing {
   getQuote() {
     return { mode: "FREE" as const, amount: 0, label: "Sin costo" };
@@ -418,6 +441,37 @@ test("un total manipulado del navegador se ignora y se recalcula", async () => {
   assert.equal(result.order.pricingDiscountAmount, 0);
   assert.equal(result.order.items[0].baseUnitPrice, 10_000);
   assert.equal(result.order.items[0].pricingPolicy, "RETAIL");
+});
+
+test("desde 6 botellas el servidor aplica precio mayorista aunque el carrito llegue retail", async () => {
+  const retail = product({
+    category: { id: "category-vinos", slug: "vinos", name: "Vinos" },
+  });
+  const wholesale = product({
+    category: retail.category,
+    price: 8_500,
+    basePrice: 8_500,
+    priceType: "wholesale",
+    pricingPolicy: "WHOLESALE",
+  });
+  const store = new FakeOrderStore();
+  const repository = new RuniaOrderRepository({
+    tenantId: "lombardo-test",
+    pricingContext: retailPricingContext,
+    productSource: new PricingAwareProductSource([retail], [wholesale]),
+    deliveryPricing: new FreeDelivery(),
+    store,
+  });
+
+  const result = await repository.createOrder(input({
+    items: [{ productId: retail.id, quantity: 6, expectedUnitPrice: retail.price }],
+  }));
+
+  assert.equal(result.order.pricingPolicy, "WHOLESALE");
+  assert.equal(result.order.items[0]?.catalogUnitPrice, 10_000);
+  assert.equal(result.order.items[0]?.pricingPolicy, "WHOLESALE");
+  assert.equal(result.order.items[0]?.unitPrice, 8_500);
+  assert.equal(result.order.total, 51_000);
 });
 
 test("el checkout acepta las dos zonas de envío y rechaza nuevos retiros", () => {

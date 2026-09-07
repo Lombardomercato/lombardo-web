@@ -56,6 +56,9 @@ export interface PromotionLineInput {
   productId: string;
   categorySlug: string;
   quantity: number;
+  /** Consumer-final price used as the only promotion basis. */
+  retailUnitPrice: number;
+  /** Best commercial price already available before the promotion. */
   commercialUnitPrice: number;
 }
 

@@ -8,6 +8,7 @@ const line = {
   productId: "25dd0000-0000-4000-8000-000000000001",
   categorySlug: "vinos",
   quantity: 1,
+  retailUnitPrice: 13_050.05,
   commercialUnitPrice: 13_050.05,
 };
 
@@ -35,7 +36,7 @@ function promotion(overrides: Partial<PromotionRuntimeRecord> = {}): PromotionRu
   };
 }
 
-test("A. RETAIL + cupón 10% aplica sobre el precio comercial", () => {
+test("A. RETAIL + cupón 10% aplica sobre el precio consumidor final", () => {
   const result = evaluatePromotion({ promotion: promotion(), identity: { policy: "RETAIL" }, lines: [line] });
   assert.equal(result.valid, true);
   if (!result.valid) return;
@@ -44,21 +45,44 @@ test("A. RETAIL + cupón 10% aplica sobre el precio comercial", () => {
   assert.equal(result.promotion.lines[0]?.finalUnitPrice, 11_745.05);
 });
 
-for (const policy of ["WHOLESALE", "BUSINESS", "CUSTOM_DISCOUNT"] as const) {
-  test(`${policy} rechaza un cupón no acumulable`, () => {
-    const result = evaluatePromotion({ promotion: promotion(), identity: { policy }, lines: [line] });
-    assert.deepEqual({ valid: result.valid, code: result.code }, { valid: false, code: "NOT_STACKABLE" });
-  });
-}
-
-test("E. CUSTOM_DISCOUNT + cupón stackable aplica después de la política", () => {
+test("WHOLESALE recibe sólo la diferencia si la promoción retail es mejor", () => {
   const result = evaluatePromotion({
-    promotion: promotion({ stackable: true }),
+    promotion: promotion(),
+    identity: { policy: "WHOLESALE", customerAccountId: "customer-1" },
+    lines: [{ ...line, commercialUnitPrice: 12_056.4 }],
+  });
+  assert.equal(result.valid, true);
+  if (!result.valid) return;
+  assert.equal(result.promotion.discountAmount, 311.35);
+  assert.equal(result.promotion.finalSubtotal, 11_745.05);
+});
+
+test("BUSINESS conserva su precio cuando ya es mejor que la promoción retail", () => {
+  const result = evaluatePromotion({
+    promotion: promotion(),
+    identity: { policy: "BUSINESS", customerAccountId: "customer-1" },
+    lines: [{ ...line, commercialUnitPrice: 9_900 }],
+  });
+  assert.deepEqual(
+    { valid: result.valid, code: result.code, message: result.message },
+    {
+      valid: false,
+      code: "NOT_APPLICABLE",
+      message: "Tu precio vigente ya es igual o mejor que esta promoción.",
+    },
+  );
+});
+
+test("CUSTOM_DISCOUNT nunca acumula porcentajes y usa la promoción retail si mejora", () => {
+  const result = evaluatePromotion({
+    promotion: promotion({ discountValue: 20, stackable: true }),
     identity: { policy: "CUSTOM_DISCOUNT", customerAccountId: "customer-1" },
     lines: [{ ...line, commercialUnitPrice: 11_745.05 }],
   });
   assert.equal(result.valid, true);
-  if (result.valid) assert.equal(result.promotion.finalSubtotal, 10_570.55);
+  if (!result.valid) return;
+  assert.equal(result.promotion.discountAmount, 1_305.01);
+  assert.equal(result.promotion.finalSubtotal, 10_440.04);
 });
 
 test("F. cupón vencido es rechazado", () => {

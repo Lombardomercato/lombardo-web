@@ -11,6 +11,10 @@ import type { CustomerPricingContext } from "@/lib/server/customers/types";
 import type { VerifiedWhatsAppCustomer } from "@/lib/server/customers/whatsapp-pricing";
 import type { CheckoutCustomer, CreateOrderInput, DeliveryMethod, InvoiceDetails } from "@/types/checkout";
 import type { Product } from "@/types/commerce";
+import {
+  resolveVolumeTierProducts,
+  wholesaleTierPricingContext,
+} from "@/lib/pricing/volume-tier";
 
 import { searchCatalog } from "./tools";
 
@@ -23,6 +27,7 @@ const cartLineSchema = z.object({
   quantity: z.number().int().min(1).max(99),
   effectiveUnitPrice: z.number().positive(),
   lineTotal: z.number().positive(),
+  pricingPolicy: z.enum(["RETAIL", "WHOLESALE", "BUSINESS", "CUSTOM_DISCOUNT"]).default("RETAIL"),
 }).strict();
 
 const cartSchema = z.object({
@@ -166,14 +171,19 @@ async function manageCart(
 
   if (input.action === "remove") {
     if (!input.productId) throw new Error("WHATSAPP_CART_PRODUCT_REQUIRED");
-    return cartResult("updated", current.filter((line) => line.productId !== input.productId), pricing);
+    const next = await repriceCart(
+      current.filter((line) => line.productId !== input.productId),
+      pricing,
+    );
+    return cartResult("updated", next, pricing);
   }
   if (input.action === "set_quantity") {
     if (!input.productId || !input.quantity) throw new Error("WHATSAPP_CART_QUANTITY_REQUIRED");
     if (!current.some((line) => line.productId === input.productId)) throw new Error("WHATSAPP_CART_PRODUCT_NOT_FOUND");
-    return cartResult("updated", current.map((line) => line.productId === input.productId
+    const next = await repriceCart(current.map((line) => line.productId === input.productId
       ? { ...line, quantity: input.quantity!, lineTotal: round(line.effectiveUnitPrice * input.quantity!) }
       : line), pricing);
+    return cartResult("updated", next, pricing);
   }
 
   const candidates = input.productId
@@ -196,7 +206,7 @@ async function manageCart(
   assertAvailable(product, nextQuantity);
   const next = current.filter((line) => line.productId !== product.id);
   next.push(toCartLine(product, nextQuantity));
-  return cartResult("updated", next, pricing);
+  return cartResult("updated", await repriceCart(next, pricing), pricing);
 }
 
 async function repriceCart(
@@ -204,7 +214,23 @@ async function repriceCart(
   pricing: CustomerPricingContext,
 ) {
   if (!lines.length) return [];
-  const products = await commerceProvider.getProductsByIds(lines.map((line) => line.productId), pricing);
+  const quantities = lines.map((line) => ({
+    productId: line.productId,
+    quantity: line.quantity,
+  }));
+  const baseProducts = await commerceProvider.getProductsByIds(
+    lines.map((line) => line.productId),
+    pricing,
+  );
+  const { products } = await resolveVolumeTierProducts({
+    products: baseProducts,
+    quantities,
+    pricingContext: pricing,
+    loadWholesale: (productIds) => commerceProvider.getProductsByIds(
+      productIds,
+      wholesaleTierPricingContext(pricing),
+    ),
+  });
   const byId = new Map(products.map((product) => [product.id, product]));
   return lines.map((line) => {
     const product = byId.get(line.productId);
@@ -231,6 +257,7 @@ function toCartLine(product: Product, quantity: number) {
     quantity,
     effectiveUnitPrice: product.price,
     lineTotal: round(product.price * quantity),
+    pricingPolicy: product.pricingPolicy,
   };
 }
 
@@ -252,7 +279,9 @@ function cartResult(status: string, items: ReturnType<typeof toCartLine>[], pric
       items,
       total: round(items.reduce((sum, item) => sum + item.lineTotal, 0)),
       currency: "ARS" as const,
-      pricingPolicy: pricing.policy,
+      pricingPolicy: items.some((item) => item.pricingPolicy === "WHOLESALE")
+        ? "WHOLESALE" as const
+        : pricing.policy,
     },
   };
 }

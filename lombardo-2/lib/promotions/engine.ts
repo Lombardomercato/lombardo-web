@@ -58,24 +58,32 @@ function eligibleLine(promotion: PromotionRuntimeRecord, line: PromotionLineInpu
 
 function fixedDiscountLines(lines: PromotionLineInput[], configuredAmount: number) {
   const eligibleTotal = roundPromotionCurrency(lines.reduce(
-    (sum, line) => sum + line.commercialUnitPrice * line.quantity,
+    (sum, line) => sum + line.retailUnitPrice * line.quantity,
     0,
   ));
   const target = Math.min(roundPromotionCurrency(configuredAmount), eligibleTotal);
   let remaining = target;
   return lines.map((line, index) => {
-    const lineTotal = roundPromotionCurrency(line.commercialUnitPrice * line.quantity);
+    const lineTotal = roundPromotionCurrency(line.retailUnitPrice * line.quantity);
     const proportional = index === lines.length - 1
       ? remaining
       : roundPromotionCurrency(target * (lineTotal / eligibleTotal));
-    const maxUnitDiscount = Math.floor((line.commercialUnitPrice * 100) + Number.EPSILON) / 100;
+    const maxUnitDiscount = Math.floor((line.retailUnitPrice * 100) + Number.EPSILON) / 100;
     const unitDiscount = Math.min(
       maxUnitDiscount,
       Math.floor((proportional / line.quantity) * 100 + Number.EPSILON) / 100,
     );
-    const discountAmount = roundPromotionCurrency(unitDiscount * line.quantity);
-    remaining = roundPromotionCurrency(Math.max(0, remaining - discountAmount));
-    const finalUnitPrice = roundPromotionCurrency(line.commercialUnitPrice - unitDiscount);
+    const promotionalRetailUnitPrice = roundPromotionCurrency(
+      line.retailUnitPrice - unitDiscount,
+    );
+    const finalUnitPrice = Math.min(
+      line.commercialUnitPrice,
+      promotionalRetailUnitPrice,
+    );
+    const discountAmount = roundPromotionCurrency(
+      (line.commercialUnitPrice - finalUnitPrice) * line.quantity,
+    );
+    remaining = roundPromotionCurrency(Math.max(0, remaining - unitDiscount * line.quantity));
     return {
       productId: line.productId,
       discountAmount,
@@ -97,7 +105,6 @@ export function evaluatePromotion(input: {
   if (promotion.status !== "ACTIVE") return rejected("INACTIVE");
   if (promotion.startAt && now < new Date(promotion.startAt)) return rejected("SCHEDULED");
   if (promotion.endAt && now >= new Date(promotion.endAt)) return rejected("EXPIRED");
-  if (identity.policy !== "RETAIL" && !promotion.stackable) return rejected("NOT_STACKABLE");
   if (!accountScopeMatches(promotion, identity)) return rejected("NOT_APPLICABLE");
   if (promotion.firstOrderOnly && (!identity.customerAccountId || promotion.validOrderCount > 0)) {
     return rejected("FIRST_ORDER_ONLY");
@@ -110,11 +117,15 @@ export function evaluatePromotion(input: {
     promotion.customerActiveUses >= promotion.maxUsesPerCustomer
   ) return rejected("ALREADY_USED");
 
+  const retailSubtotal = roundPromotionCurrency(lines.reduce(
+    (sum, line) => sum + line.retailUnitPrice * line.quantity,
+    0,
+  ));
   const commercialSubtotal = roundPromotionCurrency(lines.reduce(
     (sum, line) => sum + line.commercialUnitPrice * line.quantity,
     0,
   ));
-  if (commercialSubtotal < promotion.minimumOrderAmount) {
+  if (retailSubtotal < promotion.minimumOrderAmount) {
     return rejected("MINIMUM_NOT_MET", { minimumOrderAmount: promotion.minimumOrderAmount });
   }
   const eligible = lines.filter((line) => eligibleLine(promotion, line));
@@ -122,8 +133,12 @@ export function evaluatePromotion(input: {
 
   const eligibleQuotes = promotion.discountType === "PERCENTAGE"
     ? eligible.map((line) => {
-        const finalUnitPrice = roundPromotionCurrency(
-          line.commercialUnitPrice * (1 - promotion.discountValue / 100),
+        const promotionalRetailUnitPrice = roundPromotionCurrency(
+          line.retailUnitPrice * (1 - promotion.discountValue / 100),
+        );
+        const finalUnitPrice = Math.min(
+          line.commercialUnitPrice,
+          promotionalRetailUnitPrice,
         );
         const discountAmount = roundPromotionCurrency(
           (line.commercialUnitPrice - finalUnitPrice) * line.quantity,
@@ -147,7 +162,13 @@ export function evaluatePromotion(input: {
     (sum, line) => sum + line.discountAmount,
     0,
   ));
-  if (discountAmount <= 0) return rejected("NOT_APPLICABLE");
+  if (discountAmount <= 0) {
+    return {
+      valid: false,
+      code: "NOT_APPLICABLE",
+      message: "Tu precio vigente ya es igual o mejor que esta promoción.",
+    };
+  }
 
   const applied: AppliedPromotion = {
     promotionId: promotion.id,
