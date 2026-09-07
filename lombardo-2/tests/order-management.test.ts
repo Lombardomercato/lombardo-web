@@ -22,6 +22,10 @@ const actions = readFileSync("app/admin/actions.ts", "utf8");
 const shortcut = readFileSync("app/pedidos/page.tsx", "utf8");
 const header = readFileSync("components/layout/Header.tsx", "utf8");
 const adminShell = readFileSync("components/admin/AdminShell.tsx", "utf8");
+const unlinkedCustomerMigration = readFileSync(
+  "supabase/migrations/20260907124324_allow_admin_orders_for_unlinked_customers.sql",
+  "utf8",
+);
 
 const product: AdminProduct = {
   id: "12345678-1234-4123-8123-123456789abc",
@@ -159,4 +163,17 @@ test("Admin expone alta, edición, precios manuales, descuento y acceso /pedidos
 test("los logos principales incorporan un trademark de escala secundaria", () => {
   assert.match(header, /styles\.trademark[\s\S]*TM/);
   assert.match(adminShell, /styles\.adminTrademark[\s\S]*™/);
+});
+
+test("un pedido admin admite clientes activos sin login sin relajar la tienda", () => {
+  assert.match(
+    unlinkedCustomerMigration,
+    /new\.order_source = 'admin_manual'[\s\S]*or account\.auth_user_id is not null/,
+  );
+  assert.match(
+    unlinkedCustomerMigration,
+    /account\.status = 'active'/,
+  );
+  assert.match(actions, /Admin assisted order creation failed[\s\S]*adminOrderFailureCode/);
+  assert.doesNotMatch(actions, /Admin assisted order creation failed[\s\S]{0,200}customerId/);
 });

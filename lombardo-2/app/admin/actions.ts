@@ -76,6 +76,13 @@ export interface AdminCreateOrderState {
   publicId?: string;
 }
 
+function adminOrderFailureCode(error: unknown) {
+  if (error instanceof ServerOrderError) return error.code;
+  if (error instanceof AdminStoreError) return `ADMIN_STORE_${error.status}`;
+  if (error instanceof AdminAssistedOrderError) return "ADMIN_ORDER_INPUT";
+  return "UNEXPECTED";
+}
+
 const FULFILLMENT_STATUSES: readonly FulfillmentStatus[] = [
   "new",
   "confirmed",
@@ -1109,6 +1116,9 @@ export async function createAdminOrderAction(
       publicId: order.publicId,
     };
   } catch (error) {
+    console.error("Admin assisted order creation failed", {
+      code: adminOrderFailureCode(error),
+    });
     return {
       status: "error",
       message:
