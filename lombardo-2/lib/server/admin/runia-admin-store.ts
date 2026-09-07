@@ -2413,6 +2413,33 @@ export class RuniaAdminStore {
     if (!updated[0]) throw new AdminStoreError("Cliente no encontrado.", 404);
   }
 
+  async deleteCustomerAccount(customerId: string) {
+    if (!UUID_PATTERN.test(customerId)) {
+      throw new AdminStoreError("Cliente inválido.", 422);
+    }
+    const tenantRecordId = await this.tenantRecordId();
+    const search = new URLSearchParams({
+      id: `eq.${customerId}`,
+      tenant_id: `eq.${tenantRecordId}`,
+      select: "id",
+    });
+    const response = await this.request(
+      `customer_accounts?${search}`,
+      { method: "DELETE" },
+      "return=representation",
+    );
+    if (!response.ok) {
+      throw new AdminStoreError(
+        response.status === 409
+          ? "Este cliente conserva actividad relacionada. Archivá la cuenta para mantener el historial."
+          : "No pudimos eliminar el cliente.",
+        response.status === 409 ? 409 : 502,
+      );
+    }
+    const deleted = (await response.json()) as Array<{ id: string }>;
+    if (!deleted[0]) throw new AdminStoreError("Cliente no encontrado.", 404);
+  }
+
   private async promotionRelations(tenantRecordId: string) {
     const tenant = `tenant_id=eq.${encodeURIComponent(tenantRecordId)}&limit=10000`;
     const [products, categories, customers, redemptions] = await Promise.all([

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CustomerAdminForm } from "@/components/admin/CustomerAdminForm";
+import { CustomerLifecycleActions } from "@/components/admin/CustomerLifecycleActions";
 import { formatAdminDate } from "@/lib/admin/presentation";
 import { requireAdminSession } from "@/lib/server/admin/admin-auth";
 import { loadAdminCustomer } from "@/lib/server/admin/admin-data";
@@ -38,7 +39,17 @@ export default async function AdminCustomerPage({
       {feedback.error ? <p className={styles.formError}>{feedback.error}</p> : null}
 
       {session.role === "admin" ? (
-        <CustomerAdminForm customer={customer} />
+        <>
+          <CustomerAdminForm customer={customer} />
+          <CustomerLifecycleActions
+            customer={{
+              id: customer.id,
+              name: customer.name,
+              orderCount: customer.orderCount,
+              status: customer.status,
+            }}
+          />
+        </>
       ) : (
         <p className={styles.emptyState}>Sólo un administrador puede modificar esta cuenta.</p>
       )}

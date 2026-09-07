@@ -13,11 +13,21 @@ function policyLabel(policy: string, discountPercent: number) {
     : policy;
 }
 
-export default async function AdminCustomersPage() {
-  const [customers, session] = await Promise.all([
+export default async function AdminCustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ archivados?: string; success?: string }>;
+}) {
+  const [customers, session, filters] = await Promise.all([
     loadAdminCustomers(),
     requireAdminSession(),
+    searchParams,
   ]);
+  const archivedCustomers = customers.filter((customer) => customer.status === "inactive");
+  const showArchived = filters.archivados === "1";
+  const visibleCustomers = showArchived
+    ? archivedCustomers
+    : customers.filter((customer) => customer.status !== "inactive");
 
   return (
     <>
@@ -27,7 +37,17 @@ export default async function AdminCustomersPage() {
           <h1>CLIENTES.</h1>
         </div>
         <div className={styles.headerActions}>
-          <p>{customers.length} cuentas configuradas en Runia.</p>
+          <p>
+            {customers.length} cuentas · {archivedCustomers.length} archivadas.
+          </p>
+          {archivedCustomers.length ? (
+            <Link
+              className={styles.secondaryButton}
+              href={showArchived ? "/admin/clientes" : "/admin/clientes?archivados=1"}
+            >
+              {showArchived ? "VER CLIENTES" : "VER ARCHIVADOS"}
+            </Link>
+          ) : null}
           {session.role === "admin" ? (
             <Link className={styles.primaryLink} href="/admin/clientes/nuevo">
               CREAR CLIENTE →
@@ -36,9 +56,11 @@ export default async function AdminCustomersPage() {
         </div>
       </header>
 
-      {customers.length ? (
+      {filters.success ? <p className={styles.formSuccess}>{filters.success}</p> : null}
+
+      {visibleCustomers.length ? (
         <div className={styles.customerList}>
-          {customers.map((customer) => (
+          {visibleCustomers.map((customer) => (
             <Link
               className={styles.customerAccountRow}
               href={`/admin/clientes/${customer.id}`}
@@ -54,7 +76,7 @@ export default async function AdminCustomersPage() {
                 {policyLabel(customer.pricingPolicy, customer.discountPercent)}
               </strong>
               <span className={styles.statusBadge} data-status={customer.status}>
-                {customer.status.toUpperCase()}
+                {customer.status === "inactive" ? "ARCHIVADO" : customer.status.toUpperCase()}
               </span>
               <span>
                 {customer.orderCount} {customer.orderCount === 1 ? "pedido" : "pedidos"}
@@ -70,8 +92,12 @@ export default async function AdminCustomersPage() {
         </div>
       ) : (
         <div className={styles.emptyState}>
-          <p>Todavía no hay cuentas de clientes.</p>
-          {session.role === "admin" ? (
+          <p>
+            {showArchived
+              ? "No hay clientes archivados."
+              : "Todavía no hay cuentas de clientes activas."}
+          </p>
+          {session.role === "admin" && !showArchived ? (
             <Link href="/admin/clientes/nuevo">Crear la primera cuenta →</Link>
           ) : null}
         </div>

@@ -148,6 +148,42 @@ test("Admin rechaza combinaciones incoherentes de tipo, lista y descuento", () =
   );
 });
 
+test("Admin archiva clientes y protege la eliminación definitiva", () => {
+  const lifecycle = readFileSync(
+    fileURLToPath(
+      new URL("../components/admin/CustomerLifecycleActions.tsx", import.meta.url),
+    ),
+    "utf8",
+  );
+  const customersPage = readFileSync(
+    fileURLToPath(
+      new URL("../app/admin/(protected)/clientes/page.tsx", import.meta.url),
+    ),
+    "utf8",
+  );
+  const actions = readFileSync(
+    fileURLToPath(new URL("../app/admin/actions.ts", import.meta.url)),
+    "utf8",
+  );
+  const store = readFileSync(
+    fileURLToPath(
+      new URL("../lib/server/admin/runia-admin-store.ts", import.meta.url),
+    ),
+    "utf8",
+  );
+
+  assert.match(lifecycle, /ARCHIVAR CLIENTE/);
+  assert.match(lifecycle, /REACTIVAR CLIENTE/);
+  assert.match(lifecycle, /window\.confirm/);
+  assert.match(lifecycle, /archived && customer\.orderCount === 0/);
+  assert.match(lifecycle, /disabled=\{!canDelete\}/);
+  assert.match(customersPage, /customer\.status !== "inactive"/);
+  assert.match(customersPage, /VER ARCHIVADOS/);
+  assert.match(actions, /deleteCustomerAction[\s\S]*?requireAdminRole\("admin"\)/);
+  assert.match(store, /deleteCustomerAccount[\s\S]*?method: "DELETE"/);
+  assert.match(store, /tenant_id: `eq\.\$\{tenantRecordId\}`/);
+});
+
 test("pedido nuevo permite elegir clientes existentes sin mezclar políticas comerciales", () => {
   const form = readFileSync(
     fileURLToPath(new URL("../components/admin/AdminOrderCreateForm.tsx", import.meta.url)),

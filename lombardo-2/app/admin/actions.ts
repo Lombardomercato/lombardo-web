@@ -31,6 +31,8 @@ import {
 } from "@/lib/server/orders/admin-assisted-order";
 import {
   createCustomerWithInvite,
+  deleteCustomer,
+  setCustomerArchived,
   updateCustomer,
 } from "@/lib/server/customers/customer-admin";
 import {
@@ -606,6 +608,61 @@ export async function updateCustomerAction(formData: FormData) {
       error instanceof AdminStoreError || error instanceof CustomerAdminValidationError
         ? error.message
         : "No pudimos actualizar el cliente.";
+    destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+export async function archiveCustomerAction(formData: FormData) {
+  const customerId = formText(formData, "customerId", 36);
+  let destination = `/admin/clientes/${customerId}`;
+  try {
+    await requireAdminRole("admin");
+    await setCustomerArchived(customerId, true);
+    revalidatePath("/admin/clientes");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Cliente archivado.")}`;
+  } catch (error) {
+    const message = error instanceof AdminStoreError
+      ? error.message
+      : "No pudimos archivar el cliente.";
+    destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+export async function reactivateCustomerAction(formData: FormData) {
+  const customerId = formText(formData, "customerId", 36);
+  let destination = `/admin/clientes/${customerId}`;
+  try {
+    await requireAdminRole("admin");
+    await setCustomerArchived(customerId, false);
+    revalidatePath("/admin/clientes");
+    revalidatePath(destination);
+    destination += `?success=${encodeURIComponent("Cliente reactivado.")}`;
+  } catch (error) {
+    const message = error instanceof AdminStoreError
+      ? error.message
+      : "No pudimos reactivar el cliente.";
+    destination += `?error=${encodeURIComponent(message)}`;
+  }
+  redirect(destination);
+}
+
+export async function deleteCustomerAction(formData: FormData) {
+  const customerId = formText(formData, "customerId", 36);
+  let destination = `/admin/clientes/${customerId}`;
+  try {
+    await requireAdminRole("admin");
+    const warning = await deleteCustomer(customerId);
+    revalidatePath("/admin/clientes");
+    destination = `/admin/clientes?success=${encodeURIComponent(
+      warning ?? "Cliente eliminado definitivamente.",
+    )}`;
+  } catch (error) {
+    const message = error instanceof AdminStoreError
+      ? error.message
+      : "No pudimos eliminar el cliente.";
     destination += `?error=${encodeURIComponent(message)}`;
   }
   redirect(destination);

@@ -52,3 +52,54 @@ export async function updateCustomer(input: AdminCustomerInput, customerId: stri
   }
   await store.updateCustomerAccount(customerId, input);
 }
+
+function customerInputWithStatus(
+  customer: Awaited<ReturnType<ReturnType<typeof createAdminStore>["getCustomer"]>>,
+  status: AdminCustomerInput["status"],
+) {
+  if (!customer) throw new AdminStoreError("Cliente no encontrado.", 404);
+  return {
+    name: customer.name,
+    email: customer.email,
+    whatsapp: customer.whatsapp,
+    accountType: customer.accountType,
+    pricingPolicy: customer.pricingPolicy,
+    discountPercent: customer.discountPercent,
+    status,
+  } satisfies AdminCustomerInput;
+}
+
+export async function setCustomerArchived(customerId: string, archived: boolean) {
+  const store = createAdminStore();
+  const customer = await store.getCustomer(customerId);
+  await store.updateCustomerAccount(
+    customerId,
+    customerInputWithStatus(customer, archived ? "inactive" : "active"),
+  );
+}
+
+export async function deleteCustomer(customerId: string) {
+  const store = createAdminStore();
+  const customer = await store.getCustomer(customerId);
+  if (!customer) throw new AdminStoreError("Cliente no encontrado.", 404);
+  if (customer.status !== "inactive") {
+    throw new AdminStoreError(
+      "Archivá el cliente antes de eliminarlo definitivamente.",
+      409,
+    );
+  }
+  if (customer.orderCount > 0) {
+    throw new AdminStoreError(
+      "Este cliente tiene pedidos. Archivá la cuenta para conservar el historial.",
+      409,
+    );
+  }
+
+  await store.deleteCustomerAccount(customerId);
+
+  if (!customer.authUserId) return undefined;
+  const { error } = await createCustomerAuthAdmin().deleteUser(customer.authUserId);
+  return error
+    ? "El cliente fue eliminado, pero no pudimos limpiar su antiguo acceso."
+    : undefined;
+}

@@ -133,7 +133,7 @@ export function CustomerAdminForm({ customer }: { customer?: AdminCustomer }) {
         <span>Estado</span>
         <select defaultValue={customer?.status ?? "active"} name="status">
           <option value="active">Activa</option>
-          <option value="inactive">Inactiva</option>
+          <option value="inactive">Archivada</option>
           <option value="pending">Pendiente</option>
           <option value="blocked">Bloqueada</option>
         </select>

@@ -363,6 +363,11 @@
   color: #a4261e;
 }
 
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .primaryButton:disabled {
   cursor: wait;
   opacity: 0.65;
@@ -700,6 +705,43 @@
   align-self: center;
   color: #5b6268;
   line-height: 1.45;
+}
+
+.customerLifecycle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem 2rem;
+  margin-top: 1rem;
+  padding: clamp(1rem, 2.5vw, 1.6rem);
+  border: 1px solid rgba(0, 58, 112, 0.2);
+  background: #f7f3ec;
+}
+
+.customerLifecycle h2 {
+  margin-top: 0.25rem;
+  color: #003a70;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+}
+
+.customerLifecycle p:not(.eyebrow) {
+  max-width: 44rem;
+  margin-top: 0.45rem;
+  color: #5b6268;
+  line-height: 1.45;
+}
+
+.customerLifecycle > small {
+  grid-column: 1 / -1;
+  color: #70777c;
+  line-height: 1.4;
+}
+
+.customerLifecycleActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
 }
 
 .formSuccess {
@@ -1885,6 +1927,19 @@
   .customerForm,
   .customerOrderRow {
     grid-template-columns: 1fr;
+  }
+
+  .customerLifecycle {
+    grid-template-columns: 1fr;
+  }
+
+  .customerLifecycleActions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .customerLifecycleActions button {
+    width: 100%;
   }
 
   .promotionRow { grid-template-columns: 1fr auto; }
