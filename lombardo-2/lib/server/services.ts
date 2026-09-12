@@ -23,7 +23,10 @@ import { OrderNotificationService } from "./notifications/order-notification-ser
 import { SupabaseOrderNotificationStore } from "./notifications/supabase-order-notification-store";
 import { ResendEmailApi } from "./notifications/resend-email-api";
 import { WhatsAppCloudApi } from "./notifications/whatsapp-cloud-api";
-import { RuniaCustomerOrderUpdateService } from "./notifications/runia-order-status-whatsapp";
+import {
+  RuniaCustomerOrderConfirmationService,
+  RuniaCustomerOrderUpdateService,
+} from "./notifications/runia-order-status-whatsapp";
 import { RuniaOrderRepository } from "./orders/runia-order-repository";
 import { EnvironmentDeliveryPricing } from "./orders/server-delivery-pricing";
 import { ServerOrderError } from "./orders/server-order-error";
@@ -78,6 +81,7 @@ export function createCheckoutCoordinator(pricingContext: CustomerPricingContext
   const newOrderNotifiers = [
     createNewOrderNotifier(),
     createCustomerOrderConfirmationNotifier(),
+    createRuniaCustomerOrderConfirmationNotifier(),
   ].filter((notifier) => notifier !== null);
   return {
     ...services,
@@ -107,6 +111,20 @@ export function createCustomerOrderConfirmationNotifier() {
         appUrl: configuration.appUrl,
       };
     },
+  });
+}
+
+export function createRuniaCustomerOrderConfirmationNotifier() {
+  if (!runiaOrderStatusNotificationsEnabled()) return null;
+  const runia = readRuniaConfiguration();
+  return new RuniaCustomerOrderConfirmationService({
+    store: new SupabaseOrderNotificationStore({
+      url: runia.url,
+      secretKey: runia.secretKey,
+      channel: "whatsapp_cloud_api",
+      kind: "customer_order_confirmation",
+    }),
+    configurationFactory: () => readRuniaOrderStatusNotificationConfiguration(),
   });
 }
 

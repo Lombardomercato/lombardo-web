@@ -18,6 +18,7 @@ import {
   createCustomerOrderConfirmationNotifier,
   createNewOrderNotifier,
   createOrderServices,
+  createRuniaCustomerOrderConfirmationNotifier,
   notifyCustomerOrderUpdate,
 } from "@/lib/server/services";
 import { parseCreateOrderInput } from "@/lib/server/orders/order-input";
@@ -1035,16 +1036,18 @@ export async function retryOrderNotificationAction(formData: FormData) {
   let destination = `/admin/pedidos/${publicId}`;
   try {
     const order = await createOrderServices().orders.getByPublicId(publicId);
-    const notifier =
-      kind === "customer_order_confirmation"
-        ? createCustomerOrderConfirmationNotifier()
-        : createNewOrderNotifier();
     if (!order) throw new AdminStoreError("Pedido no encontrado.", 404);
-    if (!notifier) {
+    const notifiers = kind === "customer_order_confirmation"
+      ? [
+        createCustomerOrderConfirmationNotifier(),
+        createRuniaCustomerOrderConfirmationNotifier(),
+      ].filter((notifier) => notifier !== null)
+      : [createNewOrderNotifier()].filter((notifier) => notifier !== null);
+    if (!notifiers.length) {
       throw new AdminStoreError("Las notificaciones automáticas están desactivadas.", 409);
     }
-    const result = await notifier.retry(order);
-    const message = result.claimed
+    const results = await Promise.all(notifiers.map((notifier) => notifier.retry(order)));
+    const message = results.some((result) => result.claimed)
       ? "Reintento de notificación procesado."
       : "La notificación no admite otro reintento automático.";
     destination += `?success=${encodeURIComponent(message)}`;
@@ -1158,6 +1161,7 @@ export async function createAdminOrderAction(
       const notifiers = [
         createNewOrderNotifier(),
         createCustomerOrderConfirmationNotifier(),
+        createRuniaCustomerOrderConfirmationNotifier(),
       ].filter((notifier) => notifier !== null);
       await Promise.allSettled(notifiers.map((notifier) => notifier.notify(order)));
     }
