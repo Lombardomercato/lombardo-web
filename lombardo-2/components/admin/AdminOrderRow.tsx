@@ -21,7 +21,7 @@ export function AdminOrderRow({ order }: { order: AdminOrder }) {
       </span>
       <strong>{formatCurrency(order.total)}</strong>
       <span>{DELIVERY_LABELS[order.deliveryMethod]}</span>
-      <FulfillmentBadge status={order.fulfillmentStatus} />
+      {order.deletedAt ? <span>ELIMINADO · {formatAdminDate(order.deletedAt)}</span> : <FulfillmentBadge status={order.fulfillmentStatus} />}
       <PaymentBadge status={order.paymentStatus} />
     </Link>
   );

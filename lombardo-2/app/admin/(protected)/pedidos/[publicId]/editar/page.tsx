@@ -23,6 +23,7 @@ export default async function EditAdminOrderPage({
   if (!/^[0-9a-f-]{36}$/i.test(publicId)) notFound();
   const order = await loadAdminOrder(publicId);
   if (!order) notFound();
+  if (order.deletedAt) redirect(`/admin/pedidos/${publicId}`);
   return (
     <>
       <header className={styles.pageHeader}>

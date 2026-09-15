@@ -95,6 +95,7 @@ export async function getCurrentCustomerAccountData(
       )
       .eq("tenant_record_id", account.tenantId)
       .eq("customer_account_id", account.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(50),
     loadCustomerDefaultAddress(supabase, account),
@@ -132,6 +133,7 @@ export async function getLatestRepeatableOrder(
     .select("public_id,items,management_items,created_at")
     .eq("tenant_record_id", account.tenantId)
     .eq("customer_account_id", account.id)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

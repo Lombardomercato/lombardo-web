@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderActions } from "@/components/admin/OrderActions";
+import { OrderDeletionActions } from "@/components/admin/OrderDeletionActions";
 import { FulfillmentBadge, PaymentBadge } from "@/components/admin/OrderStatusBadge";
 import {
   customerName,
@@ -57,11 +58,13 @@ function NotificationStatus({
   notification,
   kind,
   publicId,
+  readOnly,
 }: {
   label: string;
   notification?: OrderNotification;
   kind: OrderNotificationKind;
   publicId: string;
+  readOnly?: boolean;
 }) {
   return (
     <>
@@ -83,7 +86,7 @@ function NotificationStatus({
           </small>
         ) : null}
       </div>
-      {notification?.status === "failed" ? (
+      {!readOnly && notification?.status === "failed" ? (
         <form action={retryOrderNotificationAction}>
           <input type="hidden" name="publicId" value={publicId} />
           <input type="hidden" name="kind" value={kind} />
@@ -109,7 +112,7 @@ export default async function AdminOrderDetailPage({
     loadAdminOrder(publicId),
     requireAdminSession(),
   ]);
-  if (!order) notFound();
+  if (!order || (order.deletedAt && session.role !== "admin")) notFound();
   const success = message(query, "success");
   const error = message(query, "error");
 
@@ -117,17 +120,19 @@ export default async function AdminOrderDetailPage({
     <>
       <header className={styles.pageHeader}>
         <div>
-          <p className={styles.eyebrow}>PEDIDO REAL</p>
+          <p className={styles.eyebrow}>{order.deletedAt ? "PEDIDO ELIMINADO · PAPELERA" : "PEDIDO REAL"}</p>
           <h1>#{order.displayId}</h1>
         </div>
         <div className={styles.headerActions}>
-          {session.role === "admin" ? <Link className={styles.primaryLink} href={`/admin/pedidos/${publicId}/editar`}>EDITAR PEDIDO</Link> : null}
+          {session.role === "admin" && !order.deletedAt ? <Link className={styles.primaryLink} href={`/admin/pedidos/${publicId}/editar`}>EDITAR PEDIDO</Link> : null}
           <Link className={styles.secondaryButton} href="/admin/pedidos">VOLVER A PEDIDOS</Link>
         </div>
       </header>
 
       {success ? <p className={styles.notice}>{success}</p> : null}
       {error ? <p className={styles.errorNotice}>{error}</p> : null}
+      {order.deletedAt ? <p className={styles.errorNotice}>Eliminado el {formatAdminDate(order.deletedAt)}. Motivo: {order.deletionReason}. Los datos originales se conservaron.</p> : null}
+      {session.role === "admin" ? <OrderDeletionActions order={order} /> : null}
 
       <div className={styles.detailGrid}>
         <div>
@@ -202,12 +207,14 @@ export default async function AdminOrderDetailPage({
                 : "OPERATIVO"}`}
               notification={order.newOrderNotification}
               publicId={order.publicId}
+              readOnly={Boolean(order.deletedAt)}
             />
             <NotificationStatus
               kind="customer_order_confirmation"
               label="CONFIRMACIÓN CLIENTE"
               notification={order.customerOrderConfirmation}
               publicId={order.publicId}
+              readOnly={Boolean(order.deletedAt)}
             />
             {order.customerStatusNotifications?.length ? (
               <div className={styles.statusNotificationList}>
@@ -228,7 +235,7 @@ export default async function AdminOrderDetailPage({
           {order.customerNotes ? <div className={styles.managementNote}><span className={styles.fieldLabel}>OBSERVACIONES DEL CLIENTE</span><p>{order.customerNotes}</p></div> : null}
           {order.invoiceDetails ? <div className={styles.managementNote}><span className={styles.fieldLabel}>FACTURA A</span><p>{order.invoiceDetails.businessName} · CUIT {order.invoiceDetails.cuit}{order.invoiceDetails.taxCondition ? ` · ${order.invoiceDetails.taxCondition}` : ""}</p></div> : null}
           {order.paymentProofs?.length ? <div className={styles.managementNote}><span className={styles.fieldLabel}>COMPROBANTES DE TRANSFERENCIA</span>{order.paymentProofs.map((proof) => <p key={proof.id}><a href={proof.sourceUrl} target="_blank" rel="noreferrer">ABRIR COMPROBANTE</a> · {proof.reviewStatus === "pending_review" ? "REVISAR" : proof.reviewStatus.toUpperCase()}</p>)}</div> : null}
-          <OrderActions order={order} />
+          {!order.deletedAt ? <OrderActions order={order} /> : null}
         </aside>
       </div>
     </>

@@ -347,6 +347,28 @@
   cursor: pointer;
 }
 
+.orderDeletion {
+  margin: 1rem 0 1.5rem;
+  max-width: 44rem;
+}
+
+.orderDeletion details[open] > summary {
+  margin-bottom: 1rem;
+}
+
+.orderManagementForm .deletionConfirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  line-height: 1.5;
+}
+
+.orderManagementForm .deletionConfirmation input {
+  width: auto;
+  min-height: 0;
+  margin-top: 0.25rem;
+}
+
 .primaryButton {
   background: #003a70;
   color: white;

@@ -84,6 +84,9 @@ interface AdminSessionRow {
 }
 
 interface OrderRow {
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  deletion_reason?: string | null;
   id: string | number;
   public_id: string;
   customer_account_id: string | null;
@@ -403,6 +406,9 @@ function mapNotification(row: NotificationRow): OrderNotification {
 }
 
 const ORDER_SELECT = [
+  "deleted_at",
+  "deleted_by",
+  "deletion_reason",
   "id",
   "public_id",
   "customer_account_id",
@@ -523,6 +529,9 @@ function mapOrder(row: OrderRow): AdminOrder {
     cancelledAt: row.cancelled_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    deletedAt: row.deleted_at ?? undefined,
+    deletedBy: row.deleted_by ?? undefined,
+    deletionReason: row.deletion_reason ?? undefined,
   };
 }
 
@@ -860,6 +869,7 @@ export class RuniaAdminStore {
 
   private orderSearch(filters: AdminOrderFilters, limit: number) {
     const search = new URLSearchParams({
+      deleted_at: filters.deleted ? "not.is.null" : "is.null",
       select: ORDER_SELECT,
       tenant_id: `eq.${this.tenantId}`,
       order: "created_at.desc",
@@ -970,6 +980,38 @@ export class RuniaAdminStore {
     return page.products.filter(
       (product) => product.active && product.retailPrice !== null,
     );
+  }
+
+  async setOrderDeleted(orderId: string, expectedUpdatedAt: string, deleted: boolean, reason: string, operatorUserId: string) {
+    const response = await this.request("rpc/lombardo_admin_set_order_deleted", {
+      method: "POST",
+      body: JSON.stringify({
+        p_tenant_id: this.tenantId,
+        p_order_id: orderId,
+        p_expected_updated_at: expectedUpdatedAt,
+        p_deleted: deleted,
+        p_reason: reason,
+        p_operator_user_id: operatorUserId,
+      }),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({})) as { code?: string; message?: string };
+      const messages: Record<string, string> = {
+        ORDER_DELETE_UNSAFE: "No se puede eliminar un pedido pagado, en proceso o con Mercado Pago activo.",
+        ORDER_PROOF_PENDING: "Primero hay que revisar el comprobante recibido.",
+        ORDER_NOTIFICATION_IN_FLIGHT: "Hay un aviso en envío o a verificar. Resolvelo antes de eliminar.",
+      };
+      throw new AdminStoreError(
+        payload.code === "40001" ? "El pedido cambió. Actualizá la página antes de continuar."
+          : payload.code === "42501" ? "Sólo un administrador puede eliminar o restaurar pedidos."
+          : payload.code === "P0002" ? "Pedido no encontrado."
+          : messages[payload.message ?? ""] ?? "No pudimos cambiar la eliminación del pedido.",
+        payload.code === "42501" ? 403 : payload.code === "P0002" ? 404 : 409,
+      );
+    }
+    const rows = await response.json() as Array<{ changed: boolean; order_record: OrderRow }>;
+    if (!rows[0]?.order_record) throw new AdminStoreError("No se confirmó la acción sobre el pedido.", 502);
+    return { changed: rows[0].changed, order: mapOrder(rows[0].order_record) };
   }
 
   async getOrderProductsByIds(productIds: string[]): Promise<AdminProduct[]> {
@@ -2210,6 +2252,7 @@ export class RuniaAdminStore {
 
   private async customerOrders(customerId: string) {
     const search = new URLSearchParams({
+      deleted_at: "is.null",
       select: ORDER_SELECT,
       tenant_id: `eq.${this.tenantId}`,
       customer_account_id: `eq.${customerId}`,

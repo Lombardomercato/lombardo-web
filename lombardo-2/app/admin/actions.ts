@@ -14,6 +14,7 @@ import { AdminStoreError } from "@/lib/server/admin/runia-admin-store";
 import type { FulfillmentStatus } from "@/lib/server/admin/types";
 import type { PaymentMethod, PaymentStatus } from "@/types/checkout";
 import { checkRateLimit } from "@/lib/server/rate-limit";
+import { orderDeletionBlocker, parseOrderDeletionInput } from "@/lib/admin/order-deletion";
 import {
   createCustomerOrderConfirmationNotifier,
   createNewOrderNotifier,
@@ -877,6 +878,39 @@ export async function updateAdminOrderAction(formData: FormData) {
     destination = `/admin/pedidos/${order.publicId}?success=${encodeURIComponent("Pedido actualizado. El snapshot comercial original quedó intacto.")}`;
   } catch (error) {
     destination += `?error=${encodeURIComponent(adminOrderError(error))}`;
+  }
+  redirect(destination);
+}
+
+export async function setOrderDeletedAction(formData: FormData) {
+  const session = await requireAdminRole("admin");
+  let destination = "/admin/pedidos";
+  try {
+    const input = parseOrderDeletionInput(formData);
+    destination = `/admin/pedidos/${input.publicId}`;
+    if (!checkRateLimit(`admin-order-deletion:${session.tenantId}:${session.authUserId}`, {
+      limit: 30, windowMs: 60 * 60 * 1000,
+    }).allowed) throw new AdminStoreError("Demasiados cambios. Esperá antes de volver a intentarlo.", 429);
+    const store = createAdminStore();
+    const order = await store.getOrder(input.publicId);
+    if (!order) throw new AdminStoreError("Pedido no encontrado.", 404);
+    if (input.deleted && !order.deletedAt) {
+      const blocker = orderDeletionBlocker(order);
+      if (blocker) throw new AdminStoreError(blocker, 409);
+    }
+    await store.setOrderDeleted(order.id, input.expectedUpdatedAt, input.deleted, input.reason, session.authUserId);
+    revalidatePath("/admin", "layout");
+    revalidatePath(`/pedido/${input.publicId}`);
+    revalidatePath("/mi-cuenta");
+    destination = input.deleted ? "/admin/pedidos?papelera=1" : `/admin/pedidos/${input.publicId}`;
+    destination += `${input.deleted ? "&" : "?"}success=${encodeURIComponent(input.deleted
+      ? "Pedido eliminado. Podés restaurarlo desde la papelera. No se notificó al cliente."
+      : "Pedido restaurado. No se notificó al cliente.")}`;
+  } catch (error) {
+    const message = error instanceof AdminStoreError ? error.message
+      : error instanceof Error && error.message.startsWith("Confirmá") ? error.message
+      : "No pudimos eliminar o restaurar el pedido.";
+    destination += `${destination.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`;
   }
   redirect(destination);
 }

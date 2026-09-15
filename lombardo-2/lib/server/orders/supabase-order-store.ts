@@ -33,6 +33,7 @@ interface SupabaseOrderStoreOptions {
 }
 
 interface OrderRow {
+  deleted_at?: string | null;
   id: string | number;
   public_id: string;
   tenant_id: string;
@@ -117,6 +118,7 @@ interface PromotionOrderResultRow {
 }
 
 function mapOrder(row: OrderRow): OrderDraft {
+  if (row.deleted_at) throw new ServerOrderError("INVALID_REQUEST", "Este pedido fue eliminado. Iniciá un pedido nuevo o contactá a Lombardo.", { status: 409 });
   const usesAdminManagement =
     row.order_source === "admin_manual" && Array.isArray(row.management_items);
   return {
@@ -247,8 +249,8 @@ export class SupabaseOrderStore implements RuniaOrderStore {
     });
   }
 
-  private ordersPath(params: Record<string, string>) {
-    const search = new URLSearchParams({ select: "*", ...params });
+  private ordersPath(params: Record<string, string>, includeDeleted = false) {
+    const search = new URLSearchParams({ select: "*", ...(includeDeleted ? {} : { deleted_at: "is.null" }), ...params });
     return `commerce_orders?${search.toString()}`;
   }
 
@@ -262,7 +264,7 @@ export class SupabaseOrderStore implements RuniaOrderStore {
         tenant_id: `eq.${tenantId}`,
         or: `(checkout_session_id.eq.${checkoutSessionId},idempotency_key.eq.${idempotencyKey})`,
         limit: "1",
-      }),
+      }, true),
     );
     if (!response.ok) {
       return this.readFailure(response, "No pudimos consultar el pedido existente.");

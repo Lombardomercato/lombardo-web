@@ -24,10 +24,13 @@ export default async function AdminOrdersPage({
   searchParams: Promise<Query>;
 }) {
   const query = await searchParams;
+  const session = await requireAdminSession();
+  const trash = session.role === "admin" && queryValue(query, "papelera") === "1";
   const fulfillment = queryValue(query, "estado");
   const payment = queryValue(query, "pago");
   const delivery = queryValue(query, "entrega");
   const filters: AdminOrderFilters = {
+    deleted: trash,
     fulfillment: fulfillmentStatuses.includes(fulfillment as FulfillmentStatus)
       ? (fulfillment as FulfillmentStatus)
       : undefined,
@@ -45,17 +48,14 @@ export default async function AdminOrdersPage({
       : undefined,
     search: queryValue(query, "buscar"),
   };
-  const [orders, session] = await Promise.all([
-    loadAdminOrders(filters),
-    requireAdminSession(),
-  ]);
+  const orders = await loadAdminOrders(filters);
 
   return (
     <>
       <header className={styles.pageHeader}>
         <div>
           <p className={styles.eyebrow}>OPERACIÓN</p>
-          <h1>PEDIDOS.</h1>
+          <h1>{trash ? "PAPELERA DE PEDIDOS." : "PEDIDOS."}</h1>
         </div>
         <div className={styles.headerActions}>
           <p>{orders.length} pedidos en esta vista.</p>
@@ -67,11 +67,19 @@ export default async function AdminOrdersPage({
         </div>
       </header>
 
+      {session.role === "admin" ? <nav className={styles.headerActions} aria-label="Vista de pedidos">
+        <Link className={styles.secondaryButton} href="/admin/pedidos" aria-current={!trash ? "page" : undefined}>PEDIDOS</Link>
+        <Link className={styles.secondaryButton} href="/admin/pedidos?papelera=1" aria-current={trash ? "page" : undefined}>PAPELERA</Link>
+      </nav> : null}
+      {trash ? <p className={styles.notice}>Los pedidos eliminados no forman parte de la operación. Abrí uno para restaurarlo.</p> : null}
+      {queryValue(query, "success") ? <p className={styles.notice}>{queryValue(query, "success")}</p> : null}
+
       {queryValue(query, "error") ? (
         <p className={styles.errorNotice}>{queryValue(query, "error")}</p>
       ) : null}
 
       <form className={styles.filterForm}>
+        {trash ? <input type="hidden" name="papelera" value="1" /> : null}
         <div className={styles.filterField}>
           <label htmlFor="buscar">BUSCAR</label>
           <input id="buscar" name="buscar" defaultValue={filters.search} placeholder="Pedido, cliente, WhatsApp o SKU" />

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAdminStore, requireAdminSession } from "./admin-auth";
+import { createAdminStore, requireAdminRole, requireAdminSession } from "./admin-auth";
 import type { AdminOrderFilters, AdminProduct, ImageQualityStatus, MatchConfidenceBand, MatchReviewStatus } from "./types";
 
 export async function loadAdminDashboard() {
@@ -9,13 +9,15 @@ export async function loadAdminDashboard() {
 }
 
 export async function loadAdminOrders(filters: AdminOrderFilters = {}) {
-  await requireAdminSession();
+  if (filters.deleted) await requireAdminRole("admin");
+  else await requireAdminSession();
   return createAdminStore().listOrders(filters);
 }
 
 export async function loadAdminOrder(publicId: string) {
-  await requireAdminSession();
-  return createAdminStore().getOrder(publicId);
+  const session = await requireAdminSession();
+  const order = await createAdminStore().getOrder(publicId);
+  return order?.deletedAt && session.role !== "admin" ? null : order;
 }
 
 export async function loadAdminProducts(input: {

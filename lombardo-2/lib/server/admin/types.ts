@@ -90,6 +90,9 @@ export interface AdminOrder {
   cancelledAt?: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletionReason?: string;
   newOrderNotification?: OrderNotification;
   customerOrderConfirmation?: OrderNotification;
   customerStatusNotifications?: OrderNotification[];
@@ -122,6 +125,7 @@ export interface AdminDashboard {
 }
 
 export interface AdminOrderFilters {
+  deleted?: boolean;
   fulfillment?: FulfillmentStatus;
   payment?: PaymentStatus;
   delivery?: DeliveryMethod;
