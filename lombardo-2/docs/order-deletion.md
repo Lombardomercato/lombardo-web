@@ -1,6 +1,10 @@
 # Eliminación recuperable de pedidos
 
-Implementación local; no aplicada ni publicada en Production.
+Migración aplicada en Runia Production el 15/09/2026, versión `20260915134906`.
+El nombre del archivo coincide con el historial oficial generado por Supabase MCP.
+Verificación previa: 275 tests y compilación de la versión oficial actual.
+Runia Dev está inactivo y no hay ramas de staging disponibles: no se creó
+infraestructura paralela ni se afirmó una validación en staging.
 
 En Admin → Pedidos, el detalle incorpora **Eliminar pedido** para administradores.
 Exige motivo, confirmación y la versión vigente del pedido. La papelera permite
@@ -19,7 +23,7 @@ restaurar el mismo registro, manteniendo snapshots comerciales y estados.
 ## Activación
 
 1. Verificar staging oficial y respaldos; aplicar allí
-   `supabase/migrations/20260915133459_recoverable_order_deletion.sql`.
+   `supabase/migrations/20260915134906_recoverable_order_deletion.sql`.
 2. Publicar código en staging después de la migración: las lecturas requieren
    las columnas nuevas. No desplegar frontend primero.
 3. Probar un pedido ficticio elegible: eliminar, verificar papelera y seguimiento

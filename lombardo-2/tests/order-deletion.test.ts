@@ -5,7 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { orderDeletionBlocker, parseOrderDeletionInput } from "../lib/admin/order-deletion.ts";
 import { SupabaseOrderStore } from "../lib/server/orders/supabase-order-store.ts";
 
-const migration = readFileSync(new URL("../supabase/migrations/20260915133459_recoverable_order_deletion.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../supabase/migrations/20260915134906_recoverable_order_deletion.sql", import.meta.url), "utf8");
 const adminId = "11111111-1111-4111-8111-111111111111";
 const operatorId = "22222222-2222-4222-8222-222222222222";
 const inactiveId = "33333333-3333-4333-8333-333333333333";
