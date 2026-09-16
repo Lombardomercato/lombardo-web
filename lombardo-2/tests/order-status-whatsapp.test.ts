@@ -8,6 +8,10 @@ import {
   buildRuniaOrderConfirmationPayload,
   buildRuniaOrderUpdatePayload,
 } from "../lib/server/notifications/runia-order-status-whatsapp.ts";
+import {
+  createRuniaOrderStatusCallbackToken,
+  verifyRuniaOrderStatusCallbackToken,
+} from "../lib/server/notifications/runia-order-status-auth.ts";
 import type {
   ClaimedOrderNotification,
   OrderNotificationStore,
@@ -76,14 +80,30 @@ test("arma el payload Runia con los seis parámetros de la plantilla", () => {
     input,
     "91",
     "https://www.lombardomercato.com",
+    "b".repeat(64),
   );
   assert.equal(payload.customer_whatsapp, "5493415550000");
   assert.equal(payload.status_label, "Tu pedido está listo");
   assert.equal(payload.template_parameters.length, 6);
+  assert.equal(payload.callback_token, "b".repeat(64));
   assert.equal(payload.total, "$ 25.000");
   assert.equal(
     payload.order_url,
     "https://www.lombardomercato.com/pedido/123e4567-e89b-42d3-a456-426614174000",
+  );
+});
+
+test("firma el callback por tenant y notificación", () => {
+  const secret = "a".repeat(40);
+  const token = createRuniaOrderStatusCallbackToken(secret, "lombardo", "91");
+  assert.equal(token.length, 64);
+  assert.equal(
+    verifyRuniaOrderStatusCallbackToken(token, secret, "lombardo", "91"),
+    true,
+  );
+  assert.equal(
+    verifyRuniaOrderStatusCallbackToken(token, secret, "lombardo", "92"),
+    false,
   );
 });
 
@@ -189,10 +209,12 @@ test("arma y acepta PEDIDO RECIBIDO por el mismo webhook protegido", async () =>
     order,
     "92",
     "https://www.lombardomercato.com",
+    "c".repeat(64),
   );
   assert.equal(payload.notification_kind, "customer_order_confirmation");
   assert.equal(payload.status_label, "Pedido recibido");
   assert.equal(payload.template_parameters.length, 6);
+  assert.equal(payload.callback_token, "c".repeat(64));
 
   const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
   const service = new RuniaCustomerOrderConfirmationService({
@@ -212,6 +234,7 @@ test("arma y acepta PEDIDO RECIBIDO por el mismo webhook protegido", async () =>
   assert.equal(calls.length, 1);
   assert.equal(new URL(calls[0]?.url ?? "").searchParams.get("secret"), "b".repeat(40));
   assert.equal(calls[0]?.body.notification_kind, "customer_order_confirmation");
+  assert.equal(typeof calls[0]?.body.callback_token, "string");
 });
 
 test("PEDIDO RECIBIDO no se dispara dos veces", async () => {

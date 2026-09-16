@@ -16,6 +16,7 @@ import type {
   NewOrderNotifier,
   OrderNotificationStore,
 } from "./types.ts";
+import { createRuniaOrderStatusCallbackToken } from "./runia-order-status-auth.ts";
 
 interface RuniaStatusWebhookConfiguration {
   webhookUrl: string;
@@ -44,6 +45,7 @@ export function buildRuniaOrderConfirmationPayload(
   order: OrderDraft,
   notificationId: string,
   appUrl: string,
+  callbackToken: string,
 ) {
   const orderNumber = order.publicId.slice(0, 8).toUpperCase();
   const statusLabel = "Pedido recibido";
@@ -66,6 +68,7 @@ export function buildRuniaOrderConfirmationPayload(
     order_public_id: order.publicId,
     notification_kind: "customer_order_confirmation" as const,
     event_key: "initial",
+    callback_token: callbackToken,
     customer_whatsapp: customerWhatsApp(order.customer.whatsapp),
     customer_first_name: parameters[0],
     order_number: parameters[1],
@@ -81,6 +84,7 @@ export function buildRuniaOrderUpdatePayload(
   input: CustomerOrderUpdateInput,
   notificationId: string,
   appUrl: string,
+  callbackToken: string,
 ) {
   const parameters = buildCustomerOrderUpdateWhatsAppParameters(input, appUrl);
   return {
@@ -90,6 +94,7 @@ export function buildRuniaOrderUpdatePayload(
     order_public_id: input.order.publicId,
     notification_kind: input.kind,
     event_key: input.eventKey,
+    callback_token: callbackToken,
     customer_whatsapp: customerWhatsApp(input.order.customer.whatsapp),
     customer_first_name: parameters[0],
     order_number: parameters[1],
@@ -135,6 +140,11 @@ export class RuniaCustomerOrderUpdateService
         input,
         claim.notification.id,
         configuration.appUrl,
+        createRuniaOrderStatusCallbackToken(
+          configuration.webhookSecret,
+          input.order.tenantId,
+          claim.notification.id,
+        ),
       );
       const body = JSON.stringify(payload);
       const signature = createHmac("sha256", configuration.webhookSecret)
@@ -229,6 +239,11 @@ export class RuniaCustomerOrderConfirmationService
         order,
         claim.notification.id,
         configuration.appUrl,
+        createRuniaOrderStatusCallbackToken(
+          configuration.webhookSecret,
+          order.tenantId,
+          claim.notification.id,
+        ),
       );
       const body = JSON.stringify(payload);
       const signature = createHmac("sha256", configuration.webhookSecret)

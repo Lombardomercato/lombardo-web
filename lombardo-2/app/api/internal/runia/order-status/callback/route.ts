@@ -6,18 +6,36 @@ import {
   readRuniaOrderStatusNotificationConfiguration,
 } from "@/lib/server/environment";
 import { SupabaseOrderNotificationStore } from "@/lib/server/notifications/supabase-order-notification-store";
+import { verifyRuniaOrderStatusCallbackToken } from "@/lib/server/notifications/runia-order-status-auth";
 
-function authorized(request: Request, secret: string) {
-  const expected = Buffer.from(`Bearer ${secret}`);
+function authorized(
+  request: Request,
+  callbackSecret: string,
+  webhookSecret: string,
+  tenantId: string,
+  eventId: string,
+) {
   const actual = Buffer.from(request.headers.get("authorization") ?? "");
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  const legacyExpected = Buffer.from(`Bearer ${callbackSecret}`);
+  if (
+    actual.length === legacyExpected.length
+    && timingSafeEqual(actual, legacyExpected)
+  ) {
+    return true;
+  }
+  const prefix = "Bearer ";
+  const authorization = actual.toString("utf8");
+  if (!authorization.startsWith(prefix)) return false;
+  return verifyRuniaOrderStatusCallbackToken(
+    authorization.slice(prefix.length),
+    webhookSecret,
+    tenantId,
+    eventId,
+  );
 }
 
 export async function POST(request: Request) {
   const configuration = readRuniaOrderStatusNotificationConfiguration();
-  if (!authorized(request, configuration.callbackSecret)) {
-    return noStoreJson({ ok: false }, { status: 401 });
-  }
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const eventId = typeof body?.event_id === "string" ? body.event_id : "";
   const result = body?.result;
@@ -26,6 +44,15 @@ export async function POST(request: Request) {
   }
 
   const runia = readRuniaConfiguration();
+  if (!authorized(
+    request,
+    configuration.callbackSecret,
+    configuration.webhookSecret,
+    runia.tenantSlug,
+    eventId,
+  )) {
+    return noStoreJson({ ok: false }, { status: 401 });
+  }
   const store = new SupabaseOrderNotificationStore({
     url: runia.url,
     secretKey: runia.secretKey,
