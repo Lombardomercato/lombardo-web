@@ -135,6 +135,15 @@ test("envía el evento firmado y espera el callback de Runia", async () => {
     webhookCalls[0]?.headers.get("x-lombardo-signature") ?? "",
     /^sha256=[a-f0-9]{64}$/,
   );
+  assert.equal(webhookCalls[0]?.body.sender_id, "5493415550000");
+  assert.deepEqual(
+    Object.keys(webhookCalls[0]?.body ?? {}).sort(),
+    ["data", "sender_id"],
+  );
+  const data = webhookCalls[0]?.body.data as Record<string, unknown>;
+  assert.equal(data.order_id, "42");
+  assert.equal(data.customer_whatsapp, "5493415550000");
+  assert.equal(data.event_id, "91");
   assert.equal(store.marks.length, 0);
   assert.doesNotMatch(JSON.stringify(webhookCalls[0]?.body), /service_role|webhookSecret/i);
 });

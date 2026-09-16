@@ -146,7 +146,12 @@ export class RuniaCustomerOrderUpdateService
           claim.notification.id,
         ),
       );
-      const body = JSON.stringify(payload);
+      // Runia's native webhook trigger accepts the contact at the top level and
+      // exposes every field inside `data` as `trigger_data.payload.<field>`.
+      const body = JSON.stringify({
+        sender_id: payload.customer_whatsapp,
+        data: payload,
+      });
       const signature = createHmac("sha256", configuration.webhookSecret)
         .update(body)
         .digest("hex");
