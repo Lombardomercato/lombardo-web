@@ -98,6 +98,17 @@ test("firma estructural ignora cambios de precio y contenido", () => {
   assert.equal(first.structuralSignature, changed.structuralSignature);
 });
 
+test("firma estructural ignora campos aditivos y conserva el contrato requerido", () => {
+  const baseline = parsePositanoCatalogPage(POSITANO_PAGE, "2026-08-30T15:00:00.000Z");
+  const additive = parsePositanoCatalogPage(
+    POSITANO_PAGE.replace("attributes: null,", "attributes: null, new_storefront_field: { enabled: true },"),
+    "2026-08-31T15:00:00.000Z",
+  );
+
+  assert.equal(additive.products.length, 1);
+  assert.equal(additive.structuralSignature, baseline.structuralSignature);
+});
+
 test("robots permite catálogo público y bloquea cuando /productos está prohibido", () => {
   assert.equal(robotsAllowsProducts("User-agent: *\nDisallow: /checkout/\nDisallow: /account/"), true);
   assert.equal(robotsAllowsProducts("User-agent: *\nDisallow: /productos/"), false);

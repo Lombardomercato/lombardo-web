@@ -2,6 +2,8 @@ import "server-only";
 
 const DEFAULT_MAX_ATTEMPTS = 3;
 const RETRYABLE_STATUS_CODES = new Set([408, 409, 503, 504, 520]);
+const JWT_CLOCK_SKEW_CODE = "PGRST303";
+const JWT_CLOCK_SKEW_MESSAGE = /jwt issued at future/i;
 
 interface SupabaseRestFetchOptions {
   fetcher?: typeof fetch;
@@ -63,6 +65,19 @@ function retryDelay(attempt: number) {
   return attempt === 1 ? 100 : 250;
 }
 
+async function retryableClockSkew(response: Response) {
+  if (response.status !== 401) return false;
+  try {
+    const body = (await response.clone().json()) as PostgrestErrorBody;
+    return (
+      textField(body.code) === JWT_CLOCK_SKEW_CODE &&
+      JWT_CLOCK_SKEW_MESSAGE.test(textField(body.message) ?? "")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function defaultSleep(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -84,10 +99,16 @@ export async function fetchSupabaseRest(
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const response = await fetcher(input, init);
+      const clockSkew = await retryableClockSkew(response);
       const shouldRetry =
-        attempt < maxAttempts && RETRYABLE_STATUS_CODES.has(response.status);
+        attempt < maxAttempts &&
+        (RETRYABLE_STATUS_CODES.has(response.status) || clockSkew);
       if (!shouldRetry) return response;
       await response.body?.cancel().catch(() => undefined);
+      if (clockSkew) {
+        await sleep(attempt === 1 ? 500 : 1_500);
+        continue;
+      }
     } catch (error) {
       if (attempt === maxAttempts) {
         throw new SupabaseRestError({

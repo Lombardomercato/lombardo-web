@@ -2,6 +2,10 @@ import "server-only";
 
 import { argentinaDate } from "@/lib/automations/date";
 import { buildCompetitorMatcher } from "@/lib/competitors/matcher";
+import {
+  POSITANO_LEGACY_STRUCTURE_SIGNATURES,
+  POSITANO_REQUIRED_STRUCTURE_SIGNATURE,
+} from "@/lib/competitors/positano-parser";
 import type { CompetitorRunSummary } from "@/lib/competitors/types";
 import { ResendCompetitorAlert } from "./competitor-alert";
 import { CompetitorStore } from "./competitor-store";
@@ -69,7 +73,16 @@ export class CompetitorIntelligenceService {
         maximumPages: competitor.maxPages,
       });
       const scrape = await source.scrape();
-      if (previous?.structural_signature && previous.structural_signature !== scrape.structuralSignature) {
+      const acceptedParserUpgrade = Boolean(
+        previous?.structural_signature &&
+        POSITANO_LEGACY_STRUCTURE_SIGNATURES.has(previous.structural_signature) &&
+        scrape.structuralSignature === POSITANO_REQUIRED_STRUCTURE_SIGNATURE,
+      );
+      if (
+        previous?.structural_signature &&
+        previous.structural_signature !== scrape.structuralSignature &&
+        !acceptedParserUpgrade
+      ) {
         throw new CompetitorSourceError("La firma estructural del catálogo cambió desde la última corrida estable.", true);
       }
       if (previous?.products_parsed) {
@@ -118,7 +131,9 @@ export class CompetitorIntelligenceService {
         priceChanges: result.priceChanges,
         alertsCreated: result.alertsCreated,
         alertsSent,
-        warnings: [],
+        warnings: acceptedParserUpgrade
+          ? ["La estructura pública de Positano fue revalidada con el contrato v2."]
+          : [],
       };
     } catch (error) {
       const message = safeError(error);

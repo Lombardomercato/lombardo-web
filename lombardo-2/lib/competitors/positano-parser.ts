@@ -2,6 +2,12 @@ import { createHash } from "node:crypto";
 import type { ExternalCompetitorProduct } from "./types";
 
 const PRODUCTS_MARKER = /\bproducts\s*:\s*\[/g;
+export const POSITANO_REQUIRED_STRUCTURE_SIGNATURE = createHash("sha256")
+  .update("positano-tiendanube:product(id,name.es,canonical_url,variants):variant(id,price):v2")
+  .digest("hex");
+export const POSITANO_LEGACY_STRUCTURE_SIGNATURES = new Set([
+  "cb619b88e080cf4e91327d17d61b11b5407c91412bc5f28e21579f07e4bdbd34",
+]);
 
 interface BalancedPart {
   value: string;
@@ -97,32 +103,6 @@ function nestedArray(source: string, key: string) {
   return balancedPart(source, match.index + match[0].lastIndexOf("["), "[", "]")?.value ?? null;
 }
 
-function topLevelKeys(source: string) {
-  const keys = new Set<string>();
-  let depth = 0;
-  let quote = "";
-  let escaped = false;
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (character === "\\") escaped = true;
-      else if (character === quote) quote = "";
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      quote = character;
-      continue;
-    }
-    if (character === "{" || character === "[") depth += 1;
-    if (character === "}" || character === "]") depth -= 1;
-    if (depth !== 1) continue;
-    const key = source.slice(index).match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/)?.[1];
-    if (key) keys.add(key);
-  }
-  return [...keys].sort();
-}
-
 function promotion(currentPrice: number | undefined, listPrice: number | undefined) {
   if (!currentPrice || !listPrice || listPrice <= currentPrice) return undefined;
   const percentage = Math.round((1 - (currentPrice / listPrice)) * 100);
@@ -214,14 +194,7 @@ export function parsePositanoCatalogPage(html: string, fetchedAt: string): Posit
     .map((match) => Number(match[1]))
     .filter(Number.isFinite);
   const pagesDiscovered = Math.max(1, ...pageNumbers);
-  const productKeys = [...new Set(objects.slice(0, 8).flatMap(topLevelKeys))].sort();
-  const variantKeys = [...new Set(objects.slice(0, 8).flatMap((object) => {
-    const array = nestedArray(object, "variants");
-    return array ? objectParts(array).slice(0, 2).flatMap(topLevelKeys) : [];
-  }))].sort();
-  const structuralSignature = createHash("sha256")
-    .update(JSON.stringify({ marker: "nube-sdk-products", productKeys, variantKeys }))
-    .digest("hex");
+  const structuralSignature = POSITANO_REQUIRED_STRUCTURE_SIGNATURE;
   return { products, objectsDetected: objects.length, pagesDiscovered, structuralSignature };
 }
 

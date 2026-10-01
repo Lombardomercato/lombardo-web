@@ -71,6 +71,55 @@ test("no reintenta errores permanentes ni escrituras", async () => {
   assert.equal(postAttempts, 1);
 });
 
+test("reintenta únicamente el 401 transitorio causado por desfase de reloj", async () => {
+  let attempts = 0;
+  const delays: number[] = [];
+  const response = await fetchSupabaseRest(
+    "https://example.supabase.co/rest/v1/products",
+    { method: "GET" },
+    {
+      operation: "test GET products with clock skew",
+      fetcher: async () => {
+        attempts += 1;
+        if (attempts < 3) {
+          return Response.json(
+            { code: "PGRST303", message: "JWT issued at future" },
+            { status: 401 },
+          );
+        }
+        return Response.json([{ id: "product-1" }]);
+      },
+      sleep: async (milliseconds) => {
+        delays.push(milliseconds);
+      },
+    },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [500, 1_500]);
+
+  let permanentAttempts = 0;
+  const permanent = await fetchSupabaseRest(
+    "https://example.supabase.co/rest/v1/products",
+    { method: "GET" },
+    {
+      operation: "test permanent unauthorized",
+      fetcher: async () => {
+        permanentAttempts += 1;
+        return Response.json(
+          { code: "PGRST303", message: "JWT expired" },
+          { status: 401 },
+        );
+      },
+      sleep: async () => undefined,
+    },
+  );
+
+  assert.equal(permanent.status, 401);
+  assert.equal(permanentAttempts, 1);
+});
+
 test("conserva causa, status y detalle PostgREST para observabilidad", async () => {
   await assert.rejects(
     fetchSupabaseRest(
