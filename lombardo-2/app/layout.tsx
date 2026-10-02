@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { SalesAssistant } from "@/components/ai/SalesAssistant";
 import { Header } from "@/components/layout/Header";
 import { SITE } from "@/lib/config/site";
 import "./globals.css";
@@ -119,7 +118,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </div>
           <CartDrawer />
-          <SalesAssistant />
         </CartProvider>
       </body>
     </html>

@@ -54,10 +54,6 @@ export function Header() {
 
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   const closeMenu = () => setIsOpen(false);
-  const openAssistant = () => {
-    setIsOpen(false);
-    window.dispatchEvent(new CustomEvent("lombardo:assistant-open"));
-  };
 
   return (
     <>
@@ -80,7 +76,6 @@ export function Header() {
           <div className={styles.utilities} aria-label="Herramientas">
             <button type="button" onClick={() => setSearchOpen(true)}>Buscar</button>
             <Link href="/mi-cuenta" aria-current={pathname === "/mi-cuenta" ? "page" : undefined}>Mi cuenta</Link>
-            <button type="button" onClick={openAssistant}>Asistente</button>
           </div>
 
           <button className={styles.cartPreview} type="button" aria-label={`Abrir carrito, ${itemCount} ${itemCount === 1 ? "unidad" : "unidades"}`} aria-expanded={isDrawerOpen} aria-controls="cart-drawer" onClick={() => { setIsOpen(false); openCart(); }}>
@@ -109,7 +104,6 @@ export function Header() {
             <div className={styles.mobileUtilities}>
               <button type="button" tabIndex={isOpen ? 0 : -1} onClick={() => { closeMenu(); setSearchOpen(true); }}>BUSCAR</button>
               <Link href="/mi-cuenta" tabIndex={isOpen ? 0 : -1} onClick={closeMenu}>MI CUENTA</Link>
-              <button type="button" tabIndex={isOpen ? 0 : -1} onClick={openAssistant}>ASISTENTE</button>
             </div>
           </nav>
         </div>

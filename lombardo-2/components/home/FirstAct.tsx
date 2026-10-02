@@ -58,7 +58,6 @@ export function FirstAct() {
   const [activeSituation, setActiveSituation] = useState(0);
   const [phase, setPhase] = useState<"hero" | "situations">("hero");
   const selectedSituation = situations[activeSituation];
-  const openAssistant = () => window.dispatchEvent(new CustomEvent("lombardo:assistant-open"));
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -130,14 +129,6 @@ export function FirstAct() {
               >
                 Ver catálogo <span aria-hidden="true">→</span>
               </Link>
-              <button
-                className={styles.secondaryAction}
-                tabIndex={phase === "hero" ? 0 : -1}
-                type="button"
-                onClick={openAssistant}
-              >
-                Que Lombardo me ayude <span aria-hidden="true">→</span>
-              </button>
             </div>
           </div>
 

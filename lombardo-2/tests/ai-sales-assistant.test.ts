@@ -79,13 +79,16 @@ test("agregar desde el bot revalida producto y precio server-side sin crear órd
   assert.match(assistant, /AGREGAR/);
 });
 
-test("comparar revalida IDs mostrados y no confía en precios enviados por el navegador", () => {
+test("el asistente web queda fuera de la interfaz y su endpoint rechaza sesiones anteriores", () => {
   const route = source("app/api/ai/chat/route.ts");
-  const comparison = source("lib/server/ai/comparison.ts");
-  assert.match(route, /priorProductIds/);
-  assert.match(route, /commerceProvider\.getProductsByIds/);
-  assert.match(route, /buildProductComparison/);
-  assert.doesNotMatch(comparison, /Reflect\.get\(product, "price"\)/);
+  const layout = source("app/layout.tsx");
+  const header = source("components/layout/Header.tsx");
+  const firstAct = source("components/home/FirstAct.tsx");
+  assert.match(route, /WEB_ASSISTANT_DISABLED/);
+  assert.match(route, /status: 410/);
+  assert.doesNotMatch(layout, /SalesAssistant/);
+  assert.doesNotMatch(header, /lombardo:assistant-open|>Asistente</i);
+  assert.doesNotMatch(firstAct, /lombardo:assistant-open|Que Lombardo me ayude/);
 });
 
 test("la UI expone el contrato público exacto y funciona en mobile", () => {
