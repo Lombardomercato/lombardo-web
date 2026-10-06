@@ -153,8 +153,8 @@ test("navegación interna deja de crear facetas por query y enlaza categorías c
   assert.doesNotMatch(navigation, /productos\?categoria=/);
   assert.match(navigation, /\/categorias\/vinos/);
   assert.match(navigation, /\/categorias\/\$\{item\.slug\}/);
-  assert.match(source("proxy.ts"), /"\/categorias\/:path\*"/);
-  assert.match(source("proxy.ts"), /"\/guias\/:path\*"/);
+  assert.match(source("proxy.ts"), /_next\/static/);
+  assert.match(source("proxy.ts"), /isMaintenanceModeEnabled/);
 });
 
 test("legacy URLs críticas tienen redirect permanente a destinos equivalentes", () => {
